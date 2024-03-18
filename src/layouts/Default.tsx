@@ -1,35 +1,20 @@
 import React from "react";
-import styled from "styled-components";
-import Footer from "../components/Footer";
-import { useSelector } from "react-redux";
-import { RootState } from "../store/store";
-
-const LayoutRoot = styled.div`
-  padding: 0px 80px;
-  padding-bottom: 80px;
-  @media (max-width: 600px) {
-    padding: 0px 10px;
-    padding-bottom: 80px;
-  }1
-`;
+import Navbar from "../components/Navbar";
+import { Container } from "@mui/material";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const isDarkTheme = useSelector(
-    (state: RootState) => state.theme.isDarkTheme
-  );
   return (
     <>
-      <LayoutRoot
-        style={{ background: isDarkTheme ? "rgb(22, 23, 23)" : undefined }}
+      <Navbar />
+      <Container
+        sx={{ mt: 5, mb: 20, display: "flex", justifyContent: "center" }}
       >
-        <header></header>
-        <main>{children}</main>
-      </LayoutRoot>
-      <Footer />
+        {children}
+      </Container>
     </>
   );
 };

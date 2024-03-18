@@ -42,20 +42,24 @@ const ListSaleModal: React.FC<ListSaleModalProps> = ({
 
   /* Payment currency */
 
-  const isGameCollection = useMemo(
-    () =>
-      collections
-        .map((collection) => collection.applicationID)
-        .includes(nft.contractId),
-    [nft.contractId]
-  );
+  // only VIA sales are allowed for the time being
+  // TODO add as a something that can be switch on and off by manager later  
+  // const isGameCollection = useMemo(
+  //   () =>
+  //     collections
+  //       .map((collection) => collection.applicationID)
+  //       .includes(nft.contractId),
+  //   [nft.contractId]
+  // );
 
   const [currency, setCurrency] = useState<string>(
-    isGameCollection ? "6779767" : "0"
+    //isGameCollection ? "6779767" : "0"
+    "6779767"
   );
-  const currencies = isGameCollection
-    ? defaultCurrencies.filter((el: any) => el.value !== "0")
-    : defaultCurrencies;
+  const currencies = //isGameCollection
+    //? 
+    defaultCurrencies.filter((el: any) => el.value !== "0")
+    //: defaultCurrencies;
 
   const handleCurrencyChange = (newCurrency: string) => {
     setCurrency(newCurrency);

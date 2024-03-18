@@ -19,7 +19,7 @@ export type RootState = {
   tokens: TokensState;
   collections: CollectionsState;
   sales: SalesState;
-  theme: ThemeState
+  theme: ThemeState;
   dex: DexState;
 };
 

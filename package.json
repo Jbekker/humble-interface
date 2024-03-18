@@ -6,10 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "webpack-dev-server --open",
-    "build": "webpack",
-    "predeploy": "npm run build",
-    "deploy-prod": "gh-pages -d dist --repo https://github.com/temptemp3/nautilus.sh.git -b main",
-    "deploy-beta": "gh-pages -d dist --repo https://github.com/temptemp3/beta.nautilus.app.git -b main"
+    "build": "webpack"
   },
   "keywords": [],
   "author": "",
