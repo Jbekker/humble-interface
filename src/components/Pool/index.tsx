@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import SwapIcon from "static/icon/icon-swap-stable-light.svg";
 import ActiveSwapIcon from "static/icon/icon-swap-active-light.svg";
 import { RootState } from "../../store/store";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
 import { Stack } from "@mui/material";
 import { arc200 } from "ulujs";
@@ -11,7 +11,11 @@ import { TOKEN_VIA } from "../../contants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import TokenInput from "../TokenInput";
 import YourLiquidity from "../YourLiquidity";
-import PopularPools from "../PopularPools";
+import PoolList from "../PoolList";
+import { getPools } from "../../store/poolSlice";
+import { UnknownAction } from "@reduxjs/toolkit";
+import { PoolI } from "../../types";
+import { getTokens } from "../../store/tokenSlice";
 
 const PoolRoot = styled.div`
   display: flex;
@@ -98,10 +102,28 @@ const Pool = () => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  return (
+  const dispatch = useDispatch();
+  /* Pools */
+  const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
+  const poolsStatus = useSelector((state: RootState) => state.pools.status);
+  useEffect(() => {
+    dispatch(getPools() as unknown as UnknownAction);
+  }, [dispatch]);
+  /* Tokens */
+  const tokens = useSelector((state: RootState) => state.tokens.tokens);
+  const tokenStatus = useSelector((state: RootState) => state.tokens.status);
+  useEffect(() => {
+    dispatch(getTokens() as unknown as UnknownAction);
+  }, [dispatch]);
+
+  const isLoading = !pools || !tokens;
+
+  console.log({ pools, tokens, isLoading });
+
+  return !isLoading ? (
     <PoolRoot className={isDarkTheme ? "dark" : "light"}>
       <YourLiquidity />
-      <PopularPools />
+      <PoolList pools={pools} tokens={tokens} />
       <ViewMoreButton>
         <ButtonLabelContainer>
           <DropdownIcon />
@@ -109,7 +131,7 @@ const Pool = () => {
         </ButtonLabelContainer>
       </ViewMoreButton>
     </PoolRoot>
-  );
+  ) : null;
 };
 
 export default Pool;

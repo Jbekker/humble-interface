@@ -4,11 +4,14 @@ import tokenReducer, { TokensState } from "./tokenSlice";
 import collectionReducer, { CollectionsState } from "./collectionSlice";
 import saleReducer, { SalesState } from "./saleSlice";
 import dexReducer, { DexState } from "./dexSlice";
+import poolReducer, { PoolState } from "./poolSlice";
 
 const store = configureStore({
   reducer: {
     theme: themeReducer,
+    pools: poolReducer,
     tokens: tokenReducer,
+    //
     collections: collectionReducer,
     sales: saleReducer,
     dex: dexReducer,
@@ -16,10 +19,12 @@ const store = configureStore({
 });
 
 export type RootState = {
+  theme: ThemeState;
+  pools: PoolState;
   tokens: TokensState;
+  //
   collections: CollectionsState;
   sales: SalesState;
-  theme: ThemeState;
   dex: DexState;
 };
 

@@ -1,7 +1,15 @@
 import styled from "@emotion/styled";
-import React from "react";
+import React, { FC } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
+import { ARC200TokenI, PoolI } from "../../types";
+import { Link } from "react-router-dom";
+import { tokenSymbol } from "../../utils/dex";
+
+const StyledLink = styled(Link)`
+  text-decoration: none;
+  color: inherit;
+`;
 
 const PoolCardRoot = styled.div`
   display: flex;
@@ -374,11 +382,18 @@ const SwapButtonLabel = styled.div`
   line-height: 120%; /* 16.8px */
 `;
 
-const PoolCard = () => {
+interface PoolCardProps {
+  pool: PoolI;
+  tokA: ARC200TokenI;
+  tokB: ARC200TokenI;
+}
+const PoolCard: FC<PoolCardProps> = ({ pool, tokA, tokB }) => {
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
+  const symbolA = tokenSymbol(tokA, true);
+  const symbolB = tokenSymbol(tokB, true);
   return (
     <PoolCardRoot className={isDarkTheme ? "dark" : "light"}>
       <PoolCardRow>
@@ -388,47 +403,51 @@ const PoolCard = () => {
             <PairInfoContainer>
               <PairInfo>
                 <PairTokens>
-                  <PairTokenLabel>GAlgo</PairTokenLabel>
+                  <PairTokenLabel>{symbolA}</PairTokenLabel>
                   <CryptoIconPlaceholder />
-                  <PairTokenLabel>/ GAlgo</PairTokenLabel>
+                  <PairTokenLabel>/ {symbolB}</PairTokenLabel>
                   <CryptoIconPlaceholder />
                 </PairTokens>
               </PairInfo>
               <PairIds>
                 <Field>
                   <FieldLabel>ID:</FieldLabel>
-                  <FieldValue>0</FieldValue>
+                  <FieldValue>{pool.tokA}</FieldValue>
                 </Field>
                 <Field>
                   <FieldLabel>ID:</FieldLabel>
-                  <FieldValue>797781232</FieldValue>
+                  <FieldValue>{pool.tokB}</FieldValue>
                 </Field>
               </PairIds>
             </PairInfoContainer>
           </Col1Row1>
         </Col1>
         <Col2>
-          <TVLLabel>10.704K ALGO</TVLLabel>
+          <TVLLabel>-</TVLLabel>
         </Col2>
         <Col3>
-          <VolumeLabel>18.7K</VolumeLabel>
+          <VolumeLabel>-</VolumeLabel>
         </Col3>
         <Col4>
           <APRLabelContainer>
-            <APRLabel>71.02%</APRLabel>
+            <APRLabel>-</APRLabel>
           </APRLabelContainer>
         </Col4>
         <Col5>
-          <AddButton>
-            <ButtonLabelContainer>
-              <AddButtonLabel>Add</AddButtonLabel>
-            </ButtonLabelContainer>
-          </AddButton>
-          <SwapButton>
-            <ButtonLabelContainer>
-              <SwapButtonLabel>Swap</SwapButtonLabel>
-            </ButtonLabelContainer>
-          </SwapButton>
+          <StyledLink to={`/pool/add`}>
+            <AddButton>
+              <ButtonLabelContainer>
+                <AddButtonLabel>Add</AddButtonLabel>
+              </ButtonLabelContainer>
+            </AddButton>
+          </StyledLink>
+          <StyledLink to={`/swap?poolId=${pool.tokA}&tokenId=${pool.tokB}`}>
+            <SwapButton>
+              <ButtonLabelContainer>
+                <SwapButtonLabel>Swap</SwapButtonLabel>
+              </ButtonLabelContainer>
+            </SwapButton>
+          </StyledLink>
         </Col5>
       </PoolCardRow>
     </PoolCardRoot>

@@ -1,7 +1,14 @@
 import styled from "@emotion/styled";
 import React from "react";
 import { RootState } from "../../store/store";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { ARC200TokenI, PoolI, PositionI } from "../../types";
+import { arc200 } from "ulujs";
+import { getAlgorandClients } from "../../wallets";
+import { useWallet } from "@txnlab/use-wallet";
+import { Link } from "react-router-dom";
+import { tokenSymbol } from "../../utils/dex";
+import { Stack } from "@mui/material";
 
 const YourLiquidityRoot = styled.div`
   width: 90%;
@@ -79,19 +86,108 @@ const MessageText = styled.div`
 `;
 
 const YourLiquidity = () => {
+  const { activeAccount } = useWallet();
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
+  const dispatch = useDispatch();
+  const tokens: ARC200TokenI[] = useSelector(
+    (state: RootState) => state.tokens.tokens
+  );
+  const tokenStatus = useSelector((state: RootState) => state.tokens.status);
+  // React.useEffect(() => {
+  //   dispatch(getTokens() as unknown as UnknownAction);
+  // }, [dispatch]);
+  const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
+  const poolsStatus = useSelector((state: RootState) => state.pools.status);
+  // React.useEffect(() => {
+  //   dispatch(getPools() as unknown as UnknownAction);
+  // }, [dispatch]);
+
+  const [positions, setPositions] = React.useState<PositionI[]>([]);
+  React.useEffect(() => {
+    if (!activeAccount) return;
+    const { algodClient, indexerClient } = getAlgorandClients();
+    (async () => {
+      const positions = [];
+      for (const pool of pools) {
+        const ci = new arc200(pool.poolId, algodClient, indexerClient, {
+          acc: {
+            addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+            sk: new Uint8Array(0),
+          },
+        });
+        const arc200_balanceOfR = await ci.arc200_balanceOf(
+          activeAccount.address
+        );
+        if (!arc200_balanceOfR.success) {
+          console.error(arc200_balanceOfR.error);
+          continue;
+        }
+        const arc200_balanceOf = arc200_balanceOfR.returnValue;
+        if (arc200_balanceOf === BigInt(0)) continue;
+        positions.push({
+          ...pool,
+          balance: arc200_balanceOf,
+        });
+      }
+      setPositions(positions);
+    })();
+  }, [pools]);
+
+  console.log("positions", positions);
+
   return (
     <YourLiquidityRoot className={isDarkTheme ? "dark" : "light"}>
       <HeadingRow className="heading-row">
         <SectionTitle>Your Liquidity</SectionTitle>
       </HeadingRow>
       <Body>
-        <MessageText className="message-text">
-          No liquidity pools found
-        </MessageText>
+        {positions.length > 0 ? (
+          <Stack spacing={2}>
+            {positions.map((position) => (
+              <div
+                key={position.poolId}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignSelf: "center",
+                  width: "100%",
+                  padding: "1px 0px",
+                  alignItems: "baseline",
+                  gap: "10px",
+                }}
+              >
+                <div>
+                  {tokenSymbol(
+                    tokens.find((token) => token.tokenId === position.tokA),
+                    true
+                  )}
+                  {" / "}
+                  {tokenSymbol(
+                    tokens.find((token) => token.tokenId === position.tokB),
+                    true
+                  )}
+                </div>
+                <div>{position.poolId}</div>
+                <div>{(Number(position.balance) / 10 ** 6).toFixed(6)}</div>
+                <div>
+                  <Link to={`/pool/add?poolId=${position.poolId}`}>
+                    <button>Add more</button>
+                  </Link>
+                  <Link to={`/pool/remove?poolId=${position.poolId}`}>
+                    <button>Remove</button>
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </Stack>
+        ) : (
+          <MessageText className="message-text">
+            No liquidity pools found
+          </MessageText>
+        )}
       </Body>
     </YourLiquidityRoot>
   );

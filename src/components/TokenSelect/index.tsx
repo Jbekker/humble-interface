@@ -3,8 +3,12 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import styled from "styled-components";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../store/store";
+import { ARC200TokenI } from "../../types";
+import { getTokens } from "../../store/tokenSlice";
+import { UnknownAction } from "@reduxjs/toolkit";
+import { tokenSymbol } from "../../utils/dex";
 
 const TokenButton = styled.div`
   display: flex;
@@ -153,10 +157,24 @@ const ArrowDownwardIcon = () => {
   );
 };
 
-export default function LongMenu() {
+interface LongMenuProps {
+  onSelect: (token: ARC200TokenI) => void;
+  options?: ARC200TokenI[];
+  token?: ARC200TokenI;
+}
+
+const TokenSelect: React.FC<LongMenuProps> = ({ token, options, onSelect }) => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
+  const dispatch = useDispatch();
+  const tokens: ARC200TokenI[] = useSelector(
+    (state: RootState) => state.tokens.tokens
+  );
+  const tokenStatus = useSelector((state: RootState) => state.tokens.status);
+  React.useEffect(() => {
+    dispatch(getTokens() as unknown as UnknownAction);
+  }, [dispatch]);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -165,7 +183,7 @@ export default function LongMenu() {
   const handleClose = () => {
     setAnchorEl(null);
   };
-  const [selectedIndex, setSelectedIndex] = React.useState(1);
+  //const [selectedIndex, setSelectedIndex] = React.useState(0);
   return (
     <div>
       <TokenButton
@@ -179,7 +197,7 @@ export default function LongMenu() {
       >
         <TokenButtonGroup>
           <TokenButtonLabel className={isDarkTheme ? "dark" : "light"}>
-            {options[selectedIndex]}
+            {tokenSymbol(token)}
           </TokenButtonLabel>
           <ArrowDownwardIcon />
         </TokenButtonGroup>
@@ -214,41 +232,45 @@ export default function LongMenu() {
           },
         }}
       >
-        {options.map((option, i) => (
-          <StyledMenuItem
-            key={option}
-            selected={option === "Pyxis"}
-            onClick={(e: any) => {
-              setSelectedIndex(i);
-              handleClose();
-            }}
-          >
-            <MenuContent>
-              <IconContainer>
-                <IconButton>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="32"
-                    height="32"
-                    viewBox="0 0 32 32"
-                    fill="none"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      clip-rule="evenodd"
-                      d="M12.6187 7.38128C12.9604 7.72299 12.9604 8.27701 12.6187 8.61872L8.61872 12.6187C8.27701 12.9604 7.72299 12.9604 7.38128 12.6187C7.03957 12.277 7.03957 11.723 7.38128 11.3813L11.3813 7.38128C11.723 7.03957 12.277 7.03957 12.6187 7.38128ZM18.6187 7.38128C18.9604 7.72299 18.9604 8.27701 18.6187 8.61872L8.61872 18.6187C8.27701 18.9604 7.72299 18.9604 7.38128 18.6187C7.03957 18.277 7.03957 17.723 7.38128 17.3813L17.3813 7.38128C17.723 7.03957 18.277 7.03957 18.6187 7.38128ZM24.6187 7.38128C24.9604 7.72299 24.9604 8.27701 24.6187 8.61872L8.61872 24.6187C8.27701 24.9604 7.72299 24.9604 7.38128 24.6187C7.03957 24.277 7.03957 23.723 7.38128 23.3813L23.3813 7.38128C23.723 7.03957 24.277 7.03957 24.6187 7.38128ZM24.6187 13.3813C24.9604 13.723 24.9604 14.277 24.6187 14.6187L14.6187 24.6187C14.277 24.9604 13.723 24.9604 13.3813 24.6187C13.0396 24.277 13.0396 23.723 13.3813 23.3813L23.3813 13.3813C23.723 13.0396 24.277 13.0396 24.6187 13.3813ZM24.6187 19.3813C24.9604 19.723 24.9604 20.277 24.6187 20.6187L20.6187 24.6187C20.277 24.9604 19.723 24.9604 19.3813 24.6187C19.0396 24.277 19.0396 23.723 19.3813 23.3813L23.3813 19.3813C23.723 19.0396 24.277 19.0396 24.6187 19.3813Z"
-                      fill="#0C0C10"
-                    />
-                  </svg>
-                </IconButton>
-              </IconContainer>
-              <ContentBody>
-                <ContentText>{option}</ContentText>
-              </ContentBody>
-            </MenuContent>
-          </StyledMenuItem>
-        ))}
+        {(options || tokens)
+          .map((t) => tokenSymbol(t))
+          .map((option, i) => (
+            <StyledMenuItem
+              key={option}
+              selected={option === tokenSymbol(token)}
+              onClick={(e: any) => {
+                onSelect((options || tokens)[i]);
+                handleClose();
+              }}
+            >
+              <MenuContent>
+                <IconContainer>
+                  <IconButton>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="32"
+                      height="32"
+                      viewBox="0 0 32 32"
+                      fill="none"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        clip-rule="evenodd"
+                        d="M12.6187 7.38128C12.9604 7.72299 12.9604 8.27701 12.6187 8.61872L8.61872 12.6187C8.27701 12.9604 7.72299 12.9604 7.38128 12.6187C7.03957 12.277 7.03957 11.723 7.38128 11.3813L11.3813 7.38128C11.723 7.03957 12.277 7.03957 12.6187 7.38128ZM18.6187 7.38128C18.9604 7.72299 18.9604 8.27701 18.6187 8.61872L8.61872 18.6187C8.27701 18.9604 7.72299 18.9604 7.38128 18.6187C7.03957 18.277 7.03957 17.723 7.38128 17.3813L17.3813 7.38128C17.723 7.03957 18.277 7.03957 18.6187 7.38128ZM24.6187 7.38128C24.9604 7.72299 24.9604 8.27701 24.6187 8.61872L8.61872 24.6187C8.27701 24.9604 7.72299 24.9604 7.38128 24.6187C7.03957 24.277 7.03957 23.723 7.38128 23.3813L23.3813 7.38128C23.723 7.03957 24.277 7.03957 24.6187 7.38128ZM24.6187 13.3813C24.9604 13.723 24.9604 14.277 24.6187 14.6187L14.6187 24.6187C14.277 24.9604 13.723 24.9604 13.3813 24.6187C13.0396 24.277 13.0396 23.723 13.3813 23.3813L23.3813 13.3813C23.723 13.0396 24.277 13.0396 24.6187 13.3813ZM24.6187 19.3813C24.9604 19.723 24.9604 20.277 24.6187 20.6187L20.6187 24.6187C20.277 24.9604 19.723 24.9604 19.3813 24.6187C19.0396 24.277 19.0396 23.723 19.3813 23.3813L23.3813 19.3813C23.723 19.0396 24.277 19.0396 24.6187 19.3813Z"
+                        fill="#0C0C10"
+                      />
+                    </svg>
+                  </IconButton>
+                </IconContainer>
+                <ContentBody>
+                  <ContentText>{option}</ContentText>
+                </ContentBody>
+              </MenuContent>
+            </StyledMenuItem>
+          ))}
       </Menu>
     </div>
   );
-}
+};
+
+export default TokenSelect;

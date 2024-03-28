@@ -1,8 +1,9 @@
 import styled from "@emotion/styled";
-import React from "react";
+import React, { FC } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import PoolCard from "../PoolCard";
+import { ARC200LPTokenI, ARC200TokenI, PoolI } from "../../types";
 
 const PopularPoolsRoot = styled.div`
   width: 90%;
@@ -482,7 +483,12 @@ const SwapButtonLabel = styled.div`
   line-height: 120%; /* 16.8px */
 `;
 
-const PopularPools = () => {
+interface PoolListProps {
+  pools: PoolI[];
+  tokens: ARC200TokenI[];
+}
+
+const PoolList: FC<PoolListProps> = ({ pools, tokens }) => {
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
@@ -511,66 +517,25 @@ const PopularPools = () => {
           </ColumnAPR>
         </Heading>
       </Columns>
-      {/*
-      <PoolCard>
-        <PoolCardRow>
-          <Col1>
-            <Col1Row1>
-              <PairIconPlaceholder />
-              <PairInfoContainer>
-                <PairInfo>
-                  <PairTokens>
-                    <PairTokenLabel>GAlgo</PairTokenLabel>
-                    <CryptoIconPlaceholder />
-                    <PairTokenLabel>/ GAlgo</PairTokenLabel>
-                    <CryptoIconPlaceholder />
-                  </PairTokens>
-                </PairInfo>
-                <PairIds>
-                  <Field>
-                    <FieldLabel>ID:</FieldLabel>
-                    <FieldValue>0</FieldValue>
-                  </Field>
-                  <Field>
-                    <FieldLabel>ID:</FieldLabel>
-                    <FieldValue>797781232</FieldValue>
-                  </Field>
-                </PairIds>
-              </PairInfoContainer>
-            </Col1Row1>
-          </Col1>
-          <Col2>
-            <TVLLabel>10.704K ALGO</TVLLabel>
-          </Col2>
-          <Col3>
-            <VolumeLabel>18.7K</VolumeLabel>
-          </Col3>
-          <Col4>
-            <APRLabelContainer>
-              <APRLabel>71.02%</APRLabel>
-            </APRLabelContainer>
-          </Col4>
-          <Col5>
-            <AddButton>
-              <ButtonLabelContainer>
-                <AddButtonLabel>Add</AddButtonLabel>
-              </ButtonLabelContainer>
-            </AddButton>
-            <SwapButton>
-              <ButtonLabelContainer>
-                <SwapButtonLabel>Swap</SwapButtonLabel>
-              </ButtonLabelContainer>
-            </SwapButton>
-          </Col5>
-        </PoolCardRow>
-      </PoolCard>*/}
-      <PoolCard />
-      <PoolCard />
-      <PoolCard />
-      <PoolCard />
-      <PoolCard />
+      {pools.length > 0 ? (
+        pools.map((p: PoolI) => (
+          <PoolCard
+            pool={p}
+            tokA={
+              tokens?.find((t: ARC200TokenI) => t.tokenId === p.tokA) ||
+              ({} as ARC200TokenI)
+            }
+            tokB={
+              tokens?.find((t: ARC200TokenI) => t.tokenId === p.tokB) ||
+              ({} as ARC200TokenI)
+            }
+          />
+        ))
+      ) : (
+        <div>No pools</div>
+      )}
     </PopularPoolsRoot>
   );
 };
 
-export default PopularPools;
+export default PoolList;

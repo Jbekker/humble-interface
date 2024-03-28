@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { FC, useEffect, useMemo, useState } from "react";
 import SwapIcon from "static/icon/icon-swap-stable-light.svg";
 import ActiveSwapIcon from "static/icon/icon-swap-active-light.svg";
 import { RootState } from "../../store/store";
@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
 import { CircularProgress, Stack } from "@mui/material";
 import { CONTRACT, abi, arc200, swap200 } from "ulujs";
-import { TOKEN_VIA, TOKEN_VOI, TOKEN_WVOI1 } from "../../contants/tokens";
+import { TOKEN_VIA, TOKEN_WVOI1 } from "../../contants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import TokenInput from "../TokenInput";
 import { useSearchParams } from "react-router-dom";
@@ -15,9 +15,11 @@ import { ARC200TokenI, PoolI } from "../../types";
 import { getTokens } from "../../store/tokenSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
 import { getPools } from "../../store/poolSlice";
-import algosdk from "algosdk";
+import algosdk, { decodeAddress } from "algosdk";
 import { toast } from "react-toastify";
 import { Toast } from "react-toastify/dist/components";
+import axios from "axios";
+import { hasAllowance } from "ulujs/types/arc200";
 import { tokenId, tokenSymbol } from "../../utils/dex";
 
 const spec = {
@@ -40,18 +42,12 @@ const spec = {
       readonly: true,
     },
     {
-      name: "Provider_depositA",
-      args: [{ type: "uint256" }],
-      returns: { type: "uint256" },
-    },
-    {
-      name: "Provider_depositB",
-      args: [{ type: "uint256" }],
-      returns: { type: "uint256" },
-    },
-    {
       name: "Provider_deposit",
-      args: [{ type: "(uint256,uint256)" }, { type: "uint256" }],
+      args: [
+        { type: "byte" },
+        { type: "(uint256,uint256)" },
+        { type: "uint256" },
+      ],
       returns: { type: "uint256" },
     },
     {
@@ -145,7 +141,7 @@ const spec = {
         },
       ],
       returns: {
-        type: "void",
+        type: "byte",
       },
     },
     //createAllowanceBox(address,address)void
@@ -161,7 +157,7 @@ const spec = {
         },
       ],
       returns: {
-        type: "void",
+        type: "byte",
       },
     },
     //createBalanceBoxes(address)void
@@ -175,19 +171,6 @@ const spec = {
       ],
       returns: {
         type: "void",
-      },
-    },
-    // hasBalance(address)byte
-    {
-      name: "hasBalance",
-      desc: "Checks if the account has a balance",
-      args: [
-        {
-          type: "address",
-        },
-      ],
-      returns: {
-        type: "byte",
       },
     },
     // hasBox((byte,byte[64]))byte
@@ -215,8 +198,117 @@ const spec = {
       },
       readonly: true,
     },
+    // wnt
+    {
+      name: "deposit",
+      args: [
+        {
+          name: "amount",
+          type: "uint64",
+          desc: "Amount to deposit",
+        },
+      ],
+      returns: {
+        type: "uint256",
+        desc: "Amount deposited",
+      },
+    },
   ],
   events: [],
+};
+
+interface AddIconProps {
+  theme: "light" | "dark";
+}
+const AddIcon: FC<AddIconProps> = ({ theme }) => {
+  return theme === "dark" ? (
+    <svg
+      width="49"
+      height="71"
+      viewBox="0 0 49 71"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <line
+        x1="22.0342"
+        y1="-2.18557e-08"
+        x2="22.0342"
+        y2="71"
+        stroke="white"
+        stroke-opacity="0.2"
+      />
+      <rect x="0.53418" y="11" width="48" height="48" rx="24" fill="black" />
+      <rect
+        x="1.03418"
+        y="11.5"
+        width="47"
+        height="47"
+        rx="23.5"
+        stroke="white"
+        stroke-opacity="0.2"
+      />
+      <path
+        d="M8.53418 35H40.5342"
+        stroke="white"
+        stroke-width="3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M24.5342 51V19"
+        stroke="white"
+        stroke-width="3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  ) : (
+    <svg
+      width="49"
+      height="71"
+      viewBox="0 0 49 71"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <line
+        x1="22.0342"
+        y1="-2.18557e-08"
+        x2="22.0342"
+        y2="71"
+        stroke="#D8D8E1"
+      />
+      <rect
+        x="1.03418"
+        y="11.5"
+        width="47"
+        height="47"
+        rx="23.5"
+        fill="white"
+      />
+      <rect
+        x="1.03418"
+        y="11.5"
+        width="47"
+        height="47"
+        rx="23.5"
+        stroke="#D8D8E1"
+      />
+      <path
+        d="M8.53418 35H40.5342"
+        stroke="#141010"
+        stroke-width="3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M24.5342 51V19"
+        stroke="#141010"
+        stroke-width="3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  );
 };
 
 const SpinnerIcon = () => {
@@ -259,6 +351,26 @@ const SpinnerIcon = () => {
     </svg>
   );
 };
+
+const SwapHeadingContainer = styled.div`
+  width: 100%;
+`;
+
+const SwapHeading = styled.div`
+  color: var(--Color-Neutral-Element-Primary, #0c0c10);
+  leading-trim: both;
+  text-edge: cap;
+  font-feature-settings: "clig" off, "liga" off;
+  /* Heading/Display 2 */
+  font-family: "Plus Jakarta Sans";
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 120%; /* 21.6px */
+  &.dark {
+    color: var(--Color-Neutral-Element-Primary, #fff);
+  }
+`;
 
 const SwapRoot = styled.div`
   display: flex;
@@ -326,6 +438,11 @@ const RateContainer = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   align-self: stretch;
+  &.has-divider {
+    padding-bottom: 12px;
+    border-bottom: 1px solid
+      var(--Color-Neutral-Stroke-Primary, rgba(255, 255, 255, 0.2));
+  }
 `;
 
 const RateLabel = styled.div`
@@ -527,19 +644,20 @@ const Swap = () => {
   }, [pools, paramPoolId]);
 
   const [accInfo, setAccInfo] = React.useState<any>(null);
-  const [focus, setFocus] = useState<"from" | "to" | undefined>();
+  const [focus, setFocus] = useState<"from" | "to">("from");
   const [fromAmount, setFromAmount] = React.useState<any>("");
   const [toAmount, setToAmount] = React.useState<any>("");
-
   const [on, setOn] = useState(false);
 
   const [token, setToken] = useState<ARC200TokenI>();
   const [token2, setToken2] = useState<ARC200TokenI>();
+
   const [tokenOptions, setTokenOptions] = useState<ARC200TokenI[]>();
   const [tokenOptions2, setTokenOptions2] = useState<ARC200TokenI[]>();
   const [balance, setBalance] = React.useState<string>();
   const [balance2, setBalance2] = React.useState<string>();
 
+  // EFFECT
   useEffect(() => {
     if (!tokens || !pools || pools.length === 0) return;
     const newTokens = new Set<number>();
@@ -560,6 +678,12 @@ const Swap = () => {
     ]);
   }, [tokens, pools]);
 
+  // EFFECT
+  useEffect(() => {
+    if (token || !tokenOptions) return;
+    setToken(tokenOptions[0]);
+  }, [token, tokenOptions]);
+
   const eligiblePools = useMemo(() => {
     return pools.filter((p: PoolI) => {
       return (
@@ -569,6 +693,8 @@ const Swap = () => {
       );
     });
   }, [pools, token, token2]);
+
+  console.log("eligiblePools", eligiblePools);
 
   useEffect(() => {
     setPool(eligiblePools[0]);
@@ -599,7 +725,95 @@ const Swap = () => {
     });
   }, [pool]);
 
-  console.log({ info });
+  const [poolBalance, setPoolBalance] = useState<BigInt>();
+  useEffect(() => {
+    if (!activeAccount || !pool) return;
+    const { algodClient, indexerClient } = getAlgorandClients();
+    const ci = new arc200(pool?.poolId, algodClient, indexerClient);
+    ci.arc200_balanceOf(activeAccount.address).then(
+      (arc200_balanceOfR: any) => {
+        if (arc200_balanceOfR.success) {
+          setPoolBalance(arc200_balanceOfR.returnValue);
+        }
+      }
+    );
+  }, [activeAccount, pool]);
+
+  const [poolShare, setPoolShare] = useState<string>("0");
+  useEffect(() => {
+    if (!activeAccount || !pool || !info || !poolBalance) return;
+    const newShare = (100 * Number(poolBalance)) / Number(info.lptBals[1]);
+    setPoolShare(newShare.toFixed(2));
+  }, [activeAccount, pool, info, poolBalance]);
+
+  console.log("poolShare", poolShare);
+
+  const [expectedOutcome, setExpectedOutcome] = useState<string>();
+  useEffect(() => {
+    if (
+      !activeAccount ||
+      !pool ||
+      !info ||
+      !fromAmount ||
+      !toAmount ||
+      !token ||
+      !token2
+    ) {
+      setExpectedOutcome(undefined);
+      return;
+    }
+    const swapAForB = token.tokenId === pool.tokA;
+    const { algodClient, indexerClient } = getAlgorandClients();
+    const ci = new CONTRACT(pool.poolId, algodClient, indexerClient, spec, {
+      addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+      sk: new Uint8Array(0),
+    });
+    ci.setFee(4000);
+    ci.Provider_deposit(
+      1,
+      swapAForB
+        ? [
+            Math.round(
+              Number(fromAmount.replace(/,/g, "")) * 10 ** token.decimals
+            ),
+            Math.round(
+              Number(toAmount.replace(/,/g, "")) * 10 ** token2.decimals
+            ),
+          ]
+        : [
+            Math.round(
+              Number(toAmount.replace(/,/g, "")) * 10 ** token.decimals
+            ),
+            Math.round(
+              Number(fromAmount.replace(/,/g, "")) * 10 ** token2.decimals
+            ),
+          ],
+      0
+    ).then((Provider_depositR: any) => {
+      if (Provider_depositR.success) {
+        setExpectedOutcome(Provider_depositR.returnValue);
+      }
+    });
+  }, [activeAccount, pool, info, fromAmount, toAmount, token, token2]);
+
+  console.log("expectedOutcome", expectedOutcome);
+
+  const [newShare, setNewShare] = useState<string>();
+  useEffect(() => {
+    if (!expectedOutcome || !info) {
+      setNewShare(undefined);
+      return;
+    }
+    const newShare = (
+      (100 * (Number(poolBalance || 0) + Number(expectedOutcome))) /
+      (Number(info.lptBals[1]) + Number(expectedOutcome))
+    ).toFixed(2);
+    setNewShare(newShare);
+  }, [expectedOutcome, poolBalance, info]);
+
+  console.log("newShare", newShare);
+
+  const [newPoolShare, setNewPoolShare] = useState<string>();
 
   const rate = useMemo(() => {
     if (!info || !token || !token2) return;
@@ -625,29 +839,40 @@ const Swap = () => {
 
   console.log("invRate", invRate);
 
-  const fee = useMemo(() => {
-    return ((fromAmount * info?.protoInfo.totFee) / 10000).toFixed(6);
-  }, [info, fromAmount]);
-
-  console.log("fee", fee);
-
-  const expectedOutcome = useMemo(() => {
-    if (!rate || !fromAmount) return;
-    return Number(rate) * Number(fromAmount);
-  }, [rate, fromAmount]);
-
-  console.log("expectedOutcome", expectedOutcome);
-
-  const [actualOutcome, setActualOutcome] = useState<string>();
-
-  // EFFECT: update toAmount and actual outcome on fromAmount change
+  // EFFECT
   useEffect(() => {
-    if (!pool || !token || !token2 || !fromAmount || focus !== "from") return;
-    if (focus === undefined || fromAmount === "") {
-      setToAmount("");
+    if (
+      !rate ||
+      !fromAmount ||
+      !toAmount ||
+      !focus ||
+      !token ||
+      !token2 ||
+      !info
+    )
       return;
+    if (info.poolBals[0] === BigInt(0) || info.poolBals[1] === BigInt(0))
+      return;
+    if (focus === "from") {
+      setToAmount(
+        Number(
+          (Number(rate) * Number(fromAmount)).toFixed(token2.decimals)
+        ).toLocaleString()
+      );
+    } else if (focus === "to") {
+      setFromAmount(
+        Number(
+          (Number(toAmount) / Number(rate)).toFixed(token.decimals)
+        ).toLocaleString()
+      );
     }
-    // check that tokens match pool
+  }, [rate, fromAmount, toAmount, focus, token, token2, info]);
+
+  useEffect(() => {
+    if (!pool || !token || !token2 || !toAmount || focus !== "to" || !!info)
+      return;
+    if (info.poolBals[0] === BigInt(0) || info.poolBals[1] === BigInt(0))
+      return;
     const { algodClient, indexerClient } = getAlgorandClients();
     const acc = {
       addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
@@ -655,84 +880,38 @@ const Swap = () => {
     };
     const ci = new CONTRACT(pool.poolId, algodClient, indexerClient, spec, acc);
     ci.setFee(4000);
-    if (pool.tokA === tokenId(token)) {
-      ci.Trader_swapAForB(1, Number(fromAmount) * 10 ** token.decimals, 0).then(
-        (r: any) => {
-          if (r.success) {
-            const toAmount = (
-              Number(r.returnValue[1]) /
-              10 ** token2.decimals
-            ).toLocaleString();
-            setActualOutcome(toAmount);
-            setToAmount(toAmount);
-          }
+    if (token.tokenId === pool?.tokA) {
+      ci.Trader_swapBForA(
+        1,
+        Number(toAmount.replace(",", "")) * 10 ** token2.decimals,
+        0
+      ).then((r: any) => {
+        console.log({ r });
+        if (r.success) {
+          const fromAmount = (
+            Number(r.returnValue[0]) /
+            10 ** token2.decimals
+          ).toLocaleString();
+          console.log({ fromAmount });
+          setFromAmount(fromAmount);
         }
-      );
-    } else if (pool.tokB === tokenId(token)) {
-      ci.Trader_swapBForA(1, Number(fromAmount) * 10 ** token.decimals, 0).then(
-        (r: any) => {
-          if (r.success) {
-            console.log({ r });
-            const toAmount = (
-              Number(r.returnValue[0]) /
-              10 ** token2.decimals
-            ).toLocaleString();
-            setActualOutcome(toAmount);
-            setToAmount(toAmount);
-          }
+      });
+    } else if (token.tokenId === pool?.tokB) {
+      ci.Trader_swapAForB(
+        1,
+        Number(fromAmount.replace(",", "")) * 10 ** token.decimals,
+        0
+      ).then((r: any) => {
+        console.log({ r });
+        if (r.success) {
+          const fromAmount = (
+            Number(r.returnValue[1]) /
+            10 ** token.decimals
+          ).toLocaleString();
+          console.log({ fromAmount });
+          setFromAmount(fromAmount);
         }
-      );
-    }
-  }, [pool, token, token2, fromAmount, focus]);
-
-  console.log("actualOutcome", actualOutcome);
-
-  const slippage = useMemo(() => {
-    if (!actualOutcome || !expectedOutcome) return;
-    return (
-      (Math.abs(Number(expectedOutcome) - Number(actualOutcome)) /
-        Number(expectedOutcome)) *
-      100
-    ).toFixed(2);
-  }, [actualOutcome, expectedOutcome]);
-
-  useEffect(() => {
-    if (!pool || !token || !token2 || !toAmount || focus !== "to") return;
-    if (focus === undefined || toAmount === "") {
-      setFromAmount("");
-      return;
-    }
-    const { algodClient, indexerClient } = getAlgorandClients();
-    const acc = {
-      addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
-      sk: new Uint8Array(0),
-    };
-    const ci = new CONTRACT(pool.poolId, algodClient, indexerClient, spec, acc);
-    ci.setFee(4000);
-    if (tokenId(token2) === pool?.tokB) {
-      ci.Trader_swapBForA(1, Number(toAmount) * 10 ** token2.decimals, 0).then(
-        (r: any) => {
-          if (r.success) {
-            const fromAmount = (
-              Number(r.returnValue[0]) /
-              10 ** token.decimals
-            ).toLocaleString();
-            setFromAmount(fromAmount);
-          }
-        }
-      );
-    } else if (tokenId(token2) === pool?.tokA) {
-      ci.Trader_swapAForB(1, Number(toAmount) * 10 ** token.decimals, 0).then(
-        (r: any) => {
-          if (r.success) {
-            const fromAmount = (
-              Number(r.returnValue[1]) /
-              10 ** token2.decimals
-            ).toLocaleString();
-            setFromAmount(fromAmount);
-          }
-        }
-      );
+      });
     }
   }, [pool, token, token2, toAmount, focus]);
 
@@ -748,11 +927,11 @@ const Swap = () => {
       tokens.length === 0
     )
       return;
-    setToken(tokens[0]);
+    //setToken(tokens[0]);
     const options = new Set<ARC200TokenI>();
     for (const p of pools) {
-      if ([p.tokA, p.tokB].includes(tokenId(tokens[0]))) {
-        if (tokenId(tokens[0]) === p.tokA) {
+      if ([p.tokA, p.tokB].includes(tokens[0].tokenId)) {
+        if (tokens[0].tokenId === p.tokA) {
           options.add(
             tokens.find(
               (t: ARC200TokenI) => `${t.tokenId}` === `${p.tokB}`
@@ -767,8 +946,8 @@ const Swap = () => {
         }
       }
     }
-    setToken2(Array.from(options)[0]);
-  }, [tokens, pools, token, token2, tokenStatus]);
+    //setToken2(Array.from(options)[0]);
+  }, [tokens, tokenStatus, pools, token, token2]);
 
   // EFFECT
   useEffect(() => {
@@ -793,27 +972,21 @@ const Swap = () => {
     }
   }, [tokens, pool, paramTokenId]);
 
-  // EFFECT: reset amounts on token change
+  // EFFECT: update token options 2 when token changes
   useEffect(() => {
-    setFocus(undefined);
-  }, [token, token2]);
-
-  // EFFECT: update token options on token change
-  useEffect(() => {
-    if (!token || !pools) return;
     const options = new Set<ARC200TokenI>();
     for (const p of pools) {
       if ([p.tokA, p.tokB].includes(tokenId(token))) {
         if (tokenId(token) === p.tokA) {
           options.add(
             tokens.find(
-              (t: ARC200TokenI) => `${tokenId(t)}` === `${p.tokB}`
+              (t: ARC200TokenI) => `${t.tokenId}` === `${p.tokB}`
             ) as ARC200TokenI
           );
         } else if (tokenId(token) === p.tokB) {
           options.add(
             tokens.find(
-              (t: ARC200TokenI) => `${tokenId(t)}` === `${p.tokA}`
+              (t: ARC200TokenI) => `${t.tokenId}` === `${p.tokA}`
             ) as ARC200TokenI
           );
         }
@@ -830,15 +1003,24 @@ const Swap = () => {
           decimals: 6,
           totalSupply: BigInt(10_000_000_000 * 1e6),
         },
+        ...tokenOptions2,
       ]);
     } else {
-      setTokenOptions2(Array.from(options));
+      setTokenOptions2(tokenOptions2);
     }
-    //setTokenOptions2(Array.from(options));
     setToken2(Array.from(options)[0]);
+    setToAmount("");
+    setFromAmount("");
   }, [token, pools]);
 
-  // EFFECT: get token balance
+  console.log({ tokenOptions2 });
+
+  useEffect(() => {
+    if (!token2) return;
+    setToAmount("");
+  }, [token2]);
+
+  // EFFECT
   useEffect(() => {
     if (!token || !activeAccount) return;
     const { algodClient, indexerClient } = getAlgorandClients();
@@ -846,11 +1028,11 @@ const Swap = () => {
       algodClient
         .accountInformation(activeAccount.address)
         .do()
-        .then((r: any) => {
-          const amount = r.amount;
-          const minBalance = r["min-balance"];
-          const available = amount - minBalance;
-          setBalance((available / 10 ** token.decimals).toLocaleString());
+        .then((accInfo: any) => {
+          const balance = accInfo.amount;
+          const minBalance = accInfo["min-balance"];
+          const availableBalance = balance - minBalance;
+          setBalance((availableBalance / 1e6).toLocaleString());
         });
     } else {
       const ci = new arc200(token.tokenId, algodClient, indexerClient);
@@ -869,22 +1051,22 @@ const Swap = () => {
     }
   }, [token, activeAccount]);
 
-  // EFFECT: get token2 balance
+  // EFFECT
   useEffect(() => {
     if (!token2 || !activeAccount) return;
     const { algodClient, indexerClient } = getAlgorandClients();
+    const ci = new arc200(token2.tokenId, algodClient, indexerClient);
     if (token2.tokenId === 0) {
       algodClient
         .accountInformation(activeAccount.address)
         .do()
-        .then((r: any) => {
-          const amount = r.amount;
-          const minBalance = r["min-balance"];
-          const available = amount - minBalance;
-          setBalance2((available / 10 ** token2.decimals).toLocaleString());
+        .then((accInfo: any) => {
+          const balance = accInfo.amount;
+          const minBalance = accInfo["min-balance"];
+          const availableBalance = balance - minBalance;
+          setBalance2((availableBalance / 1e6).toLocaleString());
         });
     } else {
-      const ci = new arc200(token2.tokenId, algodClient, indexerClient);
       ci.arc200_balanceOf(activeAccount.address).then(
         (arc200_balanceOfR: any) => {
           if (arc200_balanceOfR.success) {
@@ -909,19 +1091,14 @@ const Swap = () => {
 
   const buttonLabel = useMemo(() => {
     if (isValid) {
-      return "Swap";
+      return "Add liquidity";
     } else {
       return "Select token above";
     }
   }, [isValid]);
 
-  const minRecieved = useMemo(() => {
-    if (!actualOutcome) return "-";
-    return (Number(actualOutcome) * 0.995).toLocaleString();
-  }, [actualOutcome]);
-
   const handleButtonClick = async () => {
-    if (!isValid) return;
+    if (!isValid || !token || !token2) return;
     if (!activeAccount) {
       toast.info("Please connect your wallet first");
       return;
@@ -990,7 +1167,26 @@ const Swap = () => {
               ctcInfoTokB,
               algodClient,
               indexerClient,
-              abi.arc200,
+              {
+                ...abi.arc200,
+                methods: [
+                  ...abi.arc200.methods,
+                  {
+                    name: "deposit",
+                    args: [
+                      {
+                        name: "amount",
+                        type: "uint64",
+                        desc: "Amount to deposit",
+                      },
+                    ],
+                    returns: {
+                      type: "uint256",
+                      desc: "Amount deposited",
+                    },
+                  },
+                ],
+              },
               acc,
               true,
               false,
@@ -999,99 +1195,304 @@ const Swap = () => {
           },
         };
       };
+
       // pick a pool
       const pool = eligiblePools.slice(-1)[0];
       const { poolId, tokA, tokB } = pool;
 
-      const ci = makeCi(poolId);
-      ci.setFee(4000);
-      // determine the direction
-      if (pool.tokA === tokenId(token)) {
-        console.log("swapAForB");
-        // ---------------------------------------
-        // ensure approval for tokA
-        // ---------------------------------------
-        console.log("ensure approval for tokA");
-        do {
-          const ci = new arc200(tokA, algodClient, indexerClient, {
-            acc: {
-              addr: activeAccount?.address || "",
-              sk: new Uint8Array(0),
-            },
-          });
-          const arc200_approveR = await ci.arc200_approve(
+      // ensure pool has tokens to create future boxes
+      // ensure pool tokA balance box
+      // ensure pool tokB balance box
+      // ensure user balance box for pool
+      // ensure user tokA allowance for pool
+      // ensure user tokB allowance for pool
+      // ----------------------------------------
+      // ensure pool has tokens to create future boxes
+      // ----------------------------------------
+      do {
+        const accInfo = await algodClient
+          .accountInformation(algosdk.getApplicationAddress(poolId))
+          .do();
+        console.log({ accInfo });
+        const balance = accInfo.amount;
+        const minBalance = accInfo["min-balance"];
+        const availableBalance = balance - minBalance;
+        if (availableBalance < 28500) {
+          const suggestedParams = await algodClient.getTransactionParams().do();
+          const txn = algosdk.makePaymentTxnWithSuggestedParams(
+            activeAccount?.address || "",
             algosdk.getApplicationAddress(poolId),
-            BigInt(0),
-            true,
-            false
+            1e6,
+            undefined,
+            undefined,
+            suggestedParams
           );
-          if (!arc200_approveR.success) return new Error("Approve failed");
-        } while (0);
-        console.log("tokA approval ok");
-        // ---------------------------------------
-        // ensure tokB balance
-        // ---------------------------------------
-        console.log("ensure balance for tokB");
-        do {
-          const ci = new arc200(tokB, algodClient, indexerClient, {
-            acc: {
-              addr: activeAccount?.address || "",
-              sk: new Uint8Array(0),
-            },
-          });
-          const hasBalance = await ci.hasBalance(activeAccount.address);
-          console.log({ hasBalance });
-          if (!hasBalance.success) return new Error("Balance check failed");
-          if (!hasBalance.returnValue) {
-            const arc200_transferR = await ci.arc200_transfer(
-              activeAccount.address,
-              BigInt(0),
-              true,
-              false
-            );
-            if (!arc200_transferR.success) return new Error("Transfer failed");
+          await toast.promise(
+            signTransactions([txn.toByte()]).then(sendTransactions),
+            {
+              pending: "Pending transaction to fund future pool fees",
+              success: "Future pool fees funded!",
+            }
+          );
+        }
+      } while (0);
+      // ----------------------------------------
+      // ensure pool tokA balance box
+      // ----------------------------------------
+      do {
+        const ciTokA = makeCi(tokA);
+        // unsure if pool tokA balance box exists
+        const arc200_transferR = await ciTokA.arc200_transfer(
+          algosdk.getApplicationAddress(poolId),
+          0
+        );
+        console.log({ arc200_transferR });
+        if (!arc200_transferR.success) {
+          // know it does not exist
+          ciTokA.setPaymentAmount(28500);
+          const arc200_transferR2 = await ciTokA.arc200_transfer(
+            algosdk.getApplicationAddress(poolId),
+            0
+          );
+          if (!arc200_transferR2.success) {
+            return new Error("Transfer failed");
+          }
+          // creating balance box
+          // TODO use toast promise here
+          await toast.promise(
+            signTransactions(
+              arc200_transferR2.txns.map(
+                (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+              )
+            ).then(sendTransactions),
+            {
+              pending: "Pending transaction to setup pool for tokA",
+              success: "Pool setup for tokA complete!",
+            }
+          );
+          break;
+        }
+        // pool tokA balance box exists
+        break;
+      } while (0);
+      // ----------------------------------------
+      // ensure pool tokB balance box
+      // ----------------------------------------
+      // ensure user balance box for pool
+      // ----------------------------------------
+      // ensure user tokA allowance for pool
+      // ----------------------------------------
+      // ensure user tokB allowance for pool
+      // ----------------------------------------
+
+      const ciTokA = makeCi(tokA);
+
+      console.log("Ensuring balance box for tokA");
+      do {
+        const arc200_balanceOfR = await ciTokA.arc200_balanceOf(
+          activeAccount.address
+        );
+        console.log({ arc200_balanceOfR });
+        if (!arc200_balanceOfR.success) {
+          throw new Error("Balance of failed");
+        }
+        const arc200_balanceOf = arc200_balanceOfR.returnValue;
+        if (arc200_balanceOf < BigInt(0)) {
+          break;
+        }
+        // balance is zero need to figure out if it has a box
+        const ci = new CONTRACT(tokA, algodClient, indexerClient, spec, {
+          addr: activeAccount.address,
+          sk: new Uint8Array(0),
+        });
+        const hasBoxR = await ci.hasBox([
+          1,
+          [
+            ...decodeAddress(activeAccount.address).publicKey,
+            ...new Uint8Array(Buffer.from("0".repeat(64), "hex")),
+          ],
+        ]);
+        console.log({ hasBoxR });
+        if (hasBoxR.success && hasBoxR.returnValue === BigInt(0)) {
+          // has balance box use createBalanceBox in this case
+          ci.setPaymentAmount(28500);
+          const createBalanceBoxR = await ci.createBalanceBox(
+            activeAccount.address
+          );
+          console.log({ createBalanceBoxR });
+          if (
+            createBalanceBoxR.success &&
+            createBalanceBoxR.returnValue > BigInt(0)
+          ) {
             await signTransactions(
-              arc200_transferR.txns.map(
+              createBalanceBoxR.txns.map(
                 (t: string) => new Uint8Array(Buffer.from(t, "base64"))
               )
             ).then(sendTransactions);
           }
-        } while (0);
-        // ---------------------------------------
+        }
+        // hasBalance
+      } while (0);
+      // ----------------------------------------
 
-        const inA = Number(fromAmount) * 10 ** token.decimals;
-        const Trader_swapAForBR = await ci.Trader_swapAForB(1, inA, 0);
-        console.log({ Trader_swapAForBR });
-        if (!Trader_swapAForBR.success)
-          return new Error("Swap simulation failed");
-        const [, outB] = Trader_swapAForBR.returnValue;
-        const outBSl = Math.round(Number(outB) * 0.995); // 0.5% slippage
+      console.log("Ensuring allowance box for tokA");
+
+      do {
+        const arc200_approveR = await ciTokA.arc200_approve(
+          algosdk.getApplicationAddress(poolId),
+          0
+        );
+        console.log({ arc200_approveR });
+        if (!arc200_approveR.success) {
+          ciTokA.setPaymentAmount(28100);
+          const arc200_approveR = await ciTokA.arc200_approve(
+            algosdk.getApplicationAddress(poolId),
+            0
+          );
+          console.log({ arc200_approveR });
+          if (!arc200_approveR.success) {
+            throw new Error("Approve failed");
+          }
+          await toast.promise(
+            signTransactions(
+              arc200_approveR.txns.map(
+                (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+              )
+            ).then(sendTransactions),
+            {
+              pending: "Pending transaction to spend tokA in pool",
+              success: "TokA pool spending setup complete!",
+            }
+          );
+        }
+      } while (0);
+      console.log("tokA allowance box ok");
+
+      // ----------------------------------------
+
+      const ciTokB = makeCi(tokB);
+
+      console.log("Ensuring boxes for tokB");
+
+      const arc200_approveR2 = await ciTokB.arc200_approve(
+        algosdk.getApplicationAddress(poolId),
+        0
+      );
+      console.log({ arc200_approveR2 });
+      if (!arc200_approveR2.success) {
+        ciTokB.setPaymentAmount(28100);
+        const arc200_approveR = await ciTokB.arc200_approve(
+          algosdk.getApplicationAddress(poolId),
+          0
+        );
+        console.log({ arc200_approveR });
+        if (!arc200_approveR.success) {
+          return new Error("Approve failed");
+        }
+        await toast.promise(
+          signTransactions(
+            arc200_approveR.txns.map(
+              (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+            )
+          ).then(sendTransactions),
+          {
+            pending: "Pending transaction to spend tokB in pool",
+            success: "TokB pool spending setup complete!",
+          }
+        );
+      }
+
+      // ----------------------------------------
+      do {
+        const arc200_transferR = await ciTokB.arc200_transfer(
+          algosdk.getApplicationAddress(poolId),
+          0
+        );
+        console.log({ arc200_transferR });
+        if (!arc200_transferR.success) {
+          // transfer failed without box payment
+          ciTokB.setPaymentAmount(28500);
+          const arc200_transferR = await ciTokB.arc200_transfer(
+            algosdk.getApplicationAddress(poolId),
+            0
+          );
+          console.log({ arc200_transferR });
+          if (!arc200_transferR.success) {
+            // transfer failed with box payment
+            // something went wrong
+            return new Error("Transfer failed");
+          }
+          await toast.promise(
+            signTransactions(
+              arc200_transferR.txns.map(
+                (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+              )
+            ).then(sendTransactions),
+            {
+              pending: "Pending transaction to setup pool for tokB",
+              success: "Pool setup for tokB complete!",
+            }
+          );
+          break;
+        }
+        // transfer successful without box payment
+      } while (0);
+
+      // ----------------------------------------
+
+      console.log("Building extra txns");
+
+      const ci = makeCi(poolId);
+
+      console.log({ poolId, tokA, tokB });
+
+      // determine the direction
+      if (pool.tokA === tokenId(token)) {
+        console.log("depositAForB");
+        const inA = Math.round(
+          Number(fromAmount.replace(",", "")) * 10 ** token.decimals
+        );
+        const inB = Math.round(
+          Number(toAmount.replace(",", "")) * 10 ** token2.decimals
+        );
+
+        console.log({ inA, inB });
+
+        ci.setFee(5000);
+        const Provider_depositR = await ci.Provider_deposit(1, [inA, inB], 0);
+        console.log({ Provider_depositR });
+        if (!Provider_depositR.success)
+          return new Error("Add liquidity simulation failed");
+        const Provider_deposit = Provider_depositR.returnValue;
+
         const builder = makeBuilder(poolId, tokA, tokB);
         const poolAddr = algosdk.getApplicationAddress(poolId);
+
         const buildN = [];
+        console.log({ token });
         if (token.tokenId === 0) {
           buildN.push(builder.arc200.tokA.deposit(inA));
         }
-        buildN.push(builder.arc200.tokA.arc200_approve(poolAddr, inA));
-        buildN.push(builder.pool.Trader_swapAForB(0, inA, outBSl));
+        buildN.push(
+          ...[
+            builder.arc200.tokA.arc200_approve(poolAddr, inA),
+            builder.arc200.tokB.arc200_approve(poolAddr, inB),
+            builder.pool.Provider_deposit(0, [inA, inB], Provider_deposit),
+          ]
+        );
         const buildP = (await Promise.all(buildN)).map((res: any) => res.obj);
-        let customR;
+        ciTokA.setFee(4000);
+        ciTokA.setBeaconId(tokA);
         if (token.tokenId === 0) {
-          const ci = makeCi(tokA);
-          ci.setFee(4000);
-          ci.setPaymentAmount(inA);
-          ci.setAccounts([poolAddr]);
-          ci.setEnableGroupResourceSharing(true);
-          ci.setExtraTxns(buildP);
-          customR = await ci.custom();
-        } else {
-          ci.setAccounts([poolAddr]);
-          ci.setEnableGroupResourceSharing(true);
-          ci.setExtraTxns(buildP);
-          customR = await ci.custom();
+          ciTokA.setPaymentAmount(inA);
         }
+        ciTokA.setAccounts([poolAddr]);
+        ciTokA.setEnableGroupResourceSharing(true);
+        ciTokA.setExtraTxns(buildP);
+        const customR = await ciTokA.custom();
         console.log({ customR });
-        if (!customR.success) return new Error("Swap group simulation failed");
+        if (!customR.success)
+          return new Error("Add liquidity group simulation failed");
         await toast.promise(
           signTransactions(
             customR.txns.map(
@@ -1099,9 +1500,10 @@ const Swap = () => {
             )
           ).then(sendTransactions),
           {
-            pending: `Swap ${fromAmount} ${token.symbol} -> ${toAmount} ${token2.symbol}`,
-            success: `Swap successful!`,
-            //error: "Swap failed",
+            pending: `Add liquidity to pool ${fromAmount} ${tokenSymbol(
+              token
+            )} + ${toAmount} ${tokenSymbol(token2)}`,
+            success: `Add liquidity successful!`,
           },
           {
             type: "default",
@@ -1109,187 +1511,35 @@ const Swap = () => {
             theme: "dark",
           }
         );
-      } else if (pool.tokB === tokenId(token)) {
-        console.log("swapBForA");
+      } else if (tokenId(token) === pool.tokB) {
+        console.log("depositBForA");
+        const inA = Math.floor(
+          Number(toAmount.replace(",", "")) * 10 ** token.decimals
+        );
+        const inB = Math.floor(
+          Number(fromAmount.replace(",", "")) * 10 ** token2.decimals
+        );
 
-        // ---------------------------------------
-        // ensure approval
-        // ---------------------------------------
-        console.log("ensure approval for tokB");
-        do {
-          const ci = new CONTRACT(tokA, algodClient, indexerClient, spec, {
-            addr: activeAccount?.address || "",
-            sk: new Uint8Array(0),
-          });
-          const arc200_approveR = await ci.arc200_approve(
-            algosdk.getApplicationAddress(poolId),
-            BigInt(0)
-          );
-          console.log({ arc200_approveR });
-          if (!arc200_approveR.success) {
-            ci.setPaymentAmount(28100);
-            const arc200_approveR = await ci.arc200_approve(
-              algosdk.getApplicationAddress(poolId),
-              BigInt(0)
-            );
-            await toast.promise(
-              signTransactions(
-                arc200_approveR.txns.map(
-                  (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-                )
-              ).then(sendTransactions),
-              {
-                pending: `Approve ${token.symbol} spend for pool`,
-                success: `Approve successful!`,
-                //error: "Approve failed",
-              },
-              {
-                type: "default",
-                position: "top-center",
-                theme: isDarkTheme ? "dark" : "light",
-              }
-            );
-          }
-        } while (0);
-        console.log("tokB approval ok");
-        // ---------------------------------------
-        // ensure tokA balance
-        // ---------------------------------------
-        console.log("ensure balance for tokA");
-        do {
-          const pending = `Pending transaction to setup wallete to receive ${token2.symbol}`;
-          const success = "Wallet setup complete";
-          const ci = new CONTRACT(tokA, algodClient, indexerClient, spec, {
-            addr: activeAccount?.address || "",
-            sk: new Uint8Array(0),
-          });
-          const arc200_transferR = await ci.arc200_transfer(
-            activeAccount.address,
-            BigInt(0)
-          );
-          console.log({ arc200_transferR });
-          if (!arc200_transferR.success) {
-            ci.setPaymentAmount(28500);
-            const arc200_transferR = await ci.arc200_transfer(
-              activeAccount.address,
-              BigInt(0)
-            );
-            console.log({ arc200_transferR });
-            if (!arc200_transferR.success) {
-              const ci = new CONTRACT(
-                tokA,
-                algodClient,
-                indexerClient,
-                {
-                  name: "",
-                  desc: "",
-                  methods: [
-                    //createBalanceBoxes(address)void
-                    {
-                      name: "createBalanceBox",
-                      desc: "Creates a balance box",
-                      args: [
-                        {
-                          type: "address",
-                        },
-                      ],
-                      returns: {
-                        type: "byte",
-                      },
-                    },
-                  ],
-                  events: [],
-                },
-                {
-                  addr: activeAccount?.address || "",
-                  sk: new Uint8Array(0),
-                }
-              );
-              ci.setPaymentAmount(28500);
-              const createBalanceBoxR = await ci.createBalanceBox(
-                activeAccount.address
-              );
-              if (!createBalanceBoxR.success) {
-                break;
-              }
-              //
-              await toast.promise(
-                signTransactions(
-                  createBalanceBoxR.txns.map(
-                    (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-                  )
-                ).then(sendTransactions),
-                {
-                  pending,
-                  success,
-                  //error: "Balance box creation failed",
-                },
-                {
-                  type: "default",
-                  position: "top-center",
-                  theme: isDarkTheme ? "dark" : "light",
-                }
-              );
-              break;
-            }
-            // user can transfer to self to create balance box
-            await toast.promise(
-              signTransactions(
-                arc200_transferR.txns.map(
-                  (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-                )
-              ).then(sendTransactions),
-              {
-                pending,
-                success,
-                //error: "Transfer failed",
-              },
-              {
-                type: "default",
-                position: "top-center",
-                theme: isDarkTheme ? "dark" : "light",
-              }
-            );
-            break;
-          }
-          // user can transfer to self to create balance box but it is not needed
-          break;
-        } while (0);
-        console.log("tokA balance ok");
-        // ---------------------------------------
-        const inB = Number(fromAmount) * 10 ** token.decimals;
-        const Trader_swapBForAR = await ci.Trader_swapBForA(1, inB, 0);
-        console.log({ Trader_swapBForAR });
-        if (!Trader_swapBForAR.success)
-          return new Error("Swap simulation failed");
-        const [outA] = Trader_swapBForAR.returnValue;
-        //const outASl = Math.round(Number(outA) * 0.995);
-        const outASl = outA;
+        const Provider_depositR = await ci.Provider_deposit(1, [inB, inA], 0);
+        if (!Provider_depositR.success)
+          return new Error("Add liquidity simulation failed");
+        const Provider_deposit = Provider_depositR.returnValue;
+
         const builder = makeBuilder(poolId, tokA, tokB);
         const poolAddr = algosdk.getApplicationAddress(poolId);
+
         const buildN = [
-          builder.arc200.tokB.arc200_approve(poolAddr, inB),
-          builder.pool.Trader_swapBForA(0, inB, outASl),
+          builder.arc200.tokB.arc200_approve(poolAddr, inA), // !!
+          builder.arc200.tokA.arc200_approve(poolAddr, inB), // !!
+          builder.pool.Provider_deposit(0, [inB, inA], Provider_deposit), // !!
         ];
         const buildP = (await Promise.all(buildN)).map((res: any) => res.obj);
-        let customR;
-        if ([tokA, tokB].includes(TOKEN_WVOI1)) {
-          const ci = makeCi(tokB);
-          ci.setPaymentAmount(28500);
-          ci.setFee(4000);
-          ci.setAccounts([poolAddr]);
-          ci.setEnableGroupResourceSharing(true);
-          ci.setExtraTxns(buildP);
-          customR = await ci.custom();
-        } else {
-          ci.setFee(4000);
-          ci.setAccounts([poolAddr]);
-          ci.setEnableGroupResourceSharing(true);
-          ci.setExtraTxns(buildP);
-          customR = await ci.custom();
-        }
-        console.log({ customR });
-        if (!customR.success) return new Error("Swap group simulation failed");
+        ci.setAccounts([poolAddr]);
+        ci.setEnableGroupResourceSharing(true);
+        ci.setExtraTxns(buildP);
+        const customR = await ci.custom();
+        if (!customR.success)
+          return new Error("Add liquidity group simulation failed");
         await toast.promise(
           signTransactions(
             customR.txns.map(
@@ -1297,22 +1547,21 @@ const Swap = () => {
             )
           ).then(sendTransactions),
           {
-            pending: `Swap ${fromAmount} ${token.symbol} -> ${toAmount} ${token2.symbol}`,
-            success: `Swap successful!`,
-            //error: "Swap failed",
+            pending: `Add liquidity ${fromAmount} ${tokenSymbol(
+              token
+            )} -> ${toAmount} ${tokenSymbol(token2)}`,
+            success: `Add liquidity successful!`,
           },
           {
             type: "default",
             position: "top-center",
-            theme: isDarkTheme ? "dark" : "light",
-            autoClose: 3000,
-            hideProgressBar: true,
+            theme: "dark",
           }
         );
       }
     } catch (e: any) {
       toast.error(e.message);
-      console.log(e.message);
+      console.error(e);
     } finally {
       setOn(false);
     }
@@ -1322,9 +1571,14 @@ const Swap = () => {
 
   return !isLoading ? (
     <SwapRoot className={isDarkTheme ? "dark" : "light"}>
+      <SwapHeadingContainer>
+        <SwapHeading className={isDarkTheme ? "dark" : "light"}>
+          Add Liquidity
+        </SwapHeading>
+      </SwapHeadingContainer>
       <SwapContainer gap={on ? 1.43 : 0}>
         <TokenInput
-          label="Swap from"
+          label="First token"
           amount={fromAmount}
           setAmount={setFromAmount}
           token={token}
@@ -1333,19 +1587,9 @@ const Swap = () => {
           onFocus={() => setFocus("from")}
           options={tokenOptions}
         />
-        <img
-          onClick={() => {
-            const newToken = token;
-            setToken(token2);
-            setToken2(newToken);
-          }}
-          style={{ cursor: "pointer" }}
-          src={on ? ActiveSwapIcon : SwapIcon}
-          alt="swap"
-          className={on ? "rotate" : undefined}
-        />
+        <AddIcon theme={isDarkTheme ? "dark" : "light"} />
         <TokenInput
-          label="Swap to"
+          label="Second token"
           amount={toAmount}
           setAmount={setToAmount}
           token={token2}
@@ -1356,6 +1600,31 @@ const Swap = () => {
         />
       </SwapContainer>
       <SummaryContainer>
+        <BreakdownContainer>
+          <BreakdownStack>
+            <BreakdownRow>
+              <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
+                <span>Share of the pool you already have</span>
+              </BreakdownLabel>
+              <BreakdownValueContiner>
+                <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
+                  {poolShare ? `${poolShare}%` : "-"}
+                </BreakdownValue>
+              </BreakdownValueContiner>
+            </BreakdownRow>
+          </BreakdownStack>
+        </BreakdownContainer>
+        <RateContainer className="has-divider">
+          <RateLabel className={isDarkTheme ? "dark" : "light"}>
+            Total share of pool after transaction{" "}
+          </RateLabel>
+          <RateValue>
+            <RateMain className={isDarkTheme ? "dark" : "light"}>
+              {newShare ? `${newShare}%` : "-"}
+            </RateMain>
+            <RateSub>&nbsp;</RateSub>
+          </RateValue>
+        </RateContainer>
         <RateContainer>
           <RateLabel className={isDarkTheme ? "dark" : "light"}>Rate</RateLabel>
           <RateValue>
@@ -1364,59 +1633,11 @@ const Swap = () => {
               {tokenSymbol(token2)}
             </RateMain>
             <RateSub>
-              {tokenSymbol(token2)} = {invRate?.toFixed(token?.decimals)}{" "}
+              1 {tokenSymbol(token2)} = {invRate?.toFixed(token?.decimals)}{" "}
               {tokenSymbol(token)}
             </RateSub>
           </RateValue>
         </RateContainer>
-        <BreakdownContainer>
-          <BreakdownStack>
-            <BreakdownRow>
-              <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
-                <span>Liquidity provider fee</span>
-                <InfoCircleIcon />
-              </BreakdownLabel>
-              <BreakdownValueContiner>
-                <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
-                  {fee} {token?.symbol}
-                </BreakdownValue>
-              </BreakdownValueContiner>
-            </BreakdownRow>
-            <BreakdownRow>
-              <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
-                <span>Price impact</span>
-                <InfoCircleIcon />
-              </BreakdownLabel>
-              <BreakdownValueContiner>
-                <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
-                  {slippage}%
-                </BreakdownValue>
-              </BreakdownValueContiner>
-            </BreakdownRow>
-            <BreakdownRow>
-              <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
-                <span>Allowed slippage</span>
-                <InfoCircleIcon />
-              </BreakdownLabel>
-              <BreakdownValueContiner>
-                <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
-                  0.50%
-                </BreakdownValue>
-              </BreakdownValueContiner>
-            </BreakdownRow>
-            <BreakdownRow>
-              <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
-                <span>Minimum received</span>
-                <InfoCircleIcon />
-              </BreakdownLabel>
-              <BreakdownValueContiner>
-                <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
-                  {minRecieved} {token2?.symbol}
-                </BreakdownValue>
-              </BreakdownValueContiner>
-            </BreakdownRow>
-          </BreakdownStack>
-        </BreakdownContainer>
       </SummaryContainer>
       <Button
         className={isValid ? "active" : undefined}
@@ -1437,7 +1658,7 @@ const Swap = () => {
             }}
           >
             <CircularProgress color="inherit" size={20} />
-            Swap in progress
+            Add liquidity in progress
           </div>
         )}
       </Button>

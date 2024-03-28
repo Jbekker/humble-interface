@@ -12,4 +12,12 @@ export const routes = [
     path: "/pool",
     Component: Page.Pool,
   },
+  {
+    path: "/pool/add",
+    Component: Page.PoolAdd,
+  },
+  {
+    path: "/pool/remove",
+    Component: Page.PoolRemove,
+  },
 ];

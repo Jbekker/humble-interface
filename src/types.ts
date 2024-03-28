@@ -42,6 +42,16 @@ export interface Token extends TokenI {
   royalties: any;
 }
 
+export interface ARC200TokenI {
+  tokenId: number;
+  name: string;
+  symbol: string;
+  decimals: number;
+  totalSupply: BigInt;
+}
+
+export interface ARC200LPTokenI extends ARC200TokenI {}
+
 /* Collection */
 
 export interface CollectionI {
@@ -114,7 +124,6 @@ export interface Sale extends SaleI {
   collection: CollectionI;
 }
 
-
 /* Ranking */
 
 export interface RankingI {
@@ -129,4 +138,21 @@ export interface RankingI {
   owners: number;
   items: number;
   sales: number;
+}
+
+/* Pool */
+
+export interface PoolI {
+  txId: string;
+  round: number;
+  ts: number;
+  poolId: number;
+  tokA: number;
+  tokB: number;
+}
+
+/* Position */
+
+export interface PositionI extends PoolI {
+  balance: BigInt;
 }

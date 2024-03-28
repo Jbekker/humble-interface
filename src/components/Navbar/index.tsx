@@ -322,7 +322,12 @@ const Navbar = () => {
       >
         <NavContainer>
           <Link to="/">
-            <NavLogo src={HPLogo} alt="HumblePact Logo" />
+            {/*<NavLogo src={HPLogo} alt="HumblePact Logo" />*/}
+            <NavLogo
+              src={
+                "https://app.humble.sh/static/media/logo-black.713382823e568c5c4d594cfd38f180f5.svg"
+              }
+            />
           </Link>
           <NavButtonGroup sx={{ display: { xs: "none", md: "flex" } }}>
             {[

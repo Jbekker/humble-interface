@@ -3,6 +3,8 @@ import React, { FC } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import TokenSelect from "../TokenSelect";
+import { ARC200TokenI } from "../../types";
+import { tokenSymbol } from "../../utils/dex";
 
 const MaxButton = styled.div`
   display: flex;
@@ -355,15 +357,35 @@ const WalletIcon = () => {
 };
 
 interface SwapProps {
+  poolId?: number;
+  tokenId?: number;
   label: string;
   amount: string;
   setAmount: (amount: string) => void;
+  token?: ARC200TokenI;
+  setToken: (token: ARC200TokenI) => void;
+  options?: ARC200TokenI[];
+  balance?: string;
+  onFocus: () => void;
 }
-const Swap: FC<SwapProps> = ({ label, amount, setAmount }) => {
-  /* Theme */
+const Swap: FC<SwapProps> = ({
+  label,
+  amount,
+  setAmount,
+  token,
+  setToken,
+  options,
+  balance,
+  onFocus,
+}) => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
+  const handleMaxClick = () => {
+    if (balance) {
+      setAmount(balance);
+    }
+  };
   return (
     <SwapTokenContainer className={isDarkTheme ? "dark" : "light"}>
       <SwapTokenLabel className={isDarkTheme ? "dark" : "light"}>
@@ -393,12 +415,16 @@ const Swap: FC<SwapProps> = ({ label, amount, setAmount }) => {
             </TokenLogo>
             <TokenButtonContainer>
               <TokenButtonWrapper>
-                <TokenSelect />
+                <TokenSelect
+                  token={token}
+                  options={options}
+                  onSelect={setToken}
+                />
                 <TokenLabel className={isDarkTheme ? "dark" : "light"}>
-                  Algorand
+                  {tokenSymbol(token)}
                 </TokenLabel>
                 <TokenIdContainer>
-                  <TokenIdLabel>ID: 0</TokenIdLabel>
+                  <TokenIdLabel>ID: {token?.tokenId || 0}</TokenIdLabel>
                 </TokenIdContainer>
               </TokenButtonWrapper>
             </TokenButtonContainer>
@@ -415,12 +441,14 @@ const Swap: FC<SwapProps> = ({ label, amount, setAmount }) => {
               <Input
                 className={isDarkTheme ? "dark" : "light"}
                 placeholder="0.00"
+                onKeyDown={() => onFocus()}
                 onChange={(e) => setAmount(e.target.value)}
+                value={amount}
               />
             </TokenInputContainer>
           </TokenInput>
           <InputValueHelperText className={isDarkTheme ? "dark" : "light"}>
-            ~ 0 ALGO
+            ~ 0 VOI
           </InputValueHelperText>
         </TokenInputGroup>
       </Row1>
@@ -430,9 +458,14 @@ const Swap: FC<SwapProps> = ({ label, amount, setAmount }) => {
           <BalanceLabel className={isDarkTheme ? "dark" : "light"}>
             Your balance:
           </BalanceLabel>
-          <BalanceValue>0 ALGO</BalanceValue>
+          <BalanceValue>
+            {balance || ""} {tokenSymbol(token)}
+          </BalanceValue>
         </BalanceContainer>
-        <MaxButton className={isDarkTheme ? "dark" : "light"}>
+        <MaxButton
+          onClick={handleMaxClick}
+          className={isDarkTheme ? "dark" : "light"}
+        >
           <MaxButtonLabel>Max</MaxButtonLabel>
         </MaxButton>
       </Row2>

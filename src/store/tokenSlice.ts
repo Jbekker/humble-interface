@@ -1,63 +1,25 @@
 // reducers.ts
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
 import db from "../db";
 import { RootState } from "./store";
-import { NFTIndexerToken, Token } from "../types";
-import { decodeRoyalties } from "../utils/hf";
+import { ARC200TokenI } from "../types";
 
 export interface TokensState {
-  tokens: Token[];
+  tokens: ARC200TokenI[];
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
 }
 
 export const getTokens = createAsyncThunk<
-  Token[],
+  ARC200TokenI[],
   void,
   { rejectValue: string; state: RootState }
 >("tokens/getTokens", async (_, { getState, rejectWithValue }) => {
   try {
     const tokenTable = db.table("tokens");
     const tokens = await tokenTable.toArray();
-    const lastRound =
-      tokens.length > 0
-        ? Math.max(...tokens.map((token) => token.mintRound))
-        : 0;
-    const response = await axios.get(
-      "https://arc72-idx.voirewards.com/nft-indexer/v1/tokens",
-      {
-        params: {
-          "mint-min-round": lastRound,
-        },
-      }
-    );
-    const newTokens = response.data.tokens.filter(
-      (token: NFTIndexerToken) => token["mint-round"] > lastRound
-    );
-    await db.table("tokens").bulkPut(
-      newTokens.map((token: NFTIndexerToken) => {
-        return {
-          pk: `${token.contractId}-${token.tokenId}`,
-          owner: token.owner,
-          approved: token.approved,
-          tokenId: token.tokenId,
-          contractId: token.contractId,
-          mintRound: token["mint-round"],
-          metadataURI: token.metadataURI,
-          metadata: token.metadata,
-        };
-      })
-    );
-    return [...tokens, ...newTokens].map((token: any) => {
-      const metadata = JSON.parse(token.metadata);
-      const royalties = decodeRoyalties(metadata.royalties);
-      return {
-        ...token,
-        metadata: JSON.parse(token.metadata),
-        royalties,
-      };
-    }) as Token[];
+    console.log(tokens);
+    return [...tokens];
   } catch (error: any) {
     return rejectWithValue(error.message);
   }
