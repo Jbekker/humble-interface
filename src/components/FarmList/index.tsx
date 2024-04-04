@@ -1,9 +1,12 @@
 import styled from "@emotion/styled";
-import React, { FC } from "react";
+import React, { FC, useEffect, useState } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import PoolCard from "../PoolCard";
-import { ARC200LPTokenI, ARC200TokenI, PoolI } from "../../types";
+import { ARC200LPTokenI, ARC200TokenI, FarmI, PoolI } from "../../types";
+import FarmCard from "../FarmCard";
+import { getAlgorandClients } from "../../wallets";
+import moment from "moment";
 
 const PopularPoolsRoot = styled.div`
   width: 90%;
@@ -484,59 +487,66 @@ const SwapButtonLabel = styled.div`
 `;
 
 interface PoolListProps {
+  farms: FarmI[];
   pools: PoolI[];
   tokens: ARC200TokenI[];
 }
 
-const PoolList: FC<PoolListProps> = ({ pools, tokens }) => {
+const FarmList: FC<PoolListProps> = ({ farms, pools, tokens }) => {
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
+  const [round, setRound] = useState<number>(0);
+  // EFFECT get current round
+  useEffect(() => {
+    const { algodClient } = getAlgorandClients();
+    algodClient
+      .status()
+      .do()
+      .then((r: any) => {
+        setRound(r["last-round"]);
+      });
+  }, []);
+  const [timestamp, setTimestamp] = useState<number>(moment().unix());
   return (
     <PopularPoolsRoot className={isDarkTheme ? "dark" : "light"}>
       <HeadingRow className="heading-row">
-        <SectionTitle>Popular Pools</SectionTitle>
+        <SectionTitle>Popular Farms</SectionTitle>
       </HeadingRow>
       <Columns>
         <Heading>
           <ColumnPair>
-            <ColumnLabel>Pair</ColumnLabel>
+            <ColumnLabel>&nbsp;</ColumnLabel>
           </ColumnPair>
           <ColumnTVL>
-            <ColumnLabel>TVL</ColumnLabel>
+            <ColumnLabel>Rewards</ColumnLabel>
             <InfoCircleIcon />
           </ColumnTVL>
           <ColumnVolume>
-            <ColumnLabel>Volume</ColumnLabel>
+            <ColumnLabel>APR</ColumnLabel>
             <InfoCircleIcon />
           </ColumnVolume>
           <ColumnAPR>
-            <ColumnLabel>APR</ColumnLabel>
+            <ColumnLabel>TVL</ColumnLabel>
             <InfoCircleIcon />
           </ColumnAPR>
         </Heading>
       </Columns>
-      {pools.length > 0 ? (
-        pools.map((p: PoolI) => (
-          <PoolCard
-            key={p.poolId}
-            pool={p}
-            tokA={
-              tokens?.find((t: ARC200TokenI) => t.tokenId === p.tokA) ||
-              ({} as ARC200TokenI)
-            }
-            tokB={
-              tokens?.find((t: ARC200TokenI) => t.tokenId === p.tokB) ||
-              ({} as ARC200TokenI)
-            }
+      {farms.length > 0 ? (
+        farms.map((f: FarmI) => (
+          <FarmCard
+            key={f.poolId}
+            farm={f}
+            round={round}
+            timestamp={timestamp}
           />
         ))
       ) : (
-        <div>No pools</div>
+        <div>No farms</div>
       )}
     </PopularPoolsRoot>
   );
 };
 
-export default PoolList;
+export default FarmList;

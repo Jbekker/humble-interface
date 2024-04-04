@@ -1,1 +1,2 @@
 export const CTCINFO_LP_WVOI_VOI = 24590736; // wVOI/VIA
+export const CTCINFO_STAKR_200 = 36898212; // STAKR-200

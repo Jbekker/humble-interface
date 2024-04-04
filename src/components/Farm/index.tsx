@@ -1,21 +1,24 @@
 import styled from "@emotion/styled";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import SwapIcon from "static/icon/icon-swap-stable-light.svg";
 import ActiveSwapIcon from "static/icon/icon-swap-active-light.svg";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
 import { Stack } from "@mui/material";
-import { arc200 } from "ulujs";
+import { CONTRACT, arc200 } from "ulujs";
 import { TOKEN_VIA } from "../../contants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import TokenInput from "../TokenInput";
 import PoolPosition from "../PoolPosition";
-import PoolList from "../PoolList";
+import FarmList from "../FarmList";
 import { getPools } from "../../store/poolSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
-import { PoolI } from "../../types";
+import { FarmI, PoolI, StakeI } from "../../types";
 import { getTokens } from "../../store/tokenSlice";
+import FarmLiquidity from "../FarmLiquidity";
+import { getFarms } from "../../store/farmSlice";
+import { getStake } from "../../store/stakeSlice";
 
 const PoolRoot = styled.div`
   display: flex;
@@ -97,7 +100,50 @@ const ButtonLabel = styled(Button)`
   line-height: 120%; /* 26.4px */
 `;
 
-const Pool = () => {
+const spec = {
+  name: "",
+  desc: "",
+  methods: [],
+  events: [
+    // poolId, who, stakeToken, rewardsToken, rewards, start, end
+    {
+      name: "Pool",
+      args: [
+        {
+          type: "uint64",
+          name: "poolId",
+        },
+        {
+          type: "address",
+          name: "who",
+        },
+        {
+          type: "uint64",
+          name: "stakeToken",
+        },
+        {
+          type: "(uint64)",
+          name: "rewardsToken",
+        },
+        {
+          type: "(uint256)",
+          name: "rewards",
+        },
+        {
+          type: "uint64",
+          name: "start",
+        },
+        {
+          type: "uint64",
+          name: "end",
+        },
+      ],
+    },
+  ],
+};
+
+const Farm = () => {
+  const { activeAccount } = useWallet();
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
@@ -111,18 +157,54 @@ const Pool = () => {
     dispatch(getPools() as unknown as UnknownAction);
   }, [dispatch]);
 
+  /* Farms */
+  const farms: FarmI[] = useSelector((state: RootState) => state.farms.farms);
+  useEffect(() => {
+    dispatch(getFarms() as unknown as UnknownAction);
+  }, [dispatch]);
+
   /* Tokens */
   const tokens = useSelector((state: RootState) => state.tokens.tokens);
   useEffect(() => {
     dispatch(getTokens() as unknown as UnknownAction);
   }, [dispatch]);
 
-  const isLoading = !pools || !tokens;
+  /* Stake */
+  const stake = useSelector((state: RootState) => state.stake.stake);
+  useEffect(() => {
+    dispatch(getStake() as unknown as UnknownAction);
+  }, [dispatch]);
+
+  const userStake = useMemo(() => {
+    if (!activeAccount || !stake) return [] as StakeI[];
+    const filteredStake = stake.filter(
+      (stake) => stake.who === activeAccount?.address || ""
+    );
+    const stakeMap = new Map<number, StakeI>();
+    for (const stake of filteredStake) {
+      if (stakeMap.has(stake.poolId)) {
+        const prevStake = stakeMap.get(stake.poolId);
+        if (prevStake?.round || 0 < stake.round) {
+          stakeMap.set(stake.poolId, stake);
+        }
+      } else {
+        stakeMap.set(stake.poolId, stake);
+      }
+    }
+    return Array.from(stakeMap.values());
+  }, [activeAccount, stake]);
+
+  const isLoading = !pools || !tokens || !farms || !stake;
 
   return !isLoading ? (
     <PoolRoot className={isDarkTheme ? "dark" : "light"}>
-      <PoolPosition />
-      <PoolList pools={pools} tokens={tokens} />
+      <FarmLiquidity
+        farms={farms}
+        pools={pools}
+        tokens={tokens}
+        stake={userStake}
+      />
+      <FarmList farms={farms} pools={pools} tokens={tokens} />
       <ViewMoreButton>
         <ButtonLabelContainer>
           <DropdownIcon />
@@ -133,4 +215,4 @@ const Pool = () => {
   ) : null;
 };
 
-export default Pool;
+export default Farm;

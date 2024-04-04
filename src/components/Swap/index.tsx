@@ -6,7 +6,7 @@ import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
 import { CircularProgress, Stack } from "@mui/material";
-import { CONTRACT, abi, arc200, swap200 } from "ulujs";
+import { CONTRACT, abi, arc200, nt200, swap200 } from "ulujs";
 import { TOKEN_VIA, TOKEN_VOI, TOKEN_WVOI1 } from "../../contants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import TokenInput from "../TokenInput";
@@ -19,6 +19,7 @@ import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import { Toast } from "react-toastify/dist/components";
 import { tokenId, tokenSymbol } from "../../utils/dex";
+import BigNumber from "bignumber.js";
 
 const spec = {
   name: "pool",
@@ -484,23 +485,23 @@ const Swap = () => {
     (state: RootState) => state.theme.isDarkTheme
   );
   const dispatch = useDispatch();
-  /* Tokens */
-  const tokens = useSelector((state: RootState) => state.tokens.tokens);
-  const tokenStatus = useSelector((state: RootState) => state.tokens.status);
-  useEffect(() => {
-    dispatch(getTokens() as unknown as UnknownAction);
-  }, [dispatch]);
   /* Pools */
   const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
-  const poolsStatus = useSelector((state: RootState) => state.pools.status);
   useEffect(() => {
     dispatch(getPools() as unknown as UnknownAction);
   }, [dispatch]);
+  /* Tokens */
+  const tokens = useSelector((state: RootState) => state.tokens.tokens);
+  useEffect(() => {
+    if (!pools) return;
+    dispatch(getTokens() as unknown as UnknownAction);
+  }, [dispatch, pools]);
 
   /* Params */
+
   const [sp] = useSearchParams();
   const paramPoolId = sp.get("poolId");
-  const paramTokenId = sp.get("tokenId");
+  // const paramTokenId = sp.get("tokenId");
 
   /* Wallet */
   const {
@@ -512,19 +513,36 @@ const Swap = () => {
   } = useWallet();
 
   const [pool, setPool] = useState<PoolI>();
+
   useEffect(() => {
-    if (!pool) return;
-    if (paramTokenId) {
+    if (!pools || !tokens || pool) return;
+    if (paramPoolId) {
       const pool = pools.find((p: PoolI) => `${p.poolId}` === `${paramPoolId}`);
       if (pool) {
-        setPool(pool);
-      } else {
-        setPool(pools[0]);
+        const token = tokens.find(
+          (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokA}`
+        );
+        setToken(token);
+        const token2 = tokens.find(
+          (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokB}`
+        );
+        setToken2(token2);
       }
-    } else {
-      setPool(pools[0]);
     }
-  }, [pools, paramPoolId]);
+  }, [pool, pools, tokens]);
+
+  // useEffect(() => {
+  //   if (!pool) return;
+  //   const tokenA = tokens.find(
+  //     (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokA}`
+  //   );
+  //   const tokenB = tokens.find(
+  //     (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokB}`
+  //   );
+  //   console.log({ tokenA, tokenB });
+  //   setToken(tokenA);
+  //   setToken2(tokenB);
+  // }, [pool, tokens]);
 
   const [accInfo, setAccInfo] = React.useState<any>(null);
   const [focus, setFocus] = useState<"from" | "to" | undefined>();
@@ -570,12 +588,18 @@ const Swap = () => {
     });
   }, [pools, token, token2]);
 
-  useEffect(() => {
-    setPool(eligiblePools[0]);
-  }, [eligiblePools]);
+  // useEffect(() => {
+  //   setPool(eligiblePools[0]);
+  // }, [eligiblePools]);
 
   const [info, setInfo] = useState<any>();
   useEffect(() => {
+    if (!token || !token2) return;
+    const pool = pools.find(
+      (p: PoolI) =>
+        [p.tokA, p.tokB].includes(tokenId(token)) &&
+        [p.tokA, p.tokB].includes(tokenId(token2))
+    );
     if (!pool) return;
     const { algodClient, indexerClient } = getAlgorandClients();
     const ci = new swap200(pool.poolId, algodClient, indexerClient);
@@ -597,7 +621,7 @@ const Swap = () => {
         }))(info.returnValue)
       );
     });
-  }, [pool]);
+  }, [token, token2]);
 
   console.log({ info });
 
@@ -642,11 +666,17 @@ const Swap = () => {
 
   // EFFECT: update toAmount and actual outcome on fromAmount change
   useEffect(() => {
-    if (!pool || !token || !token2 || !fromAmount || focus !== "from") return;
+    if (!token || !token2 || !fromAmount || focus !== "from") return;
     if (focus === undefined || fromAmount === "") {
       setToAmount("");
       return;
     }
+    const pool = pools.find(
+      (p: PoolI) =>
+        [p.tokA, p.tokB].includes(tokenId(token)) &&
+        [p.tokA, p.tokB].includes(tokenId(token2))
+    );
+    if (!pool) return;
     // check that tokens match pool
     const { algodClient, indexerClient } = getAlgorandClients();
     const acc = {
@@ -685,23 +715,18 @@ const Swap = () => {
     }
   }, [pool, token, token2, fromAmount, focus]);
 
-  console.log("actualOutcome", actualOutcome);
-
-  const slippage = useMemo(() => {
-    if (!actualOutcome || !expectedOutcome) return;
-    return (
-      (Math.abs(Number(expectedOutcome) - Number(actualOutcome)) /
-        Number(expectedOutcome)) *
-      100
-    ).toFixed(2);
-  }, [actualOutcome, expectedOutcome]);
-
   useEffect(() => {
-    if (!pool || !token || !token2 || !toAmount || focus !== "to") return;
+    if (!token || !token2 || !toAmount || focus !== "to") return;
     if (focus === undefined || toAmount === "") {
       setFromAmount("");
       return;
     }
+    const pool = pools.find(
+      (p: PoolI) =>
+        [p.tokA, p.tokB].includes(tokenId(token)) &&
+        [p.tokA, p.tokB].includes(tokenId(token2))
+    );
+    if (!pool) return;
     const { algodClient, indexerClient } = getAlgorandClients();
     const acc = {
       addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
@@ -736,62 +761,18 @@ const Swap = () => {
     }
   }, [pool, token, token2, toAmount, focus]);
 
+  console.log("actualOutcome", actualOutcome);
+
+  const slippage = useMemo(() => {
+    if (!actualOutcome || !expectedOutcome) return;
+    return (
+      (Math.abs(Number(expectedOutcome) - Number(actualOutcome)) /
+        Number(expectedOutcome)) *
+      100
+    ).toFixed(2);
+  }, [actualOutcome, expectedOutcome]);
+
   const isValid = !!token && !!token2 && !!fromAmount && !!toAmount;
-
-  // EFFECT
-  useEffect(() => {
-    if (
-      tokenStatus !== "succeeded" ||
-      !tokens ||
-      token ||
-      token2 ||
-      tokens.length === 0
-    )
-      return;
-    setToken(tokens[0]);
-    const options = new Set<ARC200TokenI>();
-    for (const p of pools) {
-      if ([p.tokA, p.tokB].includes(tokenId(tokens[0]))) {
-        if (tokenId(tokens[0]) === p.tokA) {
-          options.add(
-            tokens.find(
-              (t: ARC200TokenI) => `${t.tokenId}` === `${p.tokB}`
-            ) as ARC200TokenI
-          );
-        } else {
-          options.add(
-            tokens.find(
-              (t: ARC200TokenI) => `${t.tokenId}` === `${p.tokA}`
-            ) as ARC200TokenI
-          );
-        }
-      }
-    }
-    setToken2(Array.from(options)[0]);
-  }, [tokens, pools, token, token2, tokenStatus]);
-
-  // EFFECT
-  useEffect(() => {
-    if (!tokens || !pool) return;
-    const tokenA = tokens.find(
-      (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokA}`
-    );
-    const tokenB = tokens.find(
-      (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokB}`
-    );
-    if (paramTokenId) {
-      if (`${paramTokenId}` === `${tokenA?.tokenId}`) {
-        setToken(tokenA);
-        setToken2(tokenB);
-      } else {
-        setToken(tokenB);
-        setToken2(tokenA);
-      }
-    } else {
-      setToken(tokenA);
-      setToken2(tokenB);
-    }
-  }, [tokens, pool, paramTokenId]);
 
   // EFFECT: reset amounts on token change
   useEffect(() => {
@@ -821,7 +802,7 @@ const Swap = () => {
     }
     const tokenOptions2 = Array.from(options);
     // check if token options includes wVOI
-    if (tokenOptions2.find((t: ARC200TokenI) => t.tokenId === TOKEN_WVOI1)) {
+    if (tokenOptions2.find((t: ARC200TokenI) => t?.tokenId === TOKEN_WVOI1)) {
       setTokenOptions2([
         {
           tokenId: 0,
@@ -830,13 +811,12 @@ const Swap = () => {
           decimals: 6,
           totalSupply: BigInt(10_000_000_000 * 1e6),
         },
+        ...tokenOptions2,
       ]);
     } else {
-      setTokenOptions2(Array.from(options));
+      setTokenOptions2(tokenOptions2);
     }
-    //setTokenOptions2(Array.from(options));
-    setToken2(Array.from(options)[0]);
-  }, [token, pools]);
+  }, [pool, token, pools]);
 
   // EFFECT: get token balance
   useEffect(() => {
@@ -964,21 +944,21 @@ const Swap = () => {
               {
                 ...abi.arc200,
                 methods: [
-                  ...abi.arc200.methods,
-                  {
-                    name: "deposit",
-                    args: [
-                      {
-                        name: "amount",
-                        type: "uint64",
-                        desc: "Amount to deposit",
-                      },
-                    ],
-                    returns: {
-                      type: "uint256",
-                      desc: "Amount deposited",
-                    },
-                  },
+                  ...abi.nt200.methods,
+                  // {
+                  //   name: "deposit",
+                  //   args: [
+                  //     {
+                  //       name: "amount",
+                  //       type: "uint64",
+                  //       desc: "Amount to deposit",
+                  //     },
+                  //   ],
+                  //   returns: {
+                  //     type: "uint256",
+                  //     desc: "Amount deposited",
+                  //   },
+                  // },
                 ],
               },
               acc,
@@ -1013,19 +993,40 @@ const Swap = () => {
         // ---------------------------------------
         console.log("ensure approval for tokA");
         do {
-          const ci = new arc200(tokA, algodClient, indexerClient, {
-            acc: {
+          const ci = new CONTRACT(
+            tokA,
+            algodClient,
+            indexerClient,
+            abi.arc200,
+            {
               addr: activeAccount?.address || "",
               sk: new Uint8Array(0),
-            },
-          });
+            }
+          );
           const arc200_approveR = await ci.arc200_approve(
             algosdk.getApplicationAddress(poolId),
-            BigInt(0),
-            true,
-            false
+            BigInt(0)
           );
-          if (!arc200_approveR.success) return new Error("Approve failed");
+          if (!arc200_approveR.success) {
+            ci.setPaymentAmount(28100);
+            const arc200_approveR = await ci.arc200_approve(
+              algosdk.getApplicationAddress(poolId),
+              BigInt(0)
+            );
+            if (!arc200_approveR.success) return new Error("Approval failed");
+            await toast.promise(
+              signTransactions(
+                arc200_approveR.txns.map(
+                  (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+                )
+              ).then(sendTransactions),
+              {
+                pending: `Approve ${token.symbol} for swap`,
+                success: `Approval successful!`,
+                //error: "Approval failed",
+              }
+            );
+          }
         } while (0);
         console.log("tokA approval ok");
         // ---------------------------------------
@@ -1050,22 +1051,60 @@ const Swap = () => {
               false
             );
             if (!arc200_transferR.success) return new Error("Transfer failed");
-            await signTransactions(
-              arc200_transferR.txns.map(
-                (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-              )
-            ).then(sendTransactions);
+            await toast.promise(
+              signTransactions(
+                arc200_transferR.txns.map(
+                  (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+                )
+              ).then(sendTransactions),
+              {
+                pending: `Transfer ${token2.symbol} to wallet`,
+                success: `Transfer successful!`,
+                //error: "Transfer failed",
+              },
+              {
+                type: "default",
+                position: "top-center",
+                theme: isDarkTheme ? "dark" : "light",
+              }
+            );
           }
         } while (0);
         // ---------------------------------------
-
+        // if tokA wVOI ensure tokA balance
+        // ---------------------------------------
+        do {
+          const ci = new CONTRACT(tokA, algodClient, indexerClient, abi.nt200, {
+            addr: activeAccount?.address || "",
+            sk: new Uint8Array(0),
+          });
+          const createBalanceBoxR = await ci.createBalanceBox(
+            activeAccount.address
+          );
+          if (createBalanceBoxR.success) {
+            await toast.promise(
+              signTransactions(
+                createBalanceBoxR.txns.map(
+                  (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+                )
+              ).then(sendTransactions),
+              {
+                pending: `Setup wallet to receive ${token.symbol}`,
+                success: `Wallet setup complete!`,
+                //error: "Wallet setup failed",
+              }
+            );
+          }
+        } while (0);
+        // ---------------------------------------
         const inA = Number(fromAmount) * 10 ** token.decimals;
         const Trader_swapAForBR = await ci.Trader_swapAForB(1, inA, 0);
-        console.log({ Trader_swapAForBR });
         if (!Trader_swapAForBR.success)
           return new Error("Swap simulation failed");
         const [, outB] = Trader_swapAForBR.returnValue;
-        const outBSl = Math.round(Number(outB) * 0.995); // 0.5% slippage
+        const outBSl = BigInt(
+          new BigNumber(outB).multipliedBy(0.995).toFixed(0)
+        ); // 0.5% slippage
         const builder = makeBuilder(poolId, tokA, tokB);
         const poolAddr = algosdk.getApplicationAddress(poolId);
         const buildN = [];
@@ -1080,7 +1119,7 @@ const Swap = () => {
           const ci = makeCi(tokA);
           ci.setFee(4000);
           ci.setPaymentAmount(inA);
-          ci.setAccounts([poolAddr]);
+          ci.setAccounts([algosdk.getApplicationAddress(tokA)]);
           ci.setEnableGroupResourceSharing(true);
           ci.setExtraTxns(buildP);
           customR = await ci.custom();
@@ -1090,7 +1129,6 @@ const Swap = () => {
           ci.setExtraTxns(buildP);
           customR = await ci.custom();
         }
-        console.log({ customR });
         if (!customR.success) return new Error("Swap group simulation failed");
         await toast.promise(
           signTransactions(
@@ -1212,7 +1250,6 @@ const Swap = () => {
               if (!createBalanceBoxR.success) {
                 break;
               }
-              //
               await toast.promise(
                 signTransactions(
                   createBalanceBoxR.txns.map(
@@ -1271,11 +1308,14 @@ const Swap = () => {
           builder.arc200.tokB.arc200_approve(poolAddr, inB),
           builder.pool.Trader_swapBForA(0, inB, outASl),
         ];
+        if (token2.tokenId === 0) {
+          buildN.push(builder.arc200.tokA.withdraw(outA));
+        }
         const buildP = (await Promise.all(buildN)).map((res: any) => res.obj);
         let customR;
         if ([tokA, tokB].includes(TOKEN_WVOI1)) {
           const ci = makeCi(tokB);
-          ci.setPaymentAmount(28500);
+          // //ci.setPaymentAmount(28500);
           ci.setFee(4000);
           ci.setAccounts([poolAddr]);
           ci.setEnableGroupResourceSharing(true);

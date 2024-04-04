@@ -156,3 +156,31 @@ export interface PoolI {
 export interface PositionI extends PoolI {
   balance: BigInt;
 }
+
+/* Farm */
+
+export interface FarmI {
+  txId: string;
+  round: number;
+  ts: number;
+  poolId: number;
+  who: string;
+  stakeToken: number;
+  rewardsToken: number;
+  rewards: number;
+  start: number;
+  end: number;
+}
+
+/* Stake */
+
+export interface StakeI {
+  txId: string;
+  round: number;
+  ts: number;
+  poolId: number;
+  who: string;
+  stakeAmount: number;
+  staked: number;
+  totalStaked: number;
+}

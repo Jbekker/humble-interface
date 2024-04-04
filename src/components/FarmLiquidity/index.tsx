@@ -1,14 +1,65 @@
 import styled from "@emotion/styled";
-import React from "react";
+import React, { FC, useEffect } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
-import { ARC200TokenI, PoolI, PositionI } from "../../types";
+import { ARC200TokenI, FarmI, PoolI, PositionI, StakeI } from "../../types";
 import { arc200 } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
 import { useWallet } from "@txnlab/use-wallet";
 import { Link } from "react-router-dom";
 import { tokenSymbol } from "../../utils/dex";
 import { Stack } from "@mui/material";
+import FarmCard from "../FarmCard";
+
+const Columns = styled.div`
+  display: flex;
+  padding: 1px 0px;
+  justify-content: center;
+  align-items: baseline;
+  gap: 10px;
+  align-self: stretch;
+`;
+
+const Heading = styled.div`
+  display: flex;
+  padding: var(--Spacing-600, 12px) var(--Spacing-700, 16px);
+  align-items: flex-start;
+  align-self: stretch;
+  border-radius: var(--Radius-500, 12px);
+`;
+
+const Column = styled.div`
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 16px;
+`;
+
+const ColumnPair = styled(Column)`
+  width: 234px;
+`;
+
+const ColumnTVL = styled(Column)`
+  width: 97px;
+`;
+
+const ColumnVolume = styled(Column)`
+  width: 98px;
+`;
+
+const ColumnAPR = styled(Column)``;
+
+const ColumnLabel = styled.div`
+  color: var(--Color-Brand-Element-Primary, #fff);
+  leading-trim: both;
+  text-edge: cap;
+  font-feature-settings: "clig" off, "liga" off;
+  font-family: "Plus Jakarta Sans";
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 120%; /* 15.6px */
+`;
 
 const YourLiquidityRoot = styled.div`
   width: 90%;
@@ -85,25 +136,59 @@ const MessageText = styled.div`
   line-height: 120%; /* 18px */
 `;
 
-const YourLiquidity = () => {
+const InfoCircleIcon = () => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+    >
+      <path
+        d="M7.99992 14.6673C11.6666 14.6673 14.6666 11.6673 14.6666 8.00065C14.6666 4.33398 11.6666 1.33398 7.99992 1.33398C4.33325 1.33398 1.33325 4.33398 1.33325 8.00065C1.33325 11.6673 4.33325 14.6673 7.99992 14.6673Z"
+        stroke="white"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M8 8V11.3333"
+        stroke="white"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M7.99634 5.33398H8.00233"
+        stroke="white"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  );
+};
+
+interface FarmLiquidityProps {
+  farms: FarmI[];
+  pools: PoolI[];
+  tokens: ARC200TokenI[];
+  stake: StakeI[];
+}
+
+const FarmLiquidity: FC<FarmLiquidityProps> = ({
+  pools,
+  tokens,
+  stake,
+  farms,
+}) => {
   const { activeAccount } = useWallet();
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
   const dispatch = useDispatch();
-  const tokens: ARC200TokenI[] = useSelector(
-    (state: RootState) => state.tokens.tokens
-  );
-  const tokenStatus = useSelector((state: RootState) => state.tokens.status);
-  // React.useEffect(() => {
-  //   dispatch(getTokens() as unknown as UnknownAction);
-  // }, [dispatch]);
-  const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
-  const poolsStatus = useSelector((state: RootState) => state.pools.status);
-  // React.useEffect(() => {
-  //   dispatch(getPools() as unknown as UnknownAction);
-  // }, [dispatch]);
 
   const [positions, setPositions] = React.useState<PositionI[]>([]);
   React.useEffect(() => {
@@ -141,56 +226,45 @@ const YourLiquidity = () => {
   return (
     <YourLiquidityRoot className={isDarkTheme ? "dark" : "light"}>
       <HeadingRow className="heading-row">
-        <SectionTitle>Your Liquidity</SectionTitle>
+        <SectionTitle>Farm Liquidity</SectionTitle>
       </HeadingRow>
+      <Columns>
+        <Heading>
+          <ColumnPair>
+            <ColumnLabel>&nbsp;</ColumnLabel>
+          </ColumnPair>
+          <ColumnTVL>
+            <ColumnLabel>Rewards</ColumnLabel>
+            <InfoCircleIcon />
+          </ColumnTVL>
+          <ColumnVolume>
+            <ColumnLabel>APR</ColumnLabel>
+            <InfoCircleIcon />
+          </ColumnVolume>
+          <ColumnAPR>
+            <ColumnLabel>TVL</ColumnLabel>
+            <InfoCircleIcon />
+          </ColumnAPR>
+        </Heading>
+      </Columns>
       <Body>
-        {positions.length > 0 ? (
-          <Stack spacing={2}>
-            {positions.map((position) => (
-              <div
+        {stake.length > 0 ? (
+          <Stack spacing={2} sx={{ width: "100%" }}>
+            {stake.map((position) => (
+              <FarmCard
                 key={position.poolId}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignSelf: "center",
-                  width: "100%",
-                  padding: "1px 0px",
-                  alignItems: "baseline",
-                  gap: "10px",
-                }}
-              >
-                <div>
-                  {tokenSymbol(
-                    tokens.find((token) => token.tokenId === position.tokA),
-                    true
-                  )}
-                  {" / "}
-                  {tokenSymbol(
-                    tokens.find((token) => token.tokenId === position.tokB),
-                    true
-                  )}
-                </div>
-                <div>{position.poolId}</div>
-                <div>{(Number(position.balance) / 10 ** 6).toFixed(6)}</div>
-                <div>
-                  <Link to={`/pool/add?poolId=${position.poolId}`}>
-                    <button>Add more</button>
-                  </Link>
-                  <Link to={`/pool/remove?poolId=${position.poolId}`}>
-                    <button>Remove</button>
-                  </Link>
-                </div>
-              </div>
+                farm={farms.find((farm) => farm.poolId === position.poolId)}
+                round={0}
+                timestamp={0}
+              />
             ))}
           </Stack>
         ) : (
-          <MessageText className="message-text">
-            No liquidity pools found
-          </MessageText>
+          <MessageText className="message-text">No farms found</MessageText>
         )}
       </Body>
     </YourLiquidityRoot>
   );
 };
 
-export default YourLiquidity;
+export default FarmLiquidity;

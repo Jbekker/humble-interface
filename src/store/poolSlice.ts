@@ -92,43 +92,46 @@ export const getPools = createAsyncThunk<
         })
       );
     }
-    const newTokens: any[] = [];
-    for (const pool of newPools) {
-      newTokens.push(pool.poolId);
-      if (
-        !tokens.find((token) => token.tokenId === pool.tokA) &&
-        !newTokens.find((token) => token.tokenId === pool.tokA)
-      ) {
-        newTokens.push(pool.tokA);
-      }
-      if (
-        !tokens.find((token) => token.tokenId === pool.tokB) &&
-        !newTokens.find((token) => token.tokenId === pool.tokB)
-      ) {
-        newTokens.push(pool.tokB);
-      }
-    }
-    for (const tokenId of newTokens) {
-      const ci = makeCi(tokenId);
-      const arc200_nameR = await ci.arc200_name();
-      const arc200_symbolR = await ci.arc200_symbol();
-      const arc200_decimalsR = await ci.arc200_decimals();
-      const arc200_totalSupplyR = await ci.arc200_totalSupply();
-      if (
-        arc200_nameR.success &&
-        arc200_symbolR.success &&
-        arc200_decimalsR.success &&
-        arc200_totalSupplyR.success
-      ) {
-        await db.table("tokens").put({
-          tokenId,
-          name: arc200_nameR.returnValue,
-          symbol: arc200_symbolR.returnValue,
-          decimals: Number(arc200_decimalsR.returnValue),
-          totalSupply: arc200_totalSupplyR.returnValue,
-        });
-      }
-    }
+    // const newTokens: any[] = [];
+    // for (const pool of newPools) {
+    //   newTokens.push(pool.poolId);
+    //   if (
+    //     !tokens.find((token) => token.tokenId === pool.tokA) &&
+    //     !newTokens.find((token) => token.tokenId === pool.tokA)
+    //   ) {
+    //     newTokens.push(pool.tokA);
+    //   }
+    //   if (
+    //     !tokens.find((token) => token.tokenId === pool.tokB) &&
+    //     !newTokens.find((token) => token.tokenId === pool.tokB)
+    //   ) {
+    //     newTokens.push(pool.tokB);
+    //   }
+    // }
+    // const dbTokens = []
+    // for (const tokenId of newTokens) {
+    //   const ci = makeCi(tokenId);
+    //   const arc200_nameR = await ci.arc200_name();
+    //   const arc200_symbolR = await ci.arc200_symbol();
+    //   const arc200_decimalsR = await ci.arc200_decimals();
+    //   const arc200_totalSupplyR = await ci.arc200_totalSupply();
+    //   if (
+    //     arc200_nameR.success &&
+    //     arc200_symbolR.success &&
+    //     arc200_decimalsR.success &&
+    //     arc200_totalSupplyR.success
+    //   ) {
+
+    //     dbTokens.push({
+    //       tokenId,
+    //       name: arc200_nameR.returnValue,
+    //       symbol: arc200_symbolR.returnValue,
+    //       decimals: Number(arc200_decimalsR.returnValue),
+    //       totalSupply: arc200_totalSupplyR.returnValue,
+    //     });
+    //   }
+    // }
+    // await db.table("tokens").bulkPut(dbTokens);
     const wl: number[] = [];
     return ([...pools, ...newPools] as Pool[]).filter(
       (pool) =>

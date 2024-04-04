@@ -21,6 +21,7 @@ import { Toast } from "react-toastify/dist/components";
 import axios from "axios";
 import { hasAllowance } from "ulujs/types/arc200";
 import { tokenId, tokenSymbol } from "../../utils/dex";
+import BigNumber from "bignumber.js";
 
 const spec = {
   name: "pool",
@@ -768,19 +769,33 @@ const Swap = () => {
       addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
       sk: new Uint8Array(0),
     });
+    const fromAmountBI = BigInt(
+      new BigNumber(fromAmount.replace(/,/g, ""))
+        .multipliedBy(new BigNumber(10).pow(token.decimals))
+        .toFixed(0)
+    );
+    const toAmountBI = BigInt(
+      new BigNumber(toAmount.replace(/,/g, ""))
+        .multipliedBy(new BigNumber(10).pow(token2.decimals))
+        .toFixed(0)
+    );
     ci.setFee(4000);
     ci.Provider_deposit(
       1,
       swapAForB
         ? [
-            Math.round(
-              Number(fromAmount.replace(/,/g, "")) * 10 ** token.decimals
-            ),
-            Math.round(
-              Number(toAmount.replace(/,/g, "")) * 10 ** token2.decimals
-            ),
+            fromAmountBI,
+            toAmountBI,
+            // Math.round(
+            //   Number(fromAmount.replace(/,/g, "")) * 10 ** token.decimals
+            // ),
+            // Math.round(
+            //   Number(toAmount.replace(/,/g, "")) * 10 ** token2.decimals
+            // ),
           ]
         : [
+          toAmountBI,
+          fromAmountBI,
             Math.round(
               Number(toAmount.replace(/,/g, "")) * 10 ** token.decimals
             ),
@@ -1449,11 +1464,16 @@ const Swap = () => {
       // determine the direction
       if (pool.tokA === tokenId(token)) {
         console.log("depositAForB");
-        const inA = Math.round(
-          Number(fromAmount.replace(",", "")) * 10 ** token.decimals
+
+        const inA = BigInt(
+          new BigNumber(fromAmount.replace(",", ""))
+            .times(new BigNumber(10).pow(token.decimals))
+            .toFixed()
         );
-        const inB = Math.round(
-          Number(toAmount.replace(",", "")) * 10 ** token2.decimals
+        const inB = BigInt(
+          new BigNumber(toAmount.replace(",", ""))
+            .times(new BigNumber(10).pow(token2.decimals))
+            .toFixed()
         );
 
         console.log({ inA, inB });
@@ -1484,7 +1504,7 @@ const Swap = () => {
         ciTokA.setFee(4000);
         ciTokA.setBeaconId(tokA);
         if (token.tokenId === 0) {
-          ciTokA.setPaymentAmount(inA);
+          ciTokA.setPaymentAmount(Number(inA));
         }
         ciTokA.setAccounts([poolAddr]);
         ciTokA.setEnableGroupResourceSharing(true);

@@ -20,4 +20,8 @@ export const routes = [
     path: "/pool/remove",
     Component: Page.PoolRemove,
   },
+  {
+    path: "/farm",
+    Component: Page.Farm,
+  }
 ];

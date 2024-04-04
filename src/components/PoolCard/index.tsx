@@ -1,10 +1,13 @@
 import styled from "@emotion/styled";
-import React, { FC } from "react";
+import React, { FC, useEffect, useState } from "react";
 import { RootState } from "../../store/store";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { ARC200TokenI, PoolI } from "../../types";
 import { Link } from "react-router-dom";
 import { tokenSymbol } from "../../utils/dex";
+import { getToken, getTokens, updateToken } from "../../store/tokenSlice";
+import { UnknownAction } from "@reduxjs/toolkit";
+import { Skeleton } from "@mui/material";
 
 const StyledLink = styled(Link)`
   text-decoration: none;
@@ -251,7 +254,7 @@ const Col2 = styled.div`
   display: flex;
   height: 32px;
   padding: var(--Spacing-400, 8px) 0px;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
 `;
 
@@ -295,7 +298,7 @@ const Col3 = styled.div`
   display: flex;
   padding: 11px 0px var(--Spacing-400, 8px) 0px;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: baseline;
   gap: 8px;
 `;
 
@@ -304,7 +307,7 @@ const Col4 = styled.div`
   padding: var(--Spacing-600, 12px) 0px var(--Spacing-400, 8px) 0px;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
+  align-items: baseline;
   gap: 8px;
 `;
 
@@ -386,14 +389,32 @@ interface PoolCardProps {
   pool: PoolI;
   tokA: ARC200TokenI;
   tokB: ARC200TokenI;
+  balance?: string;
 }
-const PoolCard: FC<PoolCardProps> = ({ pool, tokA, tokB }) => {
+const PoolCard: FC<PoolCardProps> = ({ pool, tokA, tokB, balance }) => {
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const symbolA = tokenSymbol(tokA, true);
-  const symbolB = tokenSymbol(tokB, true);
+  const dispatch = useDispatch();
+  // EFFECT: Fetch token A if not available
+  useEffect(() => {
+    if (!tokA?.tokenId) {
+      getToken(pool.tokA).then((token) => {
+        dispatch(updateToken(token) as unknown as UnknownAction);
+      });
+    }
+  }, [dispatch]);
+  // // EFFECT: Fetch token B if not available
+  useEffect(() => {
+    if (!tokB?.tokenId) {
+      getToken(pool.tokB).then((token) => {
+        dispatch(updateToken(token) as unknown as UnknownAction);
+      });
+    }
+  }, [dispatch]);
+  const symbolA = tokA?.symbol ? tokenSymbol(tokA, true) : "...";
+  const symbolB = tokB?.symbol ? tokenSymbol(tokB, true) : "...";
   return (
     <PoolCardRoot className={isDarkTheme ? "dark" : "light"}>
       <PoolCardRow>
@@ -422,33 +443,85 @@ const PoolCard: FC<PoolCardProps> = ({ pool, tokA, tokB }) => {
             </PairInfoContainer>
           </Col1Row1>
         </Col1>
-        <Col2>
-          <TVLLabel>-</TVLLabel>
-        </Col2>
-        <Col3>
-          <VolumeLabel>-</VolumeLabel>
-        </Col3>
-        <Col4>
-          <APRLabelContainer>
-            <APRLabel>-</APRLabel>
-          </APRLabelContainer>
-        </Col4>
-        <Col5>
-          <StyledLink to={`/pool/add`}>
-            <AddButton>
-              <ButtonLabelContainer>
-                <AddButtonLabel>Add</AddButtonLabel>
-              </ButtonLabelContainer>
-            </AddButton>
-          </StyledLink>
-          <StyledLink to={`/swap?poolId=${pool.tokA}&tokenId=${pool.tokB}`}>
-            <SwapButton>
-              <ButtonLabelContainer>
-                <SwapButtonLabel>Swap</SwapButtonLabel>
-              </ButtonLabelContainer>
-            </SwapButton>
-          </StyledLink>
-        </Col5>
+        {balance ? (
+          <>
+            <Col2>
+              <TVLLabel>&nbsp;</TVLLabel>
+            </Col2>
+            <Col3>
+              <VolumeLabel>&nbsp;</VolumeLabel>
+            </Col3>
+            <Col4>
+              <APRLabelContainer>
+                <APRLabel
+                  style={{
+                    textAlign: "right",
+                  }}
+                >
+                  {balance || ""}
+                  <br />
+                  ≈0 VOI
+                </APRLabel>
+              </APRLabelContainer>
+            </Col4>
+            <Col5>
+              <StyledLink
+                to={`/pool/add?poolId=${pool.poolId}`}
+                style={{
+                  width: "100%",
+                }}
+              >
+                <AddButton>
+                  <ButtonLabelContainer>
+                    <AddButtonLabel>Add</AddButtonLabel>
+                  </ButtonLabelContainer>
+                </AddButton>
+              </StyledLink>
+              <StyledLink to={`/pool/remove?poolId=${pool.poolId}`}>
+                <SwapButton>
+                  <ButtonLabelContainer>
+                    <SwapButtonLabel>Remove</SwapButtonLabel>
+                  </ButtonLabelContainer>
+                </SwapButton>
+              </StyledLink>
+            </Col5>
+          </>
+        ) : (
+          <>
+            <Col3>
+              <TVLLabel>0 VOI</TVLLabel>
+            </Col3>
+            <Col3>
+              <VolumeLabel>0 VOI</VolumeLabel>
+            </Col3>
+            <Col4>
+              <APRLabelContainer>
+                <APRLabel>0.00%</APRLabel>
+              </APRLabelContainer>
+            </Col4>
+            <Col5>
+              <StyledLink
+                to={`/pool/add?poolId=${pool.poolId}`}
+                style={{
+                  width: "100%",
+                }}
+              >
+                <AddButton>
+                  <ButtonLabelContainer>
+                    <AddButtonLabel>Add</AddButtonLabel>
+                  </ButtonLabelContainer>
+                </AddButton>
+              </StyledLink>
+              <StyledLink to={`/swap?poolId=${pool.poolId}`}>
+                <SwapButton>
+                  <ButtonLabelContainer>
+                    <SwapButtonLabel>Swap</SwapButtonLabel>
+                  </ButtonLabelContainer>
+                </SwapButton>
+              </StyledLink>
+            </Col5>
+          </>
+        )}
       </PoolCardRow>
     </PoolCardRoot>
   );

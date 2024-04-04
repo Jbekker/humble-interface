@@ -6,6 +6,8 @@ const dexDb = new Dexie("dexDatabase");
 dexDb.version(1).stores({
   tokens: "tokenId, name, symbol, decimals, totalSupply",
   pools: "txId, round, ts, poolId, tokA, tokB",
+  farms: "txId, round, ts, poolId, who, stakeToken, rewardsToken, rewards, start, end",
+  stake: "txId, round, ts, poolId, who, amount, staked, totalStaked",
 });
 
 //const mpDb = new Dexie("mpDatabase");
