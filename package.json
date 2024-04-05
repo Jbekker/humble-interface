@@ -22,7 +22,7 @@
     "@mui/styled-engine-sc": "^6.0.0-alpha.16",
     "@perawallet/connect": "^1.3.4",
     "@reduxjs/toolkit": "^2.2.1",
-    "@txnlab/use-wallet": "github:AustP/use-wallet#fix/kibisis",
+    "@txnlab/use-wallet": "github:temptemp3/use-wallet#fix/kibisis",
     "algosdk": "^2.7.0",
     "axios": "^1.6.7",
     "bignumber.js": "^9.1.2",
