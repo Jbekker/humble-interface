@@ -519,13 +519,25 @@ const Swap = () => {
     if (paramPoolId) {
       const pool = pools.find((p: PoolI) => `${p.poolId}` === `${paramPoolId}`);
       if (pool) {
-        const token = tokens.find(
-          (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokA}`
-        );
+        const token = [TOKEN_WVOI1].includes(pool.tokA)
+          ? {
+              tokenId: 0,
+              name: "Voi",
+              symbol: "VOI",
+              decimals: 6,
+              totalSupply: BigInt(10_000_000_000 * 1e6),
+            }
+          : tokens.find((t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokA}`);
         setToken(token);
-        const token2 = tokens.find(
-          (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokB}`
-        );
+        const token2 = [TOKEN_WVOI1].includes(pool.tokB)
+          ? {
+              tokenId: 0,
+              name: "Voi",
+              symbol: "VOI",
+              decimals: 6,
+              totalSupply: BigInt(10_000_000_000 * 1e6),
+            }
+          : tokens.find((t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokB}`);
         setToken2(token2);
       }
     }
