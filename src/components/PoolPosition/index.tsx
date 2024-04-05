@@ -92,7 +92,6 @@ const PoolPosition = () => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const dispatch = useDispatch();
   const tokens: ARC200TokenI[] = useSelector(
     (state: RootState) => state.tokens.tokens
   );
@@ -127,7 +126,7 @@ const PoolPosition = () => {
       }
       setPositions(positions);
     })();
-  }, [pools]);
+  }, [activeAccount, pools]);
 
   console.log("positions", positions);
 
@@ -149,16 +148,16 @@ const PoolPosition = () => {
                 <PoolCard
                   //key={p.poolId}
                   pool={position}
-                  tokA={
-                    tokens?.find(
-                      (t: ARC200TokenI) => t.tokenId === position.tokA
-                    ) || ({} as ARC200TokenI)
-                  }
-                  tokB={
-                    tokens?.find(
-                      (t: ARC200TokenI) => t.tokenId === position.tokB
-                    ) || ({} as ARC200TokenI)
-                  }
+                  // tokA={
+                  //   tokens?.find(
+                  //     (t: ARC200TokenI) => t.tokenId === position.tokA
+                  //   ) || ({} as ARC200TokenI)
+                  //}
+                  // tokB={
+                  //   tokens?.find(
+                  //     (t: ARC200TokenI) => t.tokenId === position.tokB
+                  //   ) || ({} as ARC200TokenI)
+                  // }
                   balance={(Number(position.balance) / 10 ** 6).toFixed(6)}
                 />
                 {/*<div

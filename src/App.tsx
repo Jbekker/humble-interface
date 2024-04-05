@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { WalletProvider, useInitializeProviders } from "@txnlab/use-wallet";
 import { HashRouter as Router, Route, Routes } from "react-router-dom";
-import { Provider, useSelector } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import store, { RootState } from "./store/store";
 import Navbar from "./components/Navbar";
 import { routes } from "./routes";
@@ -10,6 +10,9 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import styled from "styled-components";
 import Layout from "./layouts/Default";
+import { getPools } from "./store/poolSlice";
+import { UnknownAction } from "@reduxjs/toolkit";
+import { getToken, getTokens } from "./store/tokenSlice";
 
 const BackgroundLayer = styled.div`
   width: 100%;
@@ -32,6 +35,30 @@ const AppContainer: React.FC<AppContainerProps> = ({ children }) => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
+  /* Dispatch */
+  const dispatch = useDispatch();
+  /* Pools */
+  const pools = useSelector((state: RootState) => state.pools.pools);
+  const poolsStatus = useSelector((state: RootState) => state.pools.status);
+  useEffect(() => {
+    dispatch(getPools() as unknown as UnknownAction);
+  }, [dispatch]);
+  const [ready, setReady] = React.useState(false);
+  useEffect(() => {
+    if (poolsStatus === "succeeded") {
+      (async () => {
+        await Promise.all([
+          ...pools.map((pool) => getToken(pool.tokA)),
+          ...pools.map((pool) => getToken(pool.tokB)),
+        ]);
+        setReady(true);
+      })();
+    }
+  }, [poolsStatus]);
+
+  const isLoading = !ready;
+
+  if (isLoading) return;
   return (
     <div
       style={{

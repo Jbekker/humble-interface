@@ -484,20 +484,8 @@ const Swap = () => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const dispatch = useDispatch();
-  /* Pools */
   const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
-  useEffect(() => {
-    dispatch(getPools() as unknown as UnknownAction);
-  }, [dispatch]);
-  /* Tokens */
   const tokens = useSelector((state: RootState) => state.tokens.tokens);
-  useEffect(() => {
-    if (!pools) return;
-    dispatch(getTokens() as unknown as UnknownAction);
-  }, [dispatch, pools]);
-
-  /* Params */
 
   const [sp] = useSearchParams();
   const paramPoolId = sp.get("poolId");

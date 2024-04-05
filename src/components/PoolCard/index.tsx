@@ -387,28 +387,30 @@ const SwapButtonLabel = styled.div`
 
 interface PoolCardProps {
   pool: PoolI;
-  tokA: ARC200TokenI;
-  tokB: ARC200TokenI;
   balance?: string;
 }
-const PoolCard: FC<PoolCardProps> = ({ pool, tokA, tokB, balance }) => {
+const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
+  const [tokA, setTokA] = useState<ARC200TokenI>();
+  const [tokB, setTokB] = useState<ARC200TokenI>();
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
   const dispatch = useDispatch();
-  // EFFECT: Fetch token A if not available
+  // EFFECT: Fetch token A
   useEffect(() => {
     if (!tokA?.tokenId) {
       getToken(pool.tokA).then((token) => {
+        setTokA(token);
         dispatch(updateToken(token) as unknown as UnknownAction);
       });
     }
   }, [dispatch]);
-  // // EFFECT: Fetch token B if not available
+  // EFFECT: Fetch token B
   useEffect(() => {
     if (!tokB?.tokenId) {
       getToken(pool.tokB).then((token) => {
+        setTokB(token);
         dispatch(updateToken(token) as unknown as UnknownAction);
       });
     }

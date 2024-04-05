@@ -1,7 +1,7 @@
 import styled from "@emotion/styled";
-import React, { FC } from "react";
+import React, { FC, useEffect } from "react";
 import { RootState } from "../../store/store";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import PoolCard from "../PoolCard";
 import { ARC200LPTokenI, ARC200TokenI, PoolI } from "../../types";
 
@@ -483,16 +483,15 @@ const SwapButtonLabel = styled.div`
   line-height: 120%; /* 16.8px */
 `;
 
-interface PoolListProps {
-  pools: PoolI[];
-  tokens: ARC200TokenI[];
-}
+interface PoolListProps {}
 
-const PoolList: FC<PoolListProps> = ({ pools, tokens }) => {
-  /* Theme */
+const PoolList: FC<PoolListProps> = () => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
+  const dispatch = useDispatch();
+  const pools = useSelector((state: RootState) => state.pools.pools);
+  const tokens = useSelector((state: RootState) => state.tokens.tokens);
   return (
     <PopularPoolsRoot className={isDarkTheme ? "dark" : "light"}>
       <HeadingRow className="heading-row">
@@ -522,14 +521,6 @@ const PoolList: FC<PoolListProps> = ({ pools, tokens }) => {
           <PoolCard
             key={p.poolId}
             pool={p}
-            tokA={
-              tokens?.find((t: ARC200TokenI) => t.tokenId === p.tokA) ||
-              ({} as ARC200TokenI)
-            }
-            tokB={
-              tokens?.find((t: ARC200TokenI) => t.tokenId === p.tokB) ||
-              ({} as ARC200TokenI)
-            }
           />
         ))
       ) : (

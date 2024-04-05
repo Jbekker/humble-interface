@@ -96,27 +96,10 @@ const Pool = () => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-
-  const dispatch = useDispatch();
-
-  /* Pools */
-  const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
-  useEffect(() => {
-    dispatch(getPools() as unknown as UnknownAction);
-  }, [dispatch]);
-
-  /* Tokens */
-  const tokens = useSelector((state: RootState) => state.tokens.tokens);
-  useEffect(() => {
-    dispatch(getTokens() as unknown as UnknownAction);
-  }, [dispatch]);
-
-  const isLoading = !pools || !tokens;
-
-  return !isLoading ? (
+  return (
     <PoolRoot className={isDarkTheme ? "dark" : "light"}>
       {activeAccount ? <PoolPosition /> : null}
-      <PoolList pools={pools} tokens={tokens} />
+      <PoolList />
       <ViewMoreButton>
         <ButtonLabelContainer>
           <DropdownIcon />
@@ -124,7 +107,7 @@ const Pool = () => {
         </ButtonLabelContainer>
       </ViewMoreButton>
     </PoolRoot>
-  ) : null;
+  );
 };
 
 export default Pool;
