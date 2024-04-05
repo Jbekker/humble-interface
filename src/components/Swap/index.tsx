@@ -681,32 +681,39 @@ const Swap = () => {
     const ci = new CONTRACT(pool.poolId, algodClient, indexerClient, spec, acc);
     ci.setFee(4000);
     if (pool.tokA === tokenId(token)) {
-      ci.Trader_swapAForB(1, Number(fromAmount) * 10 ** token.decimals, 0).then(
-        (r: any) => {
-          if (r.success) {
-            const toAmount = (
-              Number(r.returnValue[1]) /
-              10 ** token2.decimals
-            ).toLocaleString();
-            setActualOutcome(toAmount);
-            setToAmount(toAmount);
-          }
-        }
+      const fromAmountBN = new BigNumber(fromAmount);
+      if (fromAmountBN.isNaN()) return;
+      const fromAmountBI = BigInt(
+        fromAmountBN.multipliedBy(10 ** token.decimals).toFixed()
       );
+      ci.Trader_swapAForB(1, fromAmountBI, 0).then((r: any) => {
+        if (r.success) {
+          const toAmountBN = new BigNumber(r.returnValue[1]);
+          if (toAmountBN.isNaN()) return;
+          const toAmount = toAmountBN
+            .div(10 ** token2.decimals)
+            .toFixed(token2.decimals);
+          setActualOutcome(toAmount);
+          setToAmount(toAmount);
+        }
+      });
     } else if (pool.tokB === tokenId(token)) {
-      ci.Trader_swapBForA(1, Number(fromAmount) * 10 ** token.decimals, 0).then(
-        (r: any) => {
-          if (r.success) {
-            console.log({ r });
-            const toAmount = (
-              Number(r.returnValue[0]) /
-              10 ** token2.decimals
-            ).toLocaleString();
-            setActualOutcome(toAmount);
-            setToAmount(toAmount);
-          }
-        }
+      const fromAmountBN = new BigNumber(fromAmount);
+      if (fromAmountBN.isNaN()) return;
+      const fromAmountBI = BigInt(
+        fromAmountBN.multipliedBy(10 ** token.decimals).toFixed()
       );
+      ci.Trader_swapBForA(1, fromAmountBI, 0).then((r: any) => {
+        if (r.success) {
+          const toAmountBN = new BigNumber(r.returnValue[0]);
+          if (toAmountBN.isNaN()) return;
+          const toAmount = toAmountBN
+            .div(10 ** token2.decimals)
+            .toFixed(token2.decimals);
+          setActualOutcome(toAmount);
+          setToAmount(toAmount);
+        }
+      });
     }
   }, [pool, token, token2, fromAmount, focus]);
 
@@ -730,29 +737,37 @@ const Swap = () => {
     const ci = new CONTRACT(pool.poolId, algodClient, indexerClient, spec, acc);
     ci.setFee(4000);
     if (tokenId(token2) === pool?.tokB) {
-      ci.Trader_swapBForA(1, Number(toAmount) * 10 ** token2.decimals, 0).then(
-        (r: any) => {
-          if (r.success) {
-            const fromAmount = (
-              Number(r.returnValue[0]) /
-              10 ** token.decimals
-            ).toLocaleString();
-            setFromAmount(fromAmount);
-          }
-        }
+      const toAmountBN = new BigNumber(toAmount);
+      if (toAmountBN.isNaN()) return;
+      const toAmountBI = BigInt(
+        toAmountBN.multipliedBy(10 ** token2.decimals).toFixed()
       );
+      ci.Trader_swapBForA(1, toAmountBI, 0).then((r: any) => {
+        if (r.success) {
+          const fromAmountBN = new BigNumber(r.returnValue[0]);
+          if (fromAmountBN.isNaN()) return;
+          const fromAmount = fromAmountBN
+            .div(10 ** token.decimals)
+            .toFixed(token.decimals);
+          setFromAmount(fromAmount);
+        }
+      });
     } else if (tokenId(token2) === pool?.tokA) {
-      ci.Trader_swapAForB(1, Number(toAmount) * 10 ** token.decimals, 0).then(
-        (r: any) => {
-          if (r.success) {
-            const fromAmount = (
-              Number(r.returnValue[1]) /
-              10 ** token2.decimals
-            ).toLocaleString();
-            setFromAmount(fromAmount);
-          }
-        }
+      const toAmountBN = new BigNumber(toAmount);
+      if (toAmountBN.isNaN()) return;
+      const toAmountBI = BigInt(
+        toAmountBN.multipliedBy(10 ** token2.decimals).toFixed()
       );
+      ci.Trader_swapAForB(1, toAmountBI, 0).then((r: any) => {
+        if (r.success) {
+          const fromAmountBN = new BigNumber(r.returnValue[1]);
+          if (fromAmountBN.isNaN()) return;
+          const fromAmount = fromAmountBN
+            .div(10 ** token.decimals)
+            .toFixed(token.decimals);
+          setFromAmount(fromAmount);
+        }
+      });
     }
   }, [pool, token, token2, toAmount, focus]);
 
@@ -1018,7 +1033,6 @@ const Swap = () => {
             },
           });
           const hasBalance = await ci.hasBalance(activeAccount.address);
-          console.log({ hasBalance });
           if (!hasBalance.success) return new Error("Balance check failed");
           if (!hasBalance.returnValue) {
             const arc200_transferR = await ci.arc200_transfer(
@@ -1076,8 +1090,12 @@ const Swap = () => {
           }
         } while (0);
         // ---------------------------------------
-        const inA = Number(fromAmount) * 10 ** token.decimals;
-        const Trader_swapAForBR = await ci.Trader_swapAForB(1, inA, 0);
+        const inABN = new BigNumber(fromAmount);
+        if (inABN.isNaN()) return new Error("Invalid amount");
+        const inABI = BigInt(
+          inABN.multipliedBy(10 ** token.decimals).toFixed()
+        );
+        const Trader_swapAForBR = await ci.Trader_swapAForB(1, inABI, 0);
         if (!Trader_swapAForBR.success)
           return new Error("Swap simulation failed");
         const [, outB] = Trader_swapAForBR.returnValue;
@@ -1088,16 +1106,16 @@ const Swap = () => {
         const poolAddr = algosdk.getApplicationAddress(poolId);
         const buildN = [];
         if (token.tokenId === 0) {
-          buildN.push(builder.arc200.tokA.deposit(inA));
+          buildN.push(builder.arc200.tokA.deposit(inABI));
         }
-        buildN.push(builder.arc200.tokA.arc200_approve(poolAddr, inA));
-        buildN.push(builder.pool.Trader_swapAForB(0, inA, outBSl));
+        buildN.push(builder.arc200.tokA.arc200_approve(poolAddr, inABI));
+        buildN.push(builder.pool.Trader_swapAForB(0, inABI, outBSl));
         const buildP = (await Promise.all(buildN)).map((res: any) => res.obj);
         let customR;
         if (token.tokenId === 0) {
           const ci = makeCi(tokA);
           ci.setFee(4000);
-          ci.setPaymentAmount(inA);
+          ci.setPaymentAmount(Number(inABI));
           ci.setAccounts([algosdk.getApplicationAddress(tokA)]);
           ci.setEnableGroupResourceSharing(true);
           ci.setExtraTxns(buildP);
@@ -1274,8 +1292,12 @@ const Swap = () => {
         } while (0);
         console.log("tokA balance ok");
         // ---------------------------------------
-        const inB = Number(fromAmount) * 10 ** token.decimals;
-        const Trader_swapBForAR = await ci.Trader_swapBForA(1, inB, 0);
+        const inBBN = new BigNumber(fromAmount);
+        if (inBBN.isNaN()) return new Error("Invalid amount");
+        const inBBI = BigInt(
+          inBBN.multipliedBy(10 ** token.decimals).toFixed()
+        );
+        const Trader_swapBForAR = await ci.Trader_swapBForA(1, inBBI, 0);
         console.log({ Trader_swapBForAR });
         if (!Trader_swapBForAR.success)
           return new Error("Swap simulation failed");
@@ -1285,8 +1307,8 @@ const Swap = () => {
         const builder = makeBuilder(poolId, tokA, tokB);
         const poolAddr = algosdk.getApplicationAddress(poolId);
         const buildN = [
-          builder.arc200.tokB.arc200_approve(poolAddr, inB),
-          builder.pool.Trader_swapBForA(0, inB, outASl),
+          builder.arc200.tokB.arc200_approve(poolAddr, inBBI),
+          builder.pool.Trader_swapBForA(0, inBBI, outASl),
         ];
         if (token2.tokenId === 0) {
           buildN.push(builder.arc200.tokA.withdraw(outA));
@@ -1308,6 +1330,7 @@ const Swap = () => {
           ci.setExtraTxns(buildP);
           customR = await ci.custom();
         }
+        console.log({ customR });
         if (!customR.success) return new Error("Swap group simulation failed");
         await toast.promise(
           signTransactions(

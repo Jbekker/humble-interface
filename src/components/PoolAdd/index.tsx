@@ -618,7 +618,7 @@ const Swap = () => {
   /* Params */
   const [sp] = useSearchParams();
   const paramPoolId = sp.get("poolId");
-  const paramTokenId = sp.get("tokenId");
+  //const paramTokenId = sp.get("tokenId");
 
   /* Wallet */
   const {
@@ -630,19 +630,7 @@ const Swap = () => {
   } = useWallet();
 
   const [pool, setPool] = useState<PoolI>();
-  useEffect(() => {
-    if (!pool) return;
-    if (paramTokenId) {
-      const pool = pools.find((p: PoolI) => `${p.poolId}` === `${paramPoolId}`);
-      if (pool) {
-        setPool(pool);
-      } else {
-        setPool(pools[0]);
-      }
-    } else {
-      setPool(pools[0]);
-    }
-  }, [pools, paramPoolId]);
+  const [ready, setReady] = useState<boolean>(false);
 
   const [accInfo, setAccInfo] = React.useState<any>(null);
   const [focus, setFocus] = useState<"from" | "to">("from");
@@ -657,6 +645,36 @@ const Swap = () => {
   const [tokenOptions2, setTokenOptions2] = useState<ARC200TokenI[]>();
   const [balance, setBalance] = React.useState<string>();
   const [balance2, setBalance2] = React.useState<string>();
+
+  // EFFECT
+  useEffect(() => {
+    if (!pools || !tokens || pool) return;
+    if (paramPoolId) {
+      const pool = pools.find((p: PoolI) => `${p.poolId}` === `${paramPoolId}`);
+      if (pool) {
+        const token = [TOKEN_WVOI1].includes(pool.tokA)
+          ? {
+              tokenId: 0,
+              name: "Voi",
+              symbol: "VOI",
+              decimals: 6,
+              totalSupply: BigInt(10_000_000_000 * 1e6),
+            }
+          : tokens.find((t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokA}`);
+        setToken(token);
+        const token2 = [TOKEN_WVOI1].includes(pool.tokB)
+          ? {
+              tokenId: 0,
+              name: "Voi",
+              symbol: "VOI",
+              decimals: 6,
+              totalSupply: BigInt(10_000_000_000 * 1e6),
+            }
+          : tokens.find((t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokB}`);
+        setToken2(token2);
+      }
+    }
+  }, [pools, tokens]);
 
   // EFFECT
   useEffect(() => {
@@ -680,10 +698,10 @@ const Swap = () => {
   }, [tokens, pools]);
 
   // EFFECT
-  useEffect(() => {
-    if (token || !tokenOptions) return;
-    setToken(tokenOptions[0]);
-  }, [token, tokenOptions]);
+  // useEffect(() => {
+  //   if (token || !tokenOptions) return;
+  //   setToken(tokenOptions[0]);
+  // }, [token, tokenOptions]);
 
   const eligiblePools = useMemo(() => {
     return pools.filter((p: PoolI) => {
@@ -697,11 +715,15 @@ const Swap = () => {
 
   console.log("eligiblePools", eligiblePools);
 
+  // EFFECT
   useEffect(() => {
     setPool(eligiblePools[0]);
+    setReady(true);
   }, [eligiblePools]);
 
   const [info, setInfo] = useState<any>();
+
+  // EFFECT
   useEffect(() => {
     if (!pool) return;
     const { algodClient, indexerClient } = getAlgorandClients();
@@ -727,6 +749,8 @@ const Swap = () => {
   }, [pool]);
 
   const [poolBalance, setPoolBalance] = useState<BigInt>();
+
+  // EFFECT
   useEffect(() => {
     if (!activeAccount || !pool) return;
     const { algodClient, indexerClient } = getAlgorandClients();
@@ -741,6 +765,8 @@ const Swap = () => {
   }, [activeAccount, pool]);
 
   const [poolShare, setPoolShare] = useState<string>("0");
+
+  // EFFECT
   useEffect(() => {
     if (!activeAccount || !pool || !info || !poolBalance) return;
     const newShare = (100 * Number(poolBalance)) / Number(info.lptBals[1]);
@@ -750,6 +776,8 @@ const Swap = () => {
   console.log("poolShare", poolShare);
 
   const [expectedOutcome, setExpectedOutcome] = useState<string>();
+
+  // EFFECT
   useEffect(() => {
     if (
       !activeAccount ||
@@ -769,15 +797,16 @@ const Swap = () => {
       addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
       sk: new Uint8Array(0),
     });
+    const fromAmountBN = new BigNumber(fromAmount.replace(/,/g, ""));
+    const toAmountBN = new BigNumber(toAmount.replace(/,/g, ""));
+    if (fromAmountBN.isNaN() || toAmountBN.isNaN()) return;
     const fromAmountBI = BigInt(
-      new BigNumber(fromAmount.replace(/,/g, ""))
+      fromAmountBN
         .multipliedBy(new BigNumber(10).pow(token.decimals))
         .toFixed(0)
     );
     const toAmountBI = BigInt(
-      new BigNumber(toAmount.replace(/,/g, ""))
-        .multipliedBy(new BigNumber(10).pow(token2.decimals))
-        .toFixed(0)
+      toAmountBN.multipliedBy(new BigNumber(10).pow(token2.decimals)).toFixed(0)
     );
     ci.setFee(4000);
     ci.Provider_deposit(
@@ -794,8 +823,8 @@ const Swap = () => {
             // ),
           ]
         : [
-          toAmountBI,
-          fromAmountBI,
+            toAmountBI,
+            fromAmountBI,
             Math.round(
               Number(toAmount.replace(/,/g, "")) * 10 ** token.decimals
             ),
@@ -814,6 +843,8 @@ const Swap = () => {
   console.log("expectedOutcome", expectedOutcome);
 
   const [newShare, setNewShare] = useState<string>();
+
+  // EFFECT
   useEffect(() => {
     if (!expectedOutcome || !info) {
       setNewShare(undefined);
@@ -858,6 +889,7 @@ const Swap = () => {
   useEffect(() => {
     if (
       !rate ||
+      !invRate ||
       !fromAmount ||
       !toAmount ||
       !focus ||
@@ -869,20 +901,24 @@ const Swap = () => {
     if (info.poolBals[0] === BigInt(0) || info.poolBals[1] === BigInt(0))
       return;
     if (focus === "from") {
+      const toAmountBN = new BigNumber(fromAmount.replace(/,/g, ""));
+      if (toAmountBN.isNaN()) return;
       setToAmount(
-        Number(
-          (Number(rate) * Number(fromAmount)).toFixed(token2.decimals)
-        ).toLocaleString()
+        toAmountBN.multipliedBy(rate).decimalPlaces(token2.decimals).toFormat()
       );
     } else if (focus === "to") {
+      const fromAmountBN = new BigNumber(toAmount.replace(/,/g, ""));
+      if (fromAmountBN.isNaN()) return;
       setFromAmount(
-        Number(
-          (Number(toAmount) / Number(rate)).toFixed(token.decimals)
-        ).toLocaleString()
+        fromAmountBN
+          .multipliedBy(invRate)
+          .decimalPlaces(token.decimals)
+          .toFormat()
       );
     }
   }, [rate, fromAmount, toAmount, focus, token, token2, info]);
 
+  // EFFECT
   useEffect(() => {
     if (!pool || !token || !token2 || !toAmount || focus !== "to" || !!info)
       return;
@@ -932,63 +968,64 @@ const Swap = () => {
 
   const isValid = !!token && !!token2 && !!fromAmount && !!toAmount;
 
-  // EFFECT
-  useEffect(() => {
-    if (
-      tokenStatus !== "succeeded" ||
-      !tokens ||
-      token ||
-      token2 ||
-      tokens.length === 0
-    )
-      return;
-    //setToken(tokens[0]);
-    const options = new Set<ARC200TokenI>();
-    for (const p of pools) {
-      if ([p.tokA, p.tokB].includes(tokens[0].tokenId)) {
-        if (tokens[0].tokenId === p.tokA) {
-          options.add(
-            tokens.find(
-              (t: ARC200TokenI) => `${t.tokenId}` === `${p.tokB}`
-            ) as ARC200TokenI
-          );
-        } else {
-          options.add(
-            tokens.find(
-              (t: ARC200TokenI) => `${t.tokenId}` === `${p.tokA}`
-            ) as ARC200TokenI
-          );
-        }
-      }
-    }
-    //setToken2(Array.from(options)[0]);
-  }, [tokens, tokenStatus, pools, token, token2]);
+  // // EFFECT
+  // useEffect(() => {
+  //   if (
+  //     tokenStatus !== "succeeded" ||
+  //     !tokens ||
+  //     token ||
+  //     token2 ||
+  //     tokens.length === 0
+  //   )
+  //     return;
+  //   //setToken(tokens[0]);
+  //   const options = new Set<ARC200TokenI>();
+  //   for (const p of pools) {
+  //     if ([p.tokA, p.tokB].includes(tokens[0].tokenId)) {
+  //       if (tokens[0].tokenId === p.tokA) {
+  //         options.add(
+  //           tokens.find(
+  //             (t: ARC200TokenI) => `${t.tokenId}` === `${p.tokB}`
+  //           ) as ARC200TokenI
+  //         );
+  //       } else {
+  //         options.add(
+  //           tokens.find(
+  //             (t: ARC200TokenI) => `${t.tokenId}` === `${p.tokA}`
+  //           ) as ARC200TokenI
+  //         );
+  //       }
+  //     }
+  //   }
+  //   //setToken2(Array.from(options)[0]);
+  // }, [tokens, tokenStatus, pools, token, token2]);
 
   // EFFECT
-  useEffect(() => {
-    if (!tokens || !pool) return;
-    const tokenA = tokens.find(
-      (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokA}`
-    );
-    const tokenB = tokens.find(
-      (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokB}`
-    );
-    if (paramTokenId) {
-      if (`${paramTokenId}` === `${tokenA?.tokenId}`) {
-        setToken(tokenA);
-        setToken2(tokenB);
-      } else {
-        setToken(tokenB);
-        setToken2(tokenA);
-      }
-    } else {
-      setToken(tokenA);
-      setToken2(tokenB);
-    }
-  }, [tokens, pool, paramTokenId]);
+  // useEffect(() => {
+  //   if (!tokens || !pool) return;
+  //   const tokenA = tokens.find(
+  //     (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokA}`
+  //   );
+  //   const tokenB = tokens.find(
+  //     (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokB}`
+  //   );
+  //   if (paramTokenId) {
+  //     if (`${paramTokenId}` === `${tokenA?.tokenId}`) {
+  //       setToken(tokenA);
+  //       setToken2(tokenB);
+  //     } else {
+  //       setToken(tokenB);
+  //       setToken2(tokenA);
+  //     }
+  //   } else {
+  //     setToken(tokenA);
+  //     setToken2(tokenB);
+  //   }
+  // }, [tokens, pool, paramTokenId]);
 
-  // EFFECT: update token options 2 when token changes
+  // EFFECT: update tokenOptions2 on token change
   useEffect(() => {
+    if (!token) return;
     const options = new Set<ARC200TokenI>();
     for (const p of pools) {
       if ([p.tokA, p.tokB].includes(tokenId(token))) {
@@ -1007,25 +1044,33 @@ const Swap = () => {
         }
       }
     }
+    const netToken = {
+      tokenId: 0,
+      name: "Voi",
+      symbol: "VOI",
+      decimals: 6,
+      totalSupply: BigInt(10_000_000_000 * 1e6),
+    };
     const tokenOptions2 = Array.from(options);
     // check if token options includes wVOI
     if (tokenOptions2.find((t: ARC200TokenI) => t.tokenId === TOKEN_WVOI1)) {
-      setTokenOptions2([
-        {
-          tokenId: 0,
-          name: "Voi",
-          symbol: "VOI",
-          decimals: 6,
-          totalSupply: BigInt(10_000_000_000 * 1e6),
-        },
-        ...tokenOptions2,
-      ]);
+      setTokenOptions2([netToken, ...tokenOptions2]);
     } else {
       setTokenOptions2(tokenOptions2);
     }
-    setToken2(Array.from(options)[0]);
-    setToAmount("");
-    setFromAmount("");
+    if (
+      !tokenOptions2
+        .map((t: ARC200TokenI) => t.tokenId)
+        .includes(tokenId(token2))
+    ) {
+      if (tokenOptions2.map((t: ARC200TokenI) => t.tokenId).includes(0)) {
+        setToken2(netToken);
+      } else {
+        setToken2(Array.from(options)[0]);
+      }
+    }
+    setToAmount("0");
+    setFromAmount("0");
   }, [token, pools]);
 
   console.log({ tokenOptions2 });

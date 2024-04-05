@@ -442,7 +442,9 @@ const Swap: FC<SwapProps> = ({
                 className={isDarkTheme ? "dark" : "light"}
                 placeholder="0.00"
                 onKeyDown={() => onFocus()}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                }}
                 value={amount}
               />
             </TokenInputContainer>
