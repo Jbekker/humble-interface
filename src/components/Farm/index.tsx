@@ -6,7 +6,7 @@ import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
 import { Stack } from "@mui/material";
-import { CONTRACT, arc200 } from "ulujs";
+import { CONTRACT, abi, arc200 } from "ulujs";
 import { TOKEN_VIA } from "../../contants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import TokenInput from "../TokenInput";
@@ -19,6 +19,66 @@ import { getTokens } from "../../store/tokenSlice";
 import FarmLiquidity from "../FarmLiquidity";
 import { getFarms } from "../../store/farmSlice";
 import { getStake } from "../../store/stakeSlice";
+import { CTCINFO_STAKR_200 } from "../../contants/dex";
+
+const spec = {
+  name: "",
+  desc: "",
+  methods: [],
+  events: [
+    // poolId, who, stakeToken, rewardsToken, rewards, start, end
+    {
+      name: "Pool",
+      args: [
+        {
+          type: "uint64",
+          name: "poolId",
+        },
+        {
+          type: "address",
+          name: "who",
+        },
+        {
+          type: "uint64",
+          name: "stakeToken",
+        },
+        {
+          type: "(uint64)",
+          name: "rewardsToken",
+        },
+        {
+          type: "(uint256)",
+          name: "rewards",
+        },
+        {
+          type: "uint64",
+          name: "start",
+        },
+        {
+          type: "uint64",
+          name: "end",
+        },
+      ],
+    },
+    {
+      name: "Stake",
+      args: [
+        {
+          type: "uint64",
+        },
+        {
+          type: "address",
+        },
+        {
+          type: "uint256",
+        },
+        {
+          type: "(uint256,uint256)",
+        },
+      ],
+    },
+  ],
+};
 
 const PoolRoot = styled.div`
   display: flex;
@@ -100,48 +160,6 @@ const ButtonLabel = styled(Button)`
   line-height: 120%; /* 26.4px */
 `;
 
-const spec = {
-  name: "",
-  desc: "",
-  methods: [],
-  events: [
-    // poolId, who, stakeToken, rewardsToken, rewards, start, end
-    {
-      name: "Pool",
-      args: [
-        {
-          type: "uint64",
-          name: "poolId",
-        },
-        {
-          type: "address",
-          name: "who",
-        },
-        {
-          type: "uint64",
-          name: "stakeToken",
-        },
-        {
-          type: "(uint64)",
-          name: "rewardsToken",
-        },
-        {
-          type: "(uint256)",
-          name: "rewards",
-        },
-        {
-          type: "uint64",
-          name: "start",
-        },
-        {
-          type: "uint64",
-          name: "end",
-        },
-      ],
-    },
-  ],
-};
-
 const Farm = () => {
   const { activeAccount } = useWallet();
   /* Theme */
@@ -198,12 +216,15 @@ const Farm = () => {
 
   return !isLoading ? (
     <PoolRoot className={isDarkTheme ? "dark" : "light"}>
-      <FarmLiquidity
-        farms={farms}
-        pools={pools}
-        tokens={tokens}
-        stake={userStake}
-      />
+      {activeAccount && userStake && userStake.length > 0 ? (
+        <FarmLiquidity
+          farms={farms}
+          pools={pools}
+          tokens={tokens}
+          stake={userStake}
+        />
+      ) : null}
+
       <FarmList farms={farms} pools={pools} tokens={tokens} />
       <ViewMoreButton>
         <ButtonLabelContainer>

@@ -37,7 +37,7 @@
     "react-router-dom": "^6.22.1",
     "react-toastify": "^10.0.4",
     "styled-components": "^6.1.8",
-    "ulujs": "^0.2.27",
+    "ulujs": "^0.3.3",
     "usehooks-ts": "^2.15.0"
   },
   "devDependencies": {

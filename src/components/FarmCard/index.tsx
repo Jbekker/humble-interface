@@ -508,10 +508,12 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
   // EFFECT: Fetch token A if not available
   useEffect(() => {
     if (farm.rewardsToken) {
-      getToken(farm.rewardsToken).then((token) => {
-        console.log({ token });
-        setTokenA(token);
-        dispatch(updateToken(token) as unknown as UnknownAction);
+      farm.rewardsToken.map((token) => {
+        getToken(token).then((token) => {
+          console.log({ token });
+          setTokenA(token);
+          dispatch(updateToken(token) as unknown as UnknownAction);
+        });
       });
     }
   }, [dispatch]);
@@ -1008,37 +1010,33 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
                 color: "#fff",
                 display: "flex",
                 flexDirection: "row",
-                gap: "24px",
-                justifyContent: "space-between",
+                gap: "48px",
+                justifyContent: "center",
                 alignItems: "center",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  gap: "12px",
-                }}
-              >
-                <div>
-                  <div>Staked:</div>
-                  <div>{staked ? staked.toString() : "Loading..."}</div>
-                </div>
-                <div>
-                  <div>Rewards:</div>
-                  <div>{rewards ? rewards.toString() : "Loading..."}</div>
-                </div>
+              <div>
+                <div>Balance:</div>
+                <div>{staked ? staked.toString() : "Loading..."}</div>
               </div>
-              <Stack spacing={2} direction="row">
-                <ButtonGroup size="small">
-                  <Button onClick={handleStake}>Stake</Button>
-                  <Button onClick={handleUnstake}>Unstake</Button>
-                  <Button onClick={handleHarvest}>Claim</Button>
-                  <Button onClick={handleExit}>Exit</Button>
-                </ButtonGroup>
-              </Stack>
+              <div>
+                <div>Staked:</div>
+                <div>{staked ? staked.toString() : "Loading..."}</div>
+              </div>
+              <div>
+                <div>Rewards:</div>
+                <div>{rewards ? rewards.toString() : "Loading..."}</div>
+              </div>
             </div>
           </AccordionDetails>
+          <AccordionActions>
+            <ButtonGroup size="small">
+              <Button onClick={handleStake}>Stake</Button>
+              <Button onClick={handleUnstake}>Unstake</Button>
+              <Button onClick={handleHarvest}>Claim</Button>
+              <Button onClick={handleExit}>Exit</Button>
+            </ButtonGroup>
+          </AccordionActions>
         </Accordion>
       ) : (
         renderFarmInfo

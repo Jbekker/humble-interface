@@ -2,32 +2,19 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import db from "../db";
 import { RootState } from "./store";
-import { CONTRACT, abi, arc200 } from "ulujs";
+import { CONTRACT, abi } from "ulujs";
 import { getAlgorandClients } from "../wallets";
-import { PoolI } from "../types";
+import { FarmI } from "../types";
 import { CTCINFO_STAKR_200 } from "../contants/dex";
 
-interface Farm {
-  txId: string;
-  round: number;
-  ts: number;
-  poolId: number;
-  who: string;
-  stakeToken: number;
-  rewardsToken: number;
-  rewards: number;
-  start: number;
-  end: number;
-}
-
 export interface FarmState {
-  farms: Farm[];
+  farms: FarmI[];
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
 }
 
 export const getFarms = createAsyncThunk<
-  Farm[],
+  FarmI[],
   void,
   { rejectValue: string; state: RootState }
 >("pools/getFarms", async (_, { getState, rejectWithValue }) => {
@@ -42,64 +29,7 @@ export const getFarms = createAsyncThunk<
       CTCINFO_STAKR_200,
       algodClient,
       indexerClient,
-      {
-        name: "",
-        desc: "",
-        methods: [],
-        events: [
-          // poolId, who, stakeToken, rewardsToken, rewards, start, end
-          {
-            name: "Pool",
-            args: [
-              {
-                type: "uint64",
-                name: "poolId",
-              },
-              {
-                type: "address",
-                name: "who",
-              },
-              {
-                type: "uint64",
-                name: "stakeToken",
-              },
-              {
-                type: "(uint64)",
-                name: "rewardsToken",
-              },
-              {
-                type: "(uint256)",
-                name: "rewards",
-              },
-              {
-                type: "uint64",
-                name: "start",
-              },
-              {
-                type: "uint64",
-                name: "end",
-              },
-            ],
-          },
-          {
-            name: "Stake",
-            args: [
-              {
-                type: "uint64",
-              },
-              {
-                type: "address",
-              },
-              {
-                type: "uint256",
-              },
-              {
-                type: "(uint256,uint256)",
-              },
-            ],
-          },
-        ],
-      },
+      abi.stakr200,
       {
         addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
         sk: new Uint8Array(0),
@@ -118,17 +48,18 @@ export const getFarms = createAsyncThunk<
           poolId: Number(event[3]),
           who: event[4],
           stakeToken: Number(event[5]),
-          rewardsToken: Number(event[6]),
-          rewards: Number(event[7]),
+          rewardsToken: event[6].map((x: BigInt) => Number(x)),
+          rewards: event[7].map((x: BigInt) => x.toString()),
           start: Number(event[8]),
           end: Number(event[9]),
         };
       });
+
     for (const pool of newPools.filter(
-      (pool: PoolI) => pool.round >= minRound
+      (pool: FarmI) => pool.round >= minRound
     )) {
       await db.table("farms").bulkPut(
-        newPools.map((farm: Farm) => {
+        newPools.map((farm: FarmI) => {
           return {
             txId: farm.txId,
             round: farm.round,
@@ -145,7 +76,7 @@ export const getFarms = createAsyncThunk<
       );
     }
     const wl: number[] = [];
-    return ([...pools, ...newPools] as Farm[]).filter(
+    return ([...pools, ...newPools] as FarmI[]).filter(
       (pool) =>
         pool.round >= minRound && (wl.length > 0 || !wl.includes(pool.poolId))
     );

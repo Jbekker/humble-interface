@@ -166,8 +166,8 @@ export interface FarmI {
   poolId: number;
   who: string;
   stakeToken: number;
-  rewardsToken: number;
-  rewards: number;
+  rewardsToken: number[];
+  rewards: string[];
   start: number;
   end: number;
 }
@@ -180,7 +180,7 @@ export interface StakeI {
   ts: number;
   poolId: number;
   who: string;
-  stakeAmount: number;
-  staked: number;
-  totalStaked: number;
+  stakeAmount: string;
+  staked: string;
+  totalStaked: string;
 }

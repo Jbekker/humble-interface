@@ -188,8 +188,6 @@ const FarmLiquidity: FC<FarmLiquidityProps> = ({
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const dispatch = useDispatch();
-
   const [positions, setPositions] = React.useState<PositionI[]>([]);
   React.useEffect(() => {
     if (!activeAccount) return;

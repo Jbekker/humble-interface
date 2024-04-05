@@ -1,15 +1,8 @@
 import styled from "@emotion/styled";
-import React, { useEffect, useState } from "react";
-import SwapIcon from "static/icon/icon-swap-stable-light.svg";
-import ActiveSwapIcon from "static/icon/icon-swap-active-light.svg";
+import React, { useEffect } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
-import { Stack } from "@mui/material";
-import { arc200 } from "ulujs";
-import { TOKEN_VIA } from "../../contants/tokens";
-import { getAlgorandClients } from "../../wallets";
-import TokenInput from "../TokenInput";
 import PoolPosition from "../PoolPosition";
 import PoolList from "../PoolList";
 import { getPools } from "../../store/poolSlice";
@@ -98,6 +91,7 @@ const ButtonLabel = styled(Button)`
 `;
 
 const Pool = () => {
+  const { activeAccount } = useWallet();
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
@@ -121,7 +115,7 @@ const Pool = () => {
 
   return !isLoading ? (
     <PoolRoot className={isDarkTheme ? "dark" : "light"}>
-      <PoolPosition />
+      {activeAccount ? <PoolPosition /> : null}
       <PoolList pools={pools} tokens={tokens} />
       <ViewMoreButton>
         <ButtonLabelContainer>

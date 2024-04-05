@@ -531,19 +531,6 @@ const Swap = () => {
     }
   }, [pool, pools, tokens]);
 
-  // useEffect(() => {
-  //   if (!pool) return;
-  //   const tokenA = tokens.find(
-  //     (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokA}`
-  //   );
-  //   const tokenB = tokens.find(
-  //     (t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokB}`
-  //   );
-  //   console.log({ tokenA, tokenB });
-  //   setToken(tokenA);
-  //   setToken2(tokenB);
-  // }, [pool, tokens]);
-
   const [accInfo, setAccInfo] = React.useState<any>(null);
   const [focus, setFocus] = useState<"from" | "to" | undefined>();
   const [fromAmount, setFromAmount] = React.useState<any>("");
@@ -587,10 +574,6 @@ const Swap = () => {
       );
     });
   }, [pools, token, token2]);
-
-  // useEffect(() => {
-  //   setPool(eligiblePools[0]);
-  // }, [eligiblePools]);
 
   const [info, setInfo] = useState<any>();
   useEffect(() => {
@@ -761,8 +744,6 @@ const Swap = () => {
     }
   }, [pool, token, token2, toAmount, focus]);
 
-  console.log("actualOutcome", actualOutcome);
-
   const slippage = useMemo(() => {
     if (!actualOutcome || !expectedOutcome) return;
     return (
@@ -900,7 +881,7 @@ const Swap = () => {
     return (Number(actualOutcome) * 0.995).toLocaleString();
   }, [actualOutcome]);
 
-  const handleButtonClick = async () => {
+  const handleSwap = async () => {
     if (!isValid) return;
     if (!activeAccount) {
       toast.info("Please connect your wallet first");
@@ -943,23 +924,7 @@ const Swap = () => {
               indexerClient,
               {
                 ...abi.arc200,
-                methods: [
-                  ...abi.nt200.methods,
-                  // {
-                  //   name: "deposit",
-                  //   args: [
-                  //     {
-                  //       name: "amount",
-                  //       type: "uint64",
-                  //       desc: "Amount to deposit",
-                  //     },
-                  //   ],
-                  //   returns: {
-                  //     type: "uint256",
-                  //     desc: "Amount deposited",
-                  //   },
-                  // },
-                ],
+                methods: [...abi.nt200.methods],
               },
               acc,
               true,
@@ -1058,7 +1023,7 @@ const Swap = () => {
                 )
               ).then(sendTransactions),
               {
-                pending: `Transfer ${token2.symbol} to wallet`,
+                pending: `Pending transaction to setup wallet to receive ${token2.symbol}`,
                 success: `Transfer successful!`,
                 //error: "Transfer failed",
               },
@@ -1078,9 +1043,11 @@ const Swap = () => {
             addr: activeAccount?.address || "",
             sk: new Uint8Array(0),
           });
+          ci.setPaymentAmount(28500);
           const createBalanceBoxR = await ci.createBalanceBox(
             activeAccount.address
           );
+          console.log({ createBalanceBoxR });
           if (createBalanceBoxR.success) {
             await toast.promise(
               signTransactions(
@@ -1089,7 +1056,7 @@ const Swap = () => {
                 )
               ).then(sendTransactions),
               {
-                pending: `Setup wallet to receive ${token.symbol}`,
+                pending: `Pending transaction to setup wallet for ${token.symbol}/ARC200 swaps`,
                 success: `Wallet setup complete!`,
                 //error: "Wallet setup failed",
               }
@@ -1129,6 +1096,7 @@ const Swap = () => {
           ci.setExtraTxns(buildP);
           customR = await ci.custom();
         }
+        console.log({ customR });
         if (!customR.success) return new Error("Swap group simulation failed");
         await toast.promise(
           signTransactions(
@@ -1313,9 +1281,9 @@ const Swap = () => {
         }
         const buildP = (await Promise.all(buildN)).map((res: any) => res.obj);
         let customR;
-        if ([tokA, tokB].includes(TOKEN_WVOI1)) {
+        if (token2.tokenId === 0) {
           const ci = makeCi(tokB);
-          // //ci.setPaymentAmount(28500);
+          ci.setPaymentAmount(28500); // 0.0285 NT to burn wNT
           ci.setFee(4000);
           ci.setAccounts([poolAddr]);
           ci.setEnableGroupResourceSharing(true);
@@ -1328,7 +1296,6 @@ const Swap = () => {
           ci.setExtraTxns(buildP);
           customR = await ci.custom();
         }
-        console.log({ customR });
         if (!customR.success) return new Error("Swap group simulation failed");
         await toast.promise(
           signTransactions(
@@ -1462,7 +1429,7 @@ const Swap = () => {
         className={isValid ? "active" : undefined}
         onClick={() => {
           if (!on) {
-            handleButtonClick();
+            handleSwap();
           }
         }}
       >
