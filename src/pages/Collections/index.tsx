@@ -16,7 +16,7 @@ import { getSales } from "../../store/saleSlice";
 import { getRankings } from "../../utils/mp";
 import NFTCollectionTable from "../../components/NFTCollectionTable";
 import { getPrices } from "../../store/dexSlice";
-import { CTCINFO_LP_WVOI_VOI } from "../../contants/dex";
+import { CTCINFO_LP_WVOI_VOI } from "../../constants/dex";
 
 const SectionHeading = styled.div`
   display: flex;

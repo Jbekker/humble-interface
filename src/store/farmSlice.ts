@@ -5,7 +5,7 @@ import { RootState } from "./store";
 import { CONTRACT, abi } from "ulujs";
 import { getAlgorandClients } from "../wallets";
 import { FarmI } from "../types";
-import { CTCINFO_STAKR_200 } from "../contants/dex";
+import { CTCINFO_STAKR_200 } from "../constants/dex";
 
 export interface FarmState {
   farms: FarmI[];

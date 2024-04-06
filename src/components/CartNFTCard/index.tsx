@@ -12,7 +12,7 @@ import { useWallet } from "@txnlab/use-wallet";
 import algosdk from "algosdk";
 import { getAlgorandClients } from "../../wallets";
 import { CONTRACT, arc200 } from "ulujs";
-import { ctcInfoMp206 } from "../../contants/mp";
+import { ctcInfoMp206 } from "../../constants/mp";
 
 const CollectionName = styled.div`
   color: var(--White, #fff);

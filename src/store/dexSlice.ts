@@ -3,7 +3,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { RootState } from "./store";
 import { swap200 } from "ulujs";
 import { getAlgorandClients } from "../wallets";
-import { CTCINFO_LP_WVOI_VOI } from "../contants/dex";
+import { CTCINFO_LP_WVOI_VOI } from "../constants/dex";
 
 export interface DexState {
   prices: any[];

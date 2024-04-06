@@ -29,7 +29,7 @@ import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined
 import AccountBalanceWalletOutlinedIcon from "@mui/icons-material/AccountBalanceWalletOutlined";
 import WbSunnyOutlinedIcon from "@mui/icons-material/WbSunnyOutlined";
 import { arc200 } from "ulujs";
-import { TOKEN_VIA } from "../../contants/tokens";
+import { TOKEN_VIA } from "../../constants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import { arc200_balanceOf } from "ulujs/types/arc200";
 import VOIIcon from "static/crypto-icons/voi/0.svg";

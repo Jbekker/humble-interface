@@ -33,7 +33,7 @@ import BuySaleModal from "../../components/modals/BuySaleModal";
 
 import { CONTRACT, arc72, arc200, mp, abi } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
-import { ListingBoxCost, ctcInfoMp206 } from "../../contants/mp";
+import { ListingBoxCost, ctcInfoMp206 } from "../../constants/mp";
 
 import VoiIcon from "static/crypto-icons/voi/0.svg";
 import ViaIcon from "static/crypto-icons/voi/6779767.svg";

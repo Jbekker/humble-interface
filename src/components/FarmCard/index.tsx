@@ -22,7 +22,7 @@ import moment from "moment";
 import { toast } from "react-toastify";
 import algosdk from "algosdk";
 import { Button, ButtonGroup, Stack } from "@mui/material";
-import { CTCINFO_STAKR_200 } from "../../contants/dex";
+import { CTCINFO_STAKR_200 } from "../../constants/dex";
 
 const StyledLink = styled(Link)`
   text-decoration: none;

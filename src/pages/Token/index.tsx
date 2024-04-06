@@ -32,7 +32,7 @@ import BuySaleModal from "../../components/modals/BuySaleModal";
 
 import { CONTRACT, arc72, arc200 } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
-import { ctcInfoMp206 } from "../../contants/mp";
+import { ctcInfoMp206 } from "../../constants/mp";
 
 import VoiIcon from "static/crypto-icons/voi/0.svg";
 import ViaIcon from "static/crypto-icons/voi/6779767.svg";
@@ -45,7 +45,7 @@ import { NFTInfo } from "../../components/NFTInfo";
 import { NFTMore } from "../../components/NFTMore";
 import { getPrices } from "../../store/dexSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
-import { CTCINFO_LP_WVOI_VOI } from "../../contants/dex";
+import { CTCINFO_LP_WVOI_VOI } from "../../constants/dex";
 import { decodeRoyalties } from "../../utils/hf";
 
 const CryptoIcon = styled.img`

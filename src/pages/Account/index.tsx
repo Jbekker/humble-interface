@@ -33,7 +33,7 @@ import { arc72, CONTRACT, abi, arc200 } from "ulujs";
 import TransferModal from "../../components/modals/TransferModal";
 import ListSaleModal from "../../components/modals/ListSaleModal";
 import algosdk from "algosdk";
-import { ListingBoxCost, ctcInfoMp206 } from "../../contants/mp";
+import { ListingBoxCost, ctcInfoMp206 } from "../../constants/mp";
 //import { MarketplaceContext } from "../../store/MarketplaceContext";
 import { decodeRoyalties } from "../../utils/hf";
 import NFTListingTable from "../../components/NFTListingTable";
@@ -45,7 +45,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { getPrices } from "../../store/dexSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
-import { CTCINFO_LP_WVOI_VOI } from "../../contants/dex";
+import { CTCINFO_LP_WVOI_VOI } from "../../constants/dex";
 
 const { algodClient, indexerClient } = getAlgorandClients();
 

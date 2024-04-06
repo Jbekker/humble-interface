@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
 import { Stack } from "@mui/material";
 import { CONTRACT, abi, arc200 } from "ulujs";
-import { TOKEN_VIA } from "../../contants/tokens";
+import { TOKEN_VIA } from "../../constants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import TokenInput from "../TokenInput";
 import PoolPosition from "../PoolPosition";
@@ -19,7 +19,7 @@ import { getTokens } from "../../store/tokenSlice";
 import FarmLiquidity from "../FarmLiquidity";
 import { getFarms } from "../../store/farmSlice";
 import { getStake } from "../../store/stakeSlice";
-import { CTCINFO_STAKR_200 } from "../../contants/dex";
+import { CTCINFO_STAKR_200 } from "../../constants/dex";
 
 const spec = {
   name: "",

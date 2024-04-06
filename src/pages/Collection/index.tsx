@@ -24,7 +24,7 @@ import NFTListingTable from "../../components/NFTListingTable";
 import ViewListIcon from "@mui/icons-material/ViewList";
 import GridViewIcon from "@mui/icons-material/GridView";
 import { getPrices } from "../../store/dexSlice";
-import { CTCINFO_LP_WVOI_VOI } from "../../contants/dex";
+import { CTCINFO_LP_WVOI_VOI } from "../../constants/dex";
 
 const StatContainer = styled(Stack)`
   display: flex;

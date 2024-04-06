@@ -12,7 +12,7 @@ import {
 import PaymentCurrencyRadio, {
   defaultCurrencies,
 } from "../../PaymentCurrencyRadio";
-import { collections } from "../../../contants/games";
+import { collections } from "../../../constants/games";
 
 interface ListSaleModalProps {
   open: boolean;

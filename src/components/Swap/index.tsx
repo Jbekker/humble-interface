@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
 import { CircularProgress, Stack } from "@mui/material";
 import { CONTRACT, abi, arc200, nt200, swap200 } from "ulujs";
-import { TOKEN_VIA, TOKEN_VOI, TOKEN_WVOI1 } from "../../contants/tokens";
+import { TOKEN_VIA, TOKEN_VOI, TOKEN_WVOI1 } from "../../constants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import TokenInput from "../TokenInput";
 import { useSearchParams } from "react-router-dom";
@@ -20,6 +20,7 @@ import { toast } from "react-toastify";
 import { Toast } from "react-toastify/dist/components";
 import { tokenId, tokenSymbol } from "../../utils/dex";
 import BigNumber from "bignumber.js";
+import { CTCINFO_DEFAULT_LP } from "../../constants/dex";
 
 const spec = {
   name: "pool",
@@ -488,10 +489,8 @@ const Swap = () => {
   const tokens = useSelector((state: RootState) => state.tokens.tokens);
 
   const [sp] = useSearchParams();
-  const paramPoolId = sp.get("poolId");
-  // const paramTokenId = sp.get("tokenId");
+  const paramPoolId = sp.get("poolId") || CTCINFO_DEFAULT_LP;
 
-  /* Wallet */
   const {
     providers,
     activeAccount,

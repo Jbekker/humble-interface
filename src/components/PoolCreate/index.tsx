@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
 import { CircularProgress, Stack } from "@mui/material";
 import { CONTRACT, abi, arc200, swap200 } from "ulujs";
-import { TOKEN_VIA, TOKEN_WVOI1 } from "../../contants/tokens";
+import { TOKEN_VIA, TOKEN_WVOI1 } from "../../constants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import TokenInput from "../TokenInput";
 import { useSearchParams } from "react-router-dom";

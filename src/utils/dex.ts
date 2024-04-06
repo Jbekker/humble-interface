@@ -1,4 +1,4 @@
-import { TOKEN_VOI, TOKEN_WVOI1 } from "../contants/tokens";
+import { TOKEN_VOI, TOKEN_WVOI1 } from "../constants/tokens";
 import { ARC200TokenI } from "../types";
 
 export const tokenSymbol = (

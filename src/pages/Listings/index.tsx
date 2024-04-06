@@ -30,7 +30,7 @@ import {
 } from "../../types";
 import { getSales } from "../../store/saleSlice";
 import { getPrices } from "../../store/dexSlice";
-import { CTCINFO_LP_WVOI_VOI } from "../../contants/dex";
+import { CTCINFO_LP_WVOI_VOI } from "../../constants/dex";
 
 const SectionDescription = styled.div`
   flex: 1 0 0;
