@@ -1,11 +1,11 @@
 import { PROVIDER_ID } from "@txnlab/use-wallet";
 import algosdk from "algosdk";
 
-const getDynamicDeflyWalletConnect = async () => {
-  const DeflyWalletConnect = (await import("@blockshake/defly-connect"))
-    .DeflyWalletConnect;
-  return DeflyWalletConnect;
-};
+// const getDynamicDeflyWalletConnect = async () => {
+//   const DeflyWalletConnect = (await import("@blockshake/defly-connect"))
+//     .DeflyWalletConnect;
+//   return DeflyWalletConnect;
+// };
 
 // const getDynamicPeraWalletConnect = async () => {
 //   const PeraWalletConnect = (await import("@perawallet/connect"))
@@ -41,10 +41,10 @@ export const getProviderInit: any = () => {
         //    kibisis
         //    lute
         providers: [
-          {
-            id: PROVIDER_ID.DEFLY,
-            getDynamicClient: getDynamicDeflyWalletConnect,
-          },
+          // {
+          //   id: PROVIDER_ID.DEFLY,
+          //   getDynamicClient: getDynamicDeflyWalletConnect,
+          // },
           {
             id: PROVIDER_ID.LUTE,
             getDynamicClient: getDynamicLuteConnect,

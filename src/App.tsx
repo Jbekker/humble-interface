@@ -31,13 +31,10 @@ interface AppContainerProps {
   children: React.ReactNode;
 }
 const AppContainer: React.FC<AppContainerProps> = ({ children }) => {
-  /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  /* Dispatch */
   const dispatch = useDispatch();
-  /* Pools */
   const pools = useSelector((state: RootState) => state.pools.pools);
   const poolsStatus = useSelector((state: RootState) => state.pools.status);
   useEffect(() => {
@@ -55,9 +52,7 @@ const AppContainer: React.FC<AppContainerProps> = ({ children }) => {
       })();
     }
   }, [poolsStatus]);
-
   const isLoading = !ready;
-
   if (isLoading) return;
   return (
     <div
