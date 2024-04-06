@@ -114,6 +114,7 @@ const AccountName = styled.span`
   font-style: normal;
   font-weight: 600;
   line-height: 22px; /* 137.5% */
+  width: 110px;
 `;
 
 const ActiveButtonContainer = styled.div`
@@ -402,7 +403,7 @@ function BasicMenu() {
                         <AccountContainer>
                           <AccountNameContainer>
                             <AccountName>
-                              {account.address.slice(0, 4)}
+                              {compactAddress(account.address)}
                             </AccountName>
                           </AccountNameContainer>
                           <ActiveButtonContainer>
