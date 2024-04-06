@@ -552,7 +552,7 @@ const Swap = () => {
       newTokens.add(pool.tokB);
     }
     const poolTokens = Array.from(newTokens);
-    setTokenOptions([
+    const tokenOptions = [
       {
         tokenId: 0,
         name: "Voi",
@@ -561,8 +561,10 @@ const Swap = () => {
         totalSupply: BigInt(10_000_000_000 * 1e6),
       },
       ...tokens.filter((t: ARC200TokenI) => poolTokens.includes(t.tokenId)),
-    ]);
-  }, [tokens, pools]);
+    ].filter((t: ARC200TokenI) => t.tokenId !== token2?.tokenId);
+    tokenOptions.sort((a, b) => a.tokenId - b.tokenId);
+    setTokenOptions(tokenOptions);
+  }, [token2, tokens, pools]);
 
   const eligiblePools = useMemo(() => {
     return pools.filter((p: PoolI) => {
@@ -798,7 +800,7 @@ const Swap = () => {
     const tokenOptions2 = Array.from(options);
     // check if token options includes wVOI
     if (tokenOptions2.find((t: ARC200TokenI) => t?.tokenId === TOKEN_WVOI1)) {
-      setTokenOptions2([
+      const newTokenOptions2 = [
         {
           tokenId: 0,
           name: "Voi",
@@ -807,9 +809,13 @@ const Swap = () => {
           totalSupply: BigInt(10_000_000_000 * 1e6),
         },
         ...tokenOptions2,
-      ]);
+      ];
+      newTokenOptions2.sort((a, b) => a.tokenId - b.tokenId);
+      setTokenOptions2(newTokenOptions2);
     } else {
-      setTokenOptions2(tokenOptions2);
+      const newTokenOptions2 = [...tokenOptions2];
+      newTokenOptions2.sort((a, b) => a.tokenId - b.tokenId);
+      setTokenOptions2(newTokenOptions2);
     }
   }, [pool, token, pools]);
 
