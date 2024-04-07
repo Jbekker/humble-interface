@@ -3,7 +3,7 @@ import React, { FC } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import TokenSelect from "../TokenSelect";
-import { ARC200TokenI } from "../../types";
+import { ARC200TokenI, PoolI } from "../../types";
 import { tokenSymbol } from "../../utils/dex";
 
 const MaxButton = styled.div`
@@ -363,6 +363,7 @@ interface SwapProps {
   amount: string;
   setAmount: (amount: string) => void;
   token?: ARC200TokenI;
+  token2?: ARC200TokenI;
   setToken: (token: ARC200TokenI) => void;
   options?: ARC200TokenI[];
   balance?: string;
@@ -373,6 +374,7 @@ const Swap: FC<SwapProps> = ({
   amount,
   setAmount,
   token,
+  token2,
   setToken,
   options,
   balance,
@@ -386,6 +388,7 @@ const Swap: FC<SwapProps> = ({
       setAmount(balance);
     }
   };
+  const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
   return (
     <SwapTokenContainer className={isDarkTheme ? "dark" : "light"}>
       <SwapTokenLabel className={isDarkTheme ? "dark" : "light"}>

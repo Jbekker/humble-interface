@@ -501,6 +501,7 @@ const Swap = () => {
 
   const [pool, setPool] = useState<PoolI>();
 
+  // EEFFECT
   useEffect(() => {
     if (!pools || !tokens || pool) return;
     if (paramPoolId) {
@@ -1363,6 +1364,7 @@ const Swap = () => {
           amount={fromAmount}
           setAmount={setFromAmount}
           token={token}
+          token2={token2}
           setToken={setToken}
           balance={balance}
           onFocus={() => setFocus("from")}
