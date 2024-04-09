@@ -1373,8 +1373,11 @@ const Swap = () => {
         <img
           onClick={() => {
             const newToken = token;
+            const newAmount = fromAmount;
             setToken(token2);
             setToken2(newToken);
+            setToAmount(newAmount);
+            setFromAmount(toAmount);
           }}
           style={{ cursor: "pointer" }}
           src={on ? ActiveSwapIcon : SwapIcon}

@@ -741,12 +741,14 @@ const Swap = () => {
             locked: pi[4],
           }))(info[2]),
           protoBals: info[3],
-          tokA: Number(info[4]),
-          tokB: Number(info[5]),
+          tokB: Number(info[4]),
+          tokA: Number(info[5]),
         }))(info.returnValue)
       );
     });
-  }, [pool]);
+  }, [pool, on]);
+
+  console.log("info", info);
 
   const [poolBalance, setPoolBalance] = useState<BigInt>();
 
@@ -762,7 +764,7 @@ const Swap = () => {
         }
       }
     );
-  }, [activeAccount, pool]);
+  }, [activeAccount, pool, on]);
 
   const [poolShare, setPoolShare] = useState<string>("0");
 
@@ -865,12 +867,12 @@ const Swap = () => {
     if (!info || !token || !token2) return;
     if (info.tokA === tokenId(token)) {
       return (
-        (Number(info.poolBals[0]) / Number(info.poolBals[1])) *
+        (Number(info.poolBals[1]) / Number(info.poolBals[0])) *
         10 ** (token.decimals - token2.decimals)
       );
     } else if (info.tokB === tokenId(token)) {
       return (
-        (Number(info.poolBals[1]) / Number(info.poolBals[0])) *
+        (Number(info.poolBals[0]) / Number(info.poolBals[1])) *
         10 ** (token.decimals - token2.decimals)
       );
     }
@@ -965,8 +967,6 @@ const Swap = () => {
       });
     }
   }, [pool, token, token2, toAmount, focus]);
-
-  const isValid = !!token && !!token2 && !!fromAmount && !!toAmount;
 
   // // EFFECT
   // useEffect(() => {
@@ -1149,15 +1149,44 @@ const Swap = () => {
     }
   }, [activeAccount, providers]);
 
+  const isValid = useMemo(() => {
+    return (
+      !!token &&
+      !!token2 &&
+      !!fromAmount &&
+      !!toAmount &&
+      !!balance &&
+      !!balance2 &&
+      Number(fromAmount.replace(/,/, "")) <= Number(balance.replace(/,/, "")) &&
+      Number(toAmount.replace(/,/, "")) <= Number(balance2.replace(/,/, ""))
+    );
+  }, [balance, balance2, fromAmount, toAmount, token, token2]);
+
+  console.log("isValid", isValid);
+
   const buttonLabel = useMemo(() => {
     if (isValid) {
       return "Add liquidity";
     } else {
-      return "Select token above";
+      if (
+        Number(fromAmount.replace(/,/g, "")) > Number(balance?.replace(/,/g, ""))
+      ) {
+        return `Insufficient ${tokenSymbol(token)} balance`;
+      } else if (
+        Number(toAmount.replace(/,/g, "")) > Number(balance2?.replace(/,/g, ""))
+      ) {
+        return `Insufficient ${tokenSymbol(token2)} balance`;
+      } else if (!token || !token2) {
+        return "Select token above";
+      } else if (!fromAmount || !toAmount) {
+        return "Enter amount above";
+      } else {
+        return "Invalid input";
+      }
     }
-  }, [isValid]);
+  }, [isValid, fromAmount, toAmount, balance, balance2, token, token2]);
 
-  const handleButtonClick = async () => {
+  const handleProviderDeposit = async () => {
     if (!isValid || !token || !token2) return;
     if (!activeAccount) {
       toast.info("Please connect your wallet first");
@@ -1624,6 +1653,7 @@ const Swap = () => {
           }
         );
       }
+      setFromAmount("0");
     } catch (e: any) {
       toast.error(e.message);
       console.error(e);
@@ -1708,7 +1738,7 @@ const Swap = () => {
         className={isValid ? "active" : undefined}
         onClick={() => {
           if (!on) {
-            handleButtonClick();
+            handleProviderDeposit();
           }
         }}
       >
