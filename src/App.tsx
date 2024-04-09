@@ -13,6 +13,8 @@ import Layout from "./layouts/Default";
 import { getPools } from "./store/poolSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
 import { getToken, getTokens } from "./store/tokenSlice";
+import { getPoolBals } from "./store/poolBalsSlice";
+import { getVolume } from "./store/volumeSlice";
 
 const BackgroundLayer = styled.div`
   width: 100%;
@@ -39,6 +41,15 @@ const AppContainer: React.FC<AppContainerProps> = ({ children }) => {
   const poolsStatus = useSelector((state: RootState) => state.pools.status);
   useEffect(() => {
     dispatch(getPools() as unknown as UnknownAction);
+  }, [dispatch]);
+  useEffect(() => {
+    dispatch(getTokens() as unknown as UnknownAction);
+  }, [dispatch]);
+  useEffect(() => {
+    dispatch(getPoolBals() as unknown as UnknownAction);
+  }, [dispatch]);
+  useEffect(() => {
+    dispatch(getVolume() as unknown as UnknownAction);
   }, [dispatch]);
   const [ready, setReady] = React.useState(false);
   useEffect(() => {

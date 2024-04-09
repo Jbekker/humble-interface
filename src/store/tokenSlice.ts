@@ -5,6 +5,7 @@ import { RootState } from "./store";
 import { ARC200TokenI } from "../types";
 import { arc200 } from "ulujs";
 import { getAlgorandClients } from "../wallets";
+import axios from "axios";
 
 export interface TokensState {
   tokens: ARC200TokenI[];
@@ -62,6 +63,14 @@ export const getTokens = createAsyncThunk<
   try {
     const tokenTable = db.table("tokens");
     const tokens = await tokenTable.toArray();
+
+    if (tokens.length === 0) {
+      const storedTokens = [];
+      const { data } = await axios.get("/api/tokens.json");
+      storedTokens.push(...data);
+      db.table("tokens").bulkPut(storedTokens);
+    }
+
     return [...tokens];
   } catch (error: any) {
     return rejectWithValue(error.message);

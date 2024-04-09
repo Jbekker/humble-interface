@@ -1053,17 +1053,17 @@ const Swap = () => {
     };
     const tokenOptions2 = Array.from(options);
     // check if token options includes wVOI
-    if (tokenOptions2.find((t: ARC200TokenI) => t.tokenId === TOKEN_WVOI1)) {
+    if (tokenOptions2.find((t: ARC200TokenI) => t?.tokenId === TOKEN_WVOI1)) {
       setTokenOptions2([netToken, ...tokenOptions2]);
     } else {
       setTokenOptions2(tokenOptions2);
     }
     if (
       !tokenOptions2
-        .map((t: ARC200TokenI) => t.tokenId)
+        .map((t: ARC200TokenI) => t?.tokenId)
         .includes(tokenId(token2))
     ) {
-      if (tokenOptions2.map((t: ARC200TokenI) => t.tokenId).includes(0)) {
+      if (tokenOptions2.map((t: ARC200TokenI) => t?.tokenId).includes(0)) {
         setToken2(netToken);
       } else {
         setToken2(Array.from(options)[0]);

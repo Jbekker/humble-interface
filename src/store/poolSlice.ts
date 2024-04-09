@@ -5,6 +5,8 @@ import { RootState } from "./store";
 import { CONTRACT, abi, arc200 } from "ulujs";
 import { getAlgorandClients } from "../wallets";
 import { PoolI } from "../types";
+import { CTCINFO_TRI } from "../constants/dex";
+import axios from "axios";
 
 interface Pool {
   txId: string;
@@ -28,15 +30,20 @@ export const getPools = createAsyncThunk<
 >("pools/getPools", async (_, { getState, rejectWithValue }) => {
   try {
     const poolsTable = db.table("pools");
-    const tokensTable = db.table("tokens");
     const pools = await poolsTable.toArray();
-    const tokens = await tokensTable.toArray();
     const minRound = 5486024;
+    const storedPools = [];
+    if (pools.length === 0) {
+      const { data } = await axios.get("/api/pools.json");
+      storedPools.push(...data.filter((pool: Pool) => pool.round >= minRound));
+    }
     const lastRound =
-      pools.length > 0 ? Math.max(...pools.map((pool) => pool.round)) : 0;
+      pools.length > 0
+        ? Math.max(...[...pools, ...storedPools].map((pool) => pool.round))
+        : 0;
     const { algodClient, indexerClient } = getAlgorandClients();
     const ci = new CONTRACT(
-      23223143,
+      CTCINFO_TRI,
       algodClient,
       indexerClient,
       {
@@ -76,6 +83,9 @@ export const getPools = createAsyncThunk<
           tokB: Number(event[3][2]),
         };
       });
+    if (storedPools.length > 0) {
+      newPools.push(...storedPools);
+    }
     for (const pool of newPools.filter(
       (pool: PoolI) => pool.round >= minRound
     )) {
@@ -92,46 +102,6 @@ export const getPools = createAsyncThunk<
         })
       );
     }
-    // const newTokens: any[] = [];
-    // for (const pool of newPools) {
-    //   newTokens.push(pool.poolId);
-    //   if (
-    //     !tokens.find((token) => token.tokenId === pool.tokA) &&
-    //     !newTokens.find((token) => token.tokenId === pool.tokA)
-    //   ) {
-    //     newTokens.push(pool.tokA);
-    //   }
-    //   if (
-    //     !tokens.find((token) => token.tokenId === pool.tokB) &&
-    //     !newTokens.find((token) => token.tokenId === pool.tokB)
-    //   ) {
-    //     newTokens.push(pool.tokB);
-    //   }
-    // }
-    // const dbTokens = []
-    // for (const tokenId of newTokens) {
-    //   const ci = makeCi(tokenId);
-    //   const arc200_nameR = await ci.arc200_name();
-    //   const arc200_symbolR = await ci.arc200_symbol();
-    //   const arc200_decimalsR = await ci.arc200_decimals();
-    //   const arc200_totalSupplyR = await ci.arc200_totalSupply();
-    //   if (
-    //     arc200_nameR.success &&
-    //     arc200_symbolR.success &&
-    //     arc200_decimalsR.success &&
-    //     arc200_totalSupplyR.success
-    //   ) {
-
-    //     dbTokens.push({
-    //       tokenId,
-    //       name: arc200_nameR.returnValue,
-    //       symbol: arc200_symbolR.returnValue,
-    //       decimals: Number(arc200_decimalsR.returnValue),
-    //       totalSupply: arc200_totalSupplyR.returnValue,
-    //     });
-    //   }
-    // }
-    // await db.table("tokens").bulkPut(dbTokens);
     const wl: number[] = [];
     return ([...pools, ...newPools] as Pool[]).filter(
       (pool) =>

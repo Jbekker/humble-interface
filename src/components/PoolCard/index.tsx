@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import React, { FC, useEffect, useState } from "react";
+import React, { FC, useEffect, useMemo, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { ARC200TokenI, PoolI } from "../../types";
@@ -8,6 +8,206 @@ import { tokenSymbol } from "../../utils/dex";
 import { getToken, getTokens, updateToken } from "../../store/tokenSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
 import { Skeleton } from "@mui/material";
+import { CONTRACT, abi } from "ulujs";
+import { getAlgorandClients } from "../../wallets";
+import { TOKEN_WVOI1 } from "../../constants/tokens";
+import BigNumber from "bignumber.js";
+import { useWallet } from "@txnlab/use-wallet";
+
+const spec = {
+  name: "pool",
+  desc: "pool",
+  methods: [
+    {
+      name: "custom",
+      args: [],
+      returns: {
+        type: "void",
+      },
+    },
+    {
+      name: "Info",
+      args: [],
+      returns: {
+        type: "((uint256,uint256),(uint256,uint256),(uint256,uint256,uint256,address,byte),(uint256,uint256),uint64,uint64)",
+      },
+      readonly: true,
+    },
+    {
+      name: "Provider_deposit",
+      args: [
+        { type: "byte" },
+        { type: "(uint256,uint256)" },
+        { type: "uint256" },
+      ],
+      returns: { type: "uint256" },
+    },
+    {
+      name: "Provider_withdraw",
+      args: [
+        { type: "byte" },
+        { type: "uint256" },
+        { type: "(uint256,uint256)" },
+      ],
+      returns: { type: "(uint256,uint256)" },
+    },
+    {
+      name: "Provider_withdrawA",
+      args: [{ type: "uint256" }],
+      returns: { type: "uint256" },
+    },
+    {
+      name: "Provider_withdrawB",
+      args: [{ type: "uint256" }],
+      returns: { type: "uint256" },
+    },
+    {
+      name: "Trader_swapAForB",
+      args: [{ type: "byte" }, { type: "uint256" }, { type: "uint256" }],
+      returns: { type: "(uint256,uint256)" },
+    },
+    {
+      name: "Trader_swapBForA",
+      args: [{ type: "byte" }, { type: "uint256" }, { type: "uint256" }],
+      returns: { type: "(uint256,uint256)" },
+    },
+    {
+      name: "arc200_approve",
+      desc: "Approve spender for a token",
+      args: [
+        {
+          type: "address",
+          name: "spender",
+          desc: "The address of the spender",
+        },
+        {
+          type: "uint256",
+          name: "value",
+          desc: "The amount of tokens to approve",
+        },
+      ],
+      returns: {
+        type: "bool",
+        desc: "Success",
+      },
+    },
+    {
+      name: "arc200_balanceOf",
+      desc: "Returns the current balance of the owner of the token",
+      readonly: true,
+      args: [
+        {
+          type: "address",
+          name: "owner",
+          desc: "The address of the owner of the token",
+        },
+      ],
+      returns: {
+        type: "uint256",
+        desc: "The current balance of the holder of the token",
+      },
+    },
+    {
+      name: "arc200_transfer",
+      desc: "Transfers tokens",
+      readonly: false,
+      args: [
+        {
+          type: "address",
+          name: "to",
+          desc: "The destination of the transfer",
+        },
+        {
+          type: "uint256",
+          name: "value",
+          desc: "Amount of tokens to transfer",
+        },
+      ],
+      returns: {
+        type: "bool",
+        desc: "Success",
+      },
+    },
+    {
+      name: "createBalanceBox",
+      desc: "Creates a balance box",
+      args: [
+        {
+          type: "address",
+        },
+      ],
+      returns: {
+        type: "void",
+      },
+    },
+    //createAllowanceBox(address,address)void
+    {
+      name: "createAllowanceBox",
+      desc: "Creates an allowance box",
+      args: [
+        {
+          type: "address",
+        },
+        {
+          type: "address",
+        },
+      ],
+      returns: {
+        type: "void",
+      },
+    },
+    //createBalanceBoxes(address)void
+    {
+      name: "createBalanceBoxes",
+      desc: "Creates a balance box",
+      args: [
+        {
+          type: "address",
+        },
+      ],
+      returns: {
+        type: "void",
+      },
+    },
+    // hasBox((byte,byte[64]))byte
+    {
+      name: "hasBox",
+      desc: "Checks if the account has a box",
+      args: [
+        {
+          type: "(byte,byte[64])",
+        },
+      ],
+      returns: {
+        type: "byte",
+      },
+    },
+    {
+      name: "reserve",
+      args: [
+        {
+          type: "address",
+        },
+      ],
+      returns: {
+        type: "(uint256,uint256)",
+      },
+      readonly: true,
+    },
+  ],
+  events: [
+    // Address, Bals, Bals, Bals
+    {
+      name: "SwapEvent",
+      args: [
+        { type: "address" },
+        { type: "(uin256,uint256)" },
+        { type: "(uin256,uint256)" },
+        { type: "(uin256,uint256)" },
+      ],
+    },
+  ],
+};
 
 const StyledLink = styled(Link)`
   text-decoration: none;
@@ -388,8 +588,10 @@ const SwapButtonLabel = styled.div`
 interface PoolCardProps {
   pool: PoolI;
   balance?: string;
+  tvl?: string;
 }
 const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
+  const { activeAccount } = useWallet();
   const [tokA, setTokA] = useState<ARC200TokenI>();
   const [tokB, setTokB] = useState<ARC200TokenI>();
   /* Theme */
@@ -415,8 +617,183 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
       });
     }
   }, [dispatch]);
+
+  const poolBals = useSelector(
+    (state: RootState) => state.poolBals.poolBals
+  ).filter((p) => p.poolId === pool.poolId);
+
+  const volume = useSelector(
+    (state: RootState) => state.volumes.volumes
+  ).filter((v) => v.poolId === pool.poolId);
+
+  const [info, setInfo] = useState<any>();
+  // EFFECT get pool info
+  useEffect(() => {
+    const { algodClient, indexerClient } = getAlgorandClients();
+    const ci = new CONTRACT(pool.poolId, algodClient, indexerClient, spec, {
+      addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+      sk: new Uint8Array(0),
+    });
+    ci.Info().then((info: any) => {
+      if (info.success) {
+        const [lptBals, poolBals, protoInfo, protoBals, tokB, tokA] =
+          info.returnValue;
+        setInfo({
+          lptBals,
+          poolBals,
+          protoInfo,
+          protoBals,
+          tokB: Number(tokB),
+          tokA: Number(tokA),
+        });
+      }
+    });
+  }, []);
+
+  const totalVolumeBn = useMemo(() => {
+    if (!volume || !info || !tokA || !tokB) return new BigNumber(0);
+    const totalA = volume
+      .reduce((acc, v) => acc.plus(new BigNumber(v.inA)), new BigNumber(0))
+      .div(new BigNumber(10).pow(tokA.decimals));
+    const totalB = volume
+      .reduce((acc, v) => acc.plus(new BigNumber(v.inB)), new BigNumber(0))
+      .div(new BigNumber(10).pow(tokB.decimals));
+    const rate = new BigNumber(info.poolBals[0])
+      .multipliedBy(new BigNumber(10).pow(tokB.decimals))
+      .div(
+        new BigNumber(info.poolBals[1]).multipliedBy(
+          new BigNumber(10).pow(tokA.decimals)
+        )
+      );
+    return totalA.plus(totalB.times(rate));
+  }, [volume, info, tokA, tokB]);
+
+  const totalVolume = useMemo(() => {
+    if (!totalVolumeBn) return "";
+    return new Intl.NumberFormat("en", { notation: "compact" }).format(
+      totalVolumeBn.toNumber()
+    );
+  }, [totalVolumeBn]);
+
   const symbolA = tokA?.symbol ? tokenSymbol(tokA, true) : "...";
   const symbolB = tokB?.symbol ? tokenSymbol(tokB, true) : "...";
+
+  const tvlBn = useMemo(() => {
+    if (!info || !tokA || !tokB) return new BigNumber(0);
+    if (
+      [tokA, tokB].map((t: ARC200TokenI) => t.tokenId).includes(TOKEN_WVOI1)
+    ) {
+      if (info.tokA === TOKEN_WVOI1) {
+        return new BigNumber(info.poolBals[0])
+          .multipliedBy(2)
+          .div(new BigNumber(10).pow(tokA.decimals));
+      } else if (info.tokB === TOKEN_WVOI1) {
+        return new BigNumber(info.poolBals[1])
+          .multipliedBy(2)
+          .div(new BigNumber(10).pow(tokB.decimals));
+      }
+    } else {
+      // TVL is value of pool tokens
+      return new BigNumber(0);
+    }
+  }, [tokA, tokB, info]);
+
+  const tvl = useMemo(() => {
+    if (!tvlBn) return "";
+    return new Intl.NumberFormat("en", { notation: "compact" }).format(
+      tvlBn.toNumber()
+    );
+  }, [tvlBn]);
+
+  // apr
+  // anualizedFee / tvl * 100
+  const apr = useMemo(() => {
+    if (!totalVolumeBn || !tvlBn) return "";
+    const weeks = 52;
+    // anualizedFee
+    // tv * (30/10000) * 52
+    const annualizedFee = totalVolumeBn.multipliedBy(30 * weeks).div(10_000);
+    const aprBn = annualizedFee.multipliedBy(100).div(tvlBn);
+    return aprBn.toFixed(2);
+  }, [totalVolumeBn, tvlBn]);
+  const [value, setValue] = useState("0");
+  useEffect(() => {
+    if (!poolBals || poolBals.length === 0 || !balance) return;
+    // get most recent pool balance
+    const poolBal = poolBals[poolBals.length - 1];
+    const value = new BigNumber(balance).multipliedBy(
+      new BigNumber(poolBal.rate)
+    );
+    setValue(
+      new Intl.NumberFormat("en", { notation: "compact" }).format(
+        value.toNumber()
+      )
+    );
+  }, [poolBals, balance]);
+  useEffect(() => {
+    if (!info || !tokA || !tokB || !activeAccount || !balance) return;
+    if (
+      [tokA, tokB].map((t: ARC200TokenI) => t.tokenId).includes(TOKEN_WVOI1)
+    ) {
+      if (info.tokA === TOKEN_WVOI1) {
+        const aValue = new BigNumber(info.poolBals[0]).div(
+          new BigNumber(10).pow(tokA.decimals)
+        );
+        const bValue = new BigNumber(info.poolBals[1]).div(
+          new BigNumber(10).pow(tokB.decimals)
+        );
+        const rate = aValue.div(bValue);
+        const { algodClient, indexerClient } = getAlgorandClients();
+        const ci = new CONTRACT(
+          pool.poolId,
+          algodClient,
+          indexerClient,
+          abi.arc200,
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(0),
+          }
+        );
+        ci.arc200_balanceOf(activeAccount.address).then((balance: any) => {
+          if (balance.success) {
+            const ci = new CONTRACT(
+              pool.poolId,
+              algodClient,
+              indexerClient,
+              spec,
+              {
+                addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+                sk: new Uint8Array(0),
+              }
+            );
+            ci.setFee(2000);
+            ci.Provider_withdraw(1, balance.returnValue, [0, 0]).then(
+              (withdraw: any) => {
+                if (withdraw.success) {
+                  const balA = new BigNumber(withdraw.returnValue[0]).div(
+                    new BigNumber(10).pow(tokA.decimals)
+                  );
+                  const balB = new BigNumber(withdraw.returnValue[1]).div(
+                    new BigNumber(10).pow(tokB.decimals)
+                  );
+                  const value = balA.plus(balB.times(rate));
+                  setValue(
+                    new Intl.NumberFormat("en", { notation: "compact" }).format(
+                      value.toNumber()
+                    )
+                  );
+                }
+              }
+            );
+          }
+        });
+      } else if (info.tokB === TOKEN_WVOI1) {
+        // TODO in case tokB is wvoi
+      }
+    } else {
+      // TODO in case neither is wvoi
+    }
+  }, [info, tokA, tokB, activeAccount]);
   return (
     <PoolCardRoot className={isDarkTheme ? "dark" : "light"}>
       <PoolCardRow>
@@ -462,7 +839,7 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
                 >
                   {balance || ""}
                   <br />
-                  ≈0 VOI
+                  {value !== "0" ? `≈${value} VOI` : ""}
                 </APRLabel>
               </APRLabelContainer>
             </Col4>
@@ -491,14 +868,14 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
         ) : (
           <>
             <Col3>
-              <TVLLabel>0 VOI</TVLLabel>
+              <TVLLabel>{tvl} VOI</TVLLabel>
             </Col3>
             <Col3>
-              <VolumeLabel>0 VOI</VolumeLabel>
+              <VolumeLabel>{totalVolume} VOI</VolumeLabel>
             </Col3>
             <Col4>
               <APRLabelContainer>
-                <APRLabel>0.00%</APRLabel>
+                <APRLabel>{apr}%</APRLabel>
               </APRLabelContainer>
             </Col4>
             <Col5>

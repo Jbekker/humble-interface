@@ -517,12 +517,9 @@ const PoolList: FC<PoolListProps> = () => {
         </Heading>
       </Columns>
       {pools.length > 0 ? (
-        pools.map((p: PoolI) => (
-          <PoolCard
-            key={p.poolId}
-            pool={p}
-          />
-        ))
+        pools.map((p: PoolI) => {
+          return <PoolCard key={p.poolId} pool={p} />;
+        })
       ) : (
         <div>No pools</div>
       )}
