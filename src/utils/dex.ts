@@ -1,5 +1,6 @@
 import { TOKEN_VOI, TOKEN_WVOI1 } from "../constants/tokens";
 import { ARC200TokenI } from "../types";
+import { prepareString } from "./string";
 
 export const tokenSymbol = (
   token: ARC200TokenI | undefined,
@@ -12,7 +13,7 @@ export const tokenSymbol = (
     }
     return "wVOI";
   } else {
-    return symbol;
+    return prepareString(symbol);
   }
 };
 

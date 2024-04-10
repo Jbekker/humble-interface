@@ -10,3 +10,18 @@ export function stringToColorCode(str: string): string {
 
   return "#" + Array(6 - color.length + 1).join("0") + color;
 }
+
+/*
+ * prepareString
+ * - prepare string (strip trailing null bytes)
+ * @param str: string to prepare
+ * @returns: prepared string
+ */
+export const prepareString = (str: string) => {
+  const index = str.indexOf("\x00");
+  if (index > 0) {
+    return str.slice(0, str.indexOf("\x00"));
+  } else {
+    return str;
+  }
+};

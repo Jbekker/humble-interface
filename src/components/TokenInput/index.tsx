@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import TokenSelect from "../TokenSelect";
 import { ARC200TokenI, PoolI } from "../../types";
 import { tokenSymbol } from "../../utils/dex";
+import { prepareString } from "../../utils/string";
 
 const MaxButton = styled.div`
   display: flex;
@@ -380,6 +381,7 @@ const Swap: FC<SwapProps> = ({
   balance,
   onFocus,
 }) => {
+  console.log(options?.map((option) => prepareString(option.symbol)));
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
