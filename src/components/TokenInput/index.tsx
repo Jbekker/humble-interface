@@ -468,7 +468,10 @@ const Swap: FC<SwapProps> = ({
           </BalanceValue>
         </BalanceContainer>
         <MaxButton
-          onClick={handleMaxClick}
+          onClick={() => {
+            onFocus();
+            handleMaxClick();
+          }}
           className={isDarkTheme ? "dark" : "light"}
         >
           <MaxButtonLabel>Max</MaxButtonLabel>

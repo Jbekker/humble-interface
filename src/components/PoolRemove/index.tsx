@@ -460,6 +460,14 @@ const PoolRemove = () => {
 
   const [newShare, setNewShare] = useState<string>();
   useEffect(() => {
+    if (poolShare === "100.00") {
+      if (fromAmount === "100") {
+        setNewShare("0.00");
+      } else {
+        setNewShare("100.00");
+      }
+      return;
+    }
     const newShare = (Number(poolShare) * (100 - Number(fromAmount))) / 100;
     setNewShare(newShare.toFixed(2));
   }, [poolShare, fromAmount]);
