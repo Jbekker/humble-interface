@@ -381,7 +381,6 @@ const Swap: FC<SwapProps> = ({
   balance,
   onFocus,
 }) => {
-  console.log(options?.map((option) => prepareString(option.symbol)));
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
