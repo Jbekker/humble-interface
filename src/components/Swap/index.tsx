@@ -1324,7 +1324,6 @@ const Swap = () => {
           ci.setExtraTxns(buildP);
           customR = await ci.custom();
         }
-        console.log({ customR });
         if (!customR.success) return new Error("Swap group simulation failed");
         await toast.promise(
           signTransactions(
@@ -1334,8 +1333,7 @@ const Swap = () => {
           ).then(sendTransactions),
           {
             pending: `Swap ${fromAmount} ${token.symbol} -> ${toAmount} ${token2.symbol}`,
-            success: `Swap successful!`,
-            //error: "Swap failed",
+            //success: `Swap successful!`,
           },
           {
             type: "default",
@@ -1345,6 +1343,20 @@ const Swap = () => {
             hideProgressBar: true,
           }
         );
+        // get current round
+        const statusR = await algodClient.status().do();
+        const lastRound = statusR["last-round"];
+        const ciArc200 = new arc200(tokA, algodClient, indexerClient);
+        const arc200_TransferR = await ciArc200.arc200_Transfer({
+          minRound: lastRound - 10,
+        });
+        const lastTransfer = arc200_TransferR.filter(
+          (evt: any) =>
+            evt[3] === algosdk.getApplicationAddress(poolId) &&
+            evt[4] === activeAccount.address
+        );
+        if (!lastTransfer) return;
+      
       }
     } catch (e: any) {
       toast.error(e.message);

@@ -1149,7 +1149,7 @@ const Swap = () => {
     }
   }, [activeAccount, providers]);
 
-  const isValid = useMemo(() => {
+  const isValid = true; /* useMemo(() => {
     return (
       !!token &&
       !!token2 &&
@@ -1161,6 +1161,7 @@ const Swap = () => {
       Number(toAmount.replace(/,/, "")) <= Number(balance2.replace(/,/, ""))
     );
   }, [balance, balance2, fromAmount, toAmount, token, token2]);
+  */
 
   console.log("isValid", isValid);
 
@@ -1169,7 +1170,8 @@ const Swap = () => {
       return "Add liquidity";
     } else {
       if (
-        Number(fromAmount.replace(/,/g, "")) > Number(balance?.replace(/,/g, ""))
+        Number(fromAmount.replace(/,/g, "")) >
+        Number(balance?.replace(/,/g, ""))
       ) {
         return `Insufficient ${tokenSymbol(token)} balance`;
       } else if (
