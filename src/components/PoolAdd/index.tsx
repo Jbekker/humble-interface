@@ -1149,7 +1149,7 @@ const Swap = () => {
     }
   }, [activeAccount, providers]);
 
-  const isValid = true; /* useMemo(() => {
+  const isValid = useMemo(() => {
     return (
       !!token &&
       !!token2 &&
@@ -1157,11 +1157,11 @@ const Swap = () => {
       !!toAmount &&
       !!balance &&
       !!balance2 &&
-      Number(fromAmount.replace(/,/, "")) <= Number(balance.replace(/,/, "")) &&
-      Number(toAmount.replace(/,/, "")) <= Number(balance2.replace(/,/, ""))
+      Number(fromAmount.replace(/,/g, "")) <=
+        Number(balance.replace(/,/g, "")) &&
+      Number(toAmount.replace(/,/g, "")) <= Number(balance2.replace(/,/g, ""))
     );
   }, [balance, balance2, fromAmount, toAmount, token, token2]);
-  */
 
   console.log("isValid", isValid);
 
