@@ -505,21 +505,49 @@ interface FarmCardProps {
 }
 const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
   if (!farm) return null;
-  console.log({ farm });
   const { activeAccount, signTransactions, sendTransactions } = useWallet();
   const [tokenA, setTokenA] = useState<ARC200TokenI>(); // rewards token
   const [tokenB, setTokenB] = useState<ARC200TokenI>(); // stake token
+  const [balance, setBalance] = useState<string>();
   const [staked, setStaked] = useState<string>();
   const [rewards, setRewards] = useState<string>();
   const [totalStaked, setTotalStaked] = useState<string>();
   const [poolRewards, setPoolRewards] = useState<string>();
   const [apr, setApr] = useState<string>();
-  console.log({ farm, staked, rewards, round, totalStaked });
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
   const dispatch = useDispatch();
+  // EFFECT: Fetch stake token balance
+  useEffect(() => {
+    if (!tokenB || !activeAccount) return;
+    const { algodClient, indexerClient } = getAlgorandClients();
+    // if wrapped voi use voi balance
+    if ([TOKEN_WVOI1].includes(tokenB.tokenId)) {
+      algodClient
+        .accountInformation(activeAccount.address)
+        .do()
+        .then((r: any) => {
+          const amount = r.amount;
+          const minBalance = r["min-balance"];
+          const available = amount - minBalance;
+          setBalance((available / 10 ** tokenB.decimals).toLocaleString());
+        });
+    } else {
+      // otherwise use arc200 balance
+      const ci = new arc200(tokenB.tokenId, algodClient, indexerClient);
+      ci.arc200_balanceOf(activeAccount.address).then((arc200_balanceOfR) => {
+        if (arc200_balanceOfR.success) {
+          const arc200_balanceOf: any = arc200_balanceOfR.returnValue;
+          const arc200_balanceOfBn = new BigNumber(arc200_balanceOf).div(
+            new BigNumber(10).pow(tokenB.decimals)
+          );
+          setBalance(arc200_balanceOfBn.toFixed(0));
+        }
+      });
+    }
+  }, [tokenB, activeAccount]);
   // EFFECT: Fetch token A if not available
   useEffect(() => {
     if (farm.rewardsToken) {
@@ -609,6 +637,7 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
     event: React.SyntheticEvent,
     expanded: boolean
   ) => {
+    if (!tokenA || !tokenB) return;
     if (expanded) {
       const { algodClient, indexerClient } = getAlgorandClients();
       const ci = new CONTRACT(
@@ -628,19 +657,15 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
         const [stakedR, rewardsR] = r;
         if (!stakedR.success || !rewardsR.success) return;
         const staked = stakedR.returnValue;
+        const stakedBn = new BigNumber(staked).div(
+          new BigNumber(10).pow(tokenB.decimals)
+        );
         const [rewards] = rewardsR.returnValue;
-        setStaked(
-          new BigNumber(staked)
-            .dividedBy(1e6)
-            .toFixed(tokenA?.decimals || 0)
-            .toString()
+        const rewardsBn = new BigNumber(rewards).div(
+          new BigNumber(10).pow(tokenA.decimals)
         );
-        setRewards(
-          new BigNumber(rewards)
-            .dividedBy(1e6)
-            .toFixed(tokenB?.decimals || 0)
-            .toString()
-        );
+        setStaked(stakedBn.toFixed(0));
+        setRewards(rewardsBn.toFixed(tokenA.decimals));
       });
     }
   };
@@ -964,7 +989,7 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
         };
         const buildN = [];
         if ([TOKEN_WVOI1].includes(farm.stakeToken)) {
-          builder.arc200.deposit(BigInt(amtAU.toFixed(0)));
+          buildN.push(builder.arc200.deposit(BigInt(amtAU.toFixed(0))));
         }
         buildN.push(
           builder.arc200.arc200_approve(
@@ -1110,7 +1135,7 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
             >
               <div>
                 <div>Balance:</div>
-                <div>{staked ? staked.toString() : "Loading..."}</div>
+                <div>{balance ? balance.toString() : "Loading..."}</div>
               </div>
               <div>
                 <div>Staked:</div>
