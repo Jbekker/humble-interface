@@ -21,6 +21,7 @@ import { Toast } from "react-toastify/dist/components";
 import { tokenId, tokenSymbol } from "../../utils/dex";
 import BigNumber from "bignumber.js";
 import { CTCINFO_DEFAULT_LP } from "../../constants/dex";
+import SwapSuccessfulModal from "../modals/SwapSuccessfulModal";
 
 const spec = {
   name: "pool",
@@ -500,6 +501,11 @@ const Swap = () => {
   } = useWallet();
 
   const [pool, setPool] = useState<PoolI>();
+  const [swapIn, setSwapIn] = useState("1");
+  const [swapOut, setSwapOut] = useState("2");
+  const [tokIn, setTokIn] = useState("TOKA");
+  const [tokOut, setTokOut] = useState("TOKB");
+  const [swapModalOpen, setSwapModalOpen] = useState<boolean>(false);
 
   // EEFFECT
   useEffect(() => {
@@ -1130,7 +1136,7 @@ const Swap = () => {
           ).then(sendTransactions),
           {
             pending: `Swap ${fromAmount} ${token.symbol} -> ${toAmount} ${token2.symbol}`,
-            success: `Swap successful!`,
+            //success: `Swap successful!`,
             //error: "Swap failed",
           },
           {
@@ -1139,6 +1145,34 @@ const Swap = () => {
             theme: "dark",
           }
         );
+        const statusR = await algodClient.status().do();
+        const lastRound = statusR["last-round"];
+        const ciArc200 = new arc200(tokB, algodClient, indexerClient);
+        const arc200_TransferR = await ciArc200.arc200_Transfer({
+          minRound: lastRound - 10,
+        });
+        const lastTransfer = arc200_TransferR.filter(
+          (evt: any) =>
+            evt[3] === algosdk.getApplicationAddress(poolId) &&
+            evt[4] === activeAccount.address
+        );
+        if (!lastTransfer) return;
+        const inAmtBi: any = inABI;
+        const inAmtBn = new BigNumber(inAmtBi).div(
+          new BigNumber(10).pow(token.decimals)
+        );
+        const swapIn = inAmtBn.toFixed(token.decimals);
+        const outAmtBi: any = lastTransfer[0][5];
+        const outAmtBn = new BigNumber(outAmtBi).div(
+          new BigNumber(10).pow(token2.decimals)
+        );
+        const swapOut = outAmtBn.toFixed(token2.decimals);
+        setPool(pool);
+        setSwapIn(swapIn);
+        setSwapOut(swapOut);
+        setTokIn(tokenSymbol(token));
+        setTokOut(tokenSymbol(token2));
+        setSwapModalOpen(true);
       } else if (pool.tokB === tokenId(token)) {
         console.log("swapBForA");
 
@@ -1343,7 +1377,6 @@ const Swap = () => {
             hideProgressBar: true,
           }
         );
-        // get current round
         const statusR = await algodClient.status().do();
         const lastRound = statusR["last-round"];
         const ciArc200 = new arc200(tokA, algodClient, indexerClient);
@@ -1356,7 +1389,23 @@ const Swap = () => {
             evt[4] === activeAccount.address
         );
         if (!lastTransfer) return;
-      
+        const inAmtBi: any = inBBI;
+        const inAmtBn = new BigNumber(inAmtBi).div(
+          new BigNumber(10).pow(token.decimals)
+        );
+        const swapIn = inAmtBn.toFixed(token.decimals);
+
+        const outAmtBi: any = lastTransfer[0][5];
+        const outAmtBn = new BigNumber(outAmtBi).div(
+          new BigNumber(10).pow(token2.decimals)
+        );
+        const swapOut = outAmtBn.toFixed(token2.decimals);
+        setPool(pool);
+        setSwapIn(swapIn);
+        setSwapOut(swapOut);
+        setTokIn(tokenSymbol(token));
+        setTokOut(tokenSymbol(token2));
+        setSwapModalOpen(true);
       }
     } catch (e: any) {
       toast.error(e.message);
@@ -1369,131 +1418,144 @@ const Swap = () => {
   const isLoading = !pools || !tokens;
 
   return !isLoading ? (
-    <SwapRoot className={isDarkTheme ? "dark" : "light"}>
-      <SwapContainer gap={on ? 1.43 : 0}>
-        <TokenInput
-          label="Swap from"
-          amount={fromAmount}
-          setAmount={setFromAmount}
-          token={token}
-          token2={token2}
-          setToken={setToken}
-          balance={balance}
-          onFocus={() => setFocus("from")}
-          options={tokenOptions}
-        />
-        <img
-          onClick={() => {
-            const newToken = token;
-            const newAmount = fromAmount;
-            setToken(token2);
-            setToken2(newToken);
-            setToAmount(newAmount);
-            setFromAmount(toAmount);
-          }}
-          style={{ cursor: "pointer" }}
-          src={on ? ActiveSwapIcon : SwapIcon}
-          alt="swap"
-          className={on ? "rotate" : undefined}
-        />
-        <TokenInput
-          label="Swap to"
-          amount={toAmount}
-          setAmount={setToAmount}
-          token={token2}
-          setToken={setToken2}
-          options={tokenOptions2}
-          balance={balance2}
-          onFocus={() => setFocus("to")}
-        />
-      </SwapContainer>
-      <SummaryContainer>
-        <RateContainer>
-          <RateLabel className={isDarkTheme ? "dark" : "light"}>Rate</RateLabel>
-          <RateValue>
-            <RateMain className={isDarkTheme ? "dark" : "light"}>
-              1 {tokenSymbol(token)} = {rate?.toFixed(token2?.decimals)}{" "}
-              {tokenSymbol(token2)}
-            </RateMain>
-            <RateSub>
-              {tokenSymbol(token2)} = {invRate?.toFixed(token?.decimals)}{" "}
-              {tokenSymbol(token)}
-            </RateSub>
-          </RateValue>
-        </RateContainer>
-        <BreakdownContainer>
-          <BreakdownStack>
-            <BreakdownRow>
-              <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
-                <span>Liquidity provider fee</span>
-                <InfoCircleIcon />
-              </BreakdownLabel>
-              <BreakdownValueContiner>
-                <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
-                  {fee} {token?.symbol}
-                </BreakdownValue>
-              </BreakdownValueContiner>
-            </BreakdownRow>
-            <BreakdownRow>
-              <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
-                <span>Price impact</span>
-                <InfoCircleIcon />
-              </BreakdownLabel>
-              <BreakdownValueContiner>
-                <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
-                  {slippage}%
-                </BreakdownValue>
-              </BreakdownValueContiner>
-            </BreakdownRow>
-            <BreakdownRow>
-              <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
-                <span>Allowed slippage</span>
-                <InfoCircleIcon />
-              </BreakdownLabel>
-              <BreakdownValueContiner>
-                <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
-                  0.50%
-                </BreakdownValue>
-              </BreakdownValueContiner>
-            </BreakdownRow>
-            <BreakdownRow>
-              <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
-                <span>Minimum received</span>
-                <InfoCircleIcon />
-              </BreakdownLabel>
-              <BreakdownValueContiner>
-                <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
-                  {minRecieved} {token2?.symbol}
-                </BreakdownValue>
-              </BreakdownValueContiner>
-            </BreakdownRow>
-          </BreakdownStack>
-        </BreakdownContainer>
-      </SummaryContainer>
-      <Button
-        className={isValid ? "active" : undefined}
-        onClick={() => {
-          if (!on) {
-            handleSwap();
-          }
-        }}
-      >
-        {!on ? (
-          buttonLabel
-        ) : (
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              alignItems: "center",
+    <>
+      <SwapRoot className={isDarkTheme ? "dark" : "light"}>
+        <SwapContainer gap={on ? 1.43 : 0}>
+          <TokenInput
+            label="Swap from"
+            amount={fromAmount}
+            setAmount={setFromAmount}
+            token={token}
+            token2={token2}
+            setToken={setToken}
+            balance={balance}
+            onFocus={() => setFocus("from")}
+            options={tokenOptions}
+          />
+          <img
+            onClick={() => {
+              const newToken = token;
+              const newAmount = fromAmount;
+              setToken(token2);
+              setToken2(newToken);
+              setToAmount(newAmount);
+              setFromAmount(toAmount);
             }}
-          >
-            <CircularProgress color="inherit" size={20} />
-            Swap in progress
-          </div>
-        )}
-      </Button>
-    </SwapRoot>
+            style={{ cursor: "pointer" }}
+            src={on ? ActiveSwapIcon : SwapIcon}
+            alt="swap"
+            className={on ? "rotate" : undefined}
+          />
+          <TokenInput
+            label="Swap to"
+            amount={toAmount}
+            setAmount={setToAmount}
+            token={token2}
+            setToken={setToken2}
+            options={tokenOptions2}
+            balance={balance2}
+            onFocus={() => setFocus("to")}
+          />
+        </SwapContainer>
+        <SummaryContainer>
+          <RateContainer>
+            <RateLabel className={isDarkTheme ? "dark" : "light"}>
+              Rate
+            </RateLabel>
+            <RateValue>
+              <RateMain className={isDarkTheme ? "dark" : "light"}>
+                1 {tokenSymbol(token)} = {rate?.toFixed(token2?.decimals)}{" "}
+                {tokenSymbol(token2)}
+              </RateMain>
+              <RateSub>
+                {tokenSymbol(token2)} = {invRate?.toFixed(token?.decimals)}{" "}
+                {tokenSymbol(token)}
+              </RateSub>
+            </RateValue>
+          </RateContainer>
+          <BreakdownContainer>
+            <BreakdownStack>
+              <BreakdownRow>
+                <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
+                  <span>Liquidity provider fee</span>
+                  <InfoCircleIcon />
+                </BreakdownLabel>
+                <BreakdownValueContiner>
+                  <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
+                    {fee} {token?.symbol}
+                  </BreakdownValue>
+                </BreakdownValueContiner>
+              </BreakdownRow>
+              <BreakdownRow>
+                <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
+                  <span>Price impact</span>
+                  <InfoCircleIcon />
+                </BreakdownLabel>
+                <BreakdownValueContiner>
+                  <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
+                    {slippage}%
+                  </BreakdownValue>
+                </BreakdownValueContiner>
+              </BreakdownRow>
+              <BreakdownRow>
+                <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
+                  <span>Allowed slippage</span>
+                  <InfoCircleIcon />
+                </BreakdownLabel>
+                <BreakdownValueContiner>
+                  <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
+                    0.50%
+                  </BreakdownValue>
+                </BreakdownValueContiner>
+              </BreakdownRow>
+              <BreakdownRow>
+                <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
+                  <span>Minimum received</span>
+                  <InfoCircleIcon />
+                </BreakdownLabel>
+                <BreakdownValueContiner>
+                  <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
+                    {minRecieved} {token2?.symbol}
+                  </BreakdownValue>
+                </BreakdownValueContiner>
+              </BreakdownRow>
+            </BreakdownStack>
+          </BreakdownContainer>
+        </SummaryContainer>
+        <Button
+          className={isValid ? "active" : undefined}
+          onClick={() => {
+            if (!on) {
+              handleSwap();
+            }
+          }}
+        >
+          {!on ? (
+            buttonLabel
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                alignItems: "center",
+              }}
+            >
+              <CircularProgress color="inherit" size={20} />
+              Swap in progress
+            </div>
+          )}
+        </Button>
+      </SwapRoot>
+      <SwapSuccessfulModal
+        open={swapModalOpen}
+        handleClose={() => setSwapModalOpen(false)}
+        poolId={pool?.poolId}
+        tokIn={tokIn}
+        tokOut={tokOut}
+        swapIn={swapIn}
+        swapOut={swapOut}
+      />
+    </>
   ) : null;
 };
 
