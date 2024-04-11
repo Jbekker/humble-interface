@@ -6,6 +6,7 @@ import { ARC200TokenI } from "../types";
 import { arc200 } from "ulujs";
 import { getAlgorandClients } from "../wallets";
 import axios from "axios";
+import { prepareString } from "../utils/string";
 
 export interface TokensState {
   tokens: ARC200TokenI[];

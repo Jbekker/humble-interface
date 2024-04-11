@@ -1013,7 +1013,7 @@ const Swap = () => {
                 )
               ).then(sendTransactions),
               {
-                pending: `Approve ${token.symbol} for swap`,
+                pending: `Approve ${tokenSymbol(token)} for swap`,
                 success: `Approval successful!`,
                 //error: "Approval failed",
               }
@@ -1049,7 +1049,9 @@ const Swap = () => {
                 )
               ).then(sendTransactions),
               {
-                pending: `Pending transaction to setup wallet to receive ${token2.symbol}`,
+                pending: `Pending transaction to setup wallet to receive ${tokenSymbol(
+                  token2
+                )}`,
                 success: `Transfer successful!`,
                 //error: "Transfer failed",
               },
@@ -1082,7 +1084,9 @@ const Swap = () => {
                 )
               ).then(sendTransactions),
               {
-                pending: `Pending transaction to setup wallet for ${token.symbol}/ARC200 swaps`,
+                pending: `Pending transaction to setup wallet for ${tokenSymbol(
+                  token
+                )}/ARC200 swaps`,
                 success: `Wallet setup complete!`,
                 //error: "Wallet setup failed",
               }
@@ -1135,7 +1139,9 @@ const Swap = () => {
             )
           ).then(sendTransactions),
           {
-            pending: `Swap ${fromAmount} ${token.symbol} -> ${toAmount} ${token2.symbol}`,
+            pending: `Swap ${fromAmount} ${tokenSymbol(
+              token
+            )} -> ${toAmount} ${tokenSymbol(token2)}`,
             //success: `Swap successful!`,
             //error: "Swap failed",
           },
@@ -1203,7 +1209,7 @@ const Swap = () => {
                 )
               ).then(sendTransactions),
               {
-                pending: `Approve ${token.symbol} spend for pool`,
+                pending: `Approve ${tokenSymbol(token)} spend for pool`,
                 success: `Approve successful!`,
                 //error: "Approve failed",
               },
@@ -1221,7 +1227,9 @@ const Swap = () => {
         // ---------------------------------------
         console.log("ensure balance for tokA");
         do {
-          const pending = `Pending transaction to setup wallete to receive ${token2.symbol}`;
+          const pending = `Pending transaction to setup wallete to receive ${tokenSymbol(
+            token2
+          )}`;
           const success = "Wallet setup complete";
           const ci = new CONTRACT(tokA, algodClient, indexerClient, spec, {
             addr: activeAccount?.address || "",
@@ -1366,7 +1374,9 @@ const Swap = () => {
             )
           ).then(sendTransactions),
           {
-            pending: `Swap ${fromAmount} ${token.symbol} -> ${toAmount} ${token2.symbol}`,
+            pending: `Swap ${fromAmount} ${tokenSymbol(
+              token
+            )} -> ${toAmount} ${tokenSymbol(token2)}`,
             //success: `Swap successful!`,
           },
           {

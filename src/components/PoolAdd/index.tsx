@@ -1357,8 +1357,10 @@ const Swap = () => {
               )
             ).then(sendTransactions),
             {
-              pending: "Pending transaction to setup pool for tokA",
-              success: "Pool setup for tokA complete!",
+              pending: `Pending transaction to setup pool for ${tokenSymbol(
+                token2
+              )}`,
+              success: `Pool setup for ${tokenSymbol(token2)} complete!`,
             }
           );
           break;
@@ -1451,8 +1453,10 @@ const Swap = () => {
               )
             ).then(sendTransactions),
             {
-              pending: "Pending transaction to spend tokA in pool",
-              success: "TokA pool spending setup complete!",
+              pending: `Pending transaction to spend ${tokenSymbol(
+                token2
+              )} in pool`,
+              success: `${tokenSymbol(token2)} pool spending setup complete!`,
             }
           );
         }
@@ -1487,8 +1491,10 @@ const Swap = () => {
             )
           ).then(sendTransactions),
           {
-            pending: "Pending transaction to spend tokB in pool",
-            success: "TokB pool spending setup complete!",
+            pending: `Pending transaction to spend ${tokenSymbol(
+              token2
+            )} in pool`,
+            success: `${tokenSymbol(token2)} pool spending setup complete!`,
           }
         );
       }
@@ -1520,8 +1526,10 @@ const Swap = () => {
               )
             ).then(sendTransactions),
             {
-              pending: "Pending transaction to setup pool for tokB",
-              success: "Pool setup for tokB complete!",
+              pending: `Pending transaction to setup pool for ${tokenSymbol(
+                token2
+              )}`,
+              success: `Pool setup for ${tokenSymbol(token2)} complete!`,
             }
           );
           break;
@@ -1534,8 +1542,6 @@ const Swap = () => {
       console.log("Building extra txns");
 
       const ci = makeCi(poolId);
-
-      console.log({ poolId, tokA, tokB });
 
       // determine the direction
       if (pool.tokA === tokenId(token)) {
