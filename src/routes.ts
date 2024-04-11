@@ -23,5 +23,9 @@ export const routes = [
   {
     path: "/farm",
     Component: Page.Farm,
+  },
+  {
+    path: "/token",
+    Component: Page.Token
   }
 ];

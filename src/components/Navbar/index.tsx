@@ -8,6 +8,8 @@ import SwapIcon from "static/icon/icon-swap.svg";
 import PoolIcon from "static/icon/icon-pool.svg";
 import FarmIcon from "static/icon/icon-farm.svg";
 import HomeIcon from "static/icon/icon-home.svg";
+import TokenIcon from "static/icon/icon-token.svg";
+
 import ArrowDownwardIcon from "static/icon/icon-arrow-downward.svg";
 import CogIcon from "static/icon/icon-cog.svg";
 import ArrowDownwardIcon2 from "static/icon/icon-arrow-downward-color.svg";
@@ -17,25 +19,14 @@ import { useSelector } from "react-redux";
 import ThemeSelector from "../ThemeSelector";
 
 import Box from "@mui/material/Box";
-import Popper from "@mui/material/Popper";
-import Fade from "@mui/material/Fade";
 import { useWallet } from "@txnlab/use-wallet";
-import { Chip, Divider, Stack } from "@mui/material";
 
 import { useCopyToClipboard } from "usehooks-ts";
 import { toast } from "react-toastify";
 
-import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
-import AccountBalanceWalletOutlinedIcon from "@mui/icons-material/AccountBalanceWalletOutlined";
-import WbSunnyOutlinedIcon from "@mui/icons-material/WbSunnyOutlined";
 import { arc200 } from "ulujs";
 import { TOKEN_VIA } from "../../constants/tokens";
 import { getAlgorandClients } from "../../wallets";
-import { arc200_balanceOf } from "ulujs/types/arc200";
-import VOIIcon from "static/crypto-icons/voi/0.svg";
-import VIAIcon from "static/crypto-icons/voi/6779767.svg";
-import { Wallet } from "@mui/icons-material";
-import { compactAddress } from "../../utils/mp";
 import ConnectWallet from "../ConnectWallet";
 import SettingMenu from "../SettingMenu";
 
@@ -331,6 +322,11 @@ const Navbar = () => {
           </Link>
           <NavButtonGroup sx={{ display: { xs: "none", md: "flex" } }}>
             {[
+              {
+                label: "Token",
+                href: "/token",
+                icon: TokenIcon
+              },
               {
                 label: "Swap",
                 href: "/swap",
