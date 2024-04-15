@@ -774,8 +774,11 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
       const isBNTPool = isNTPool(infoB);
 
       console.log(isANTPool, isBNTPool);
-
+      // -----------------------------------------
       // case 2
+      // both have net pool
+      // use min sum net pools, this pools tvl
+      // -----------------------------------------
       if (isANTPool && isBNTPool) {
         // tokA tvl
         let rateA = new BigNumber(1);
@@ -821,9 +824,13 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
         const balB = new BigNumber(info.poolBals[1]).dividedBy(
           new BigNumber(10).pow(tokB.decimals)
         );
-        return balA.multipliedBy(rateA).plus(balB.multipliedBy(rateB));
+        return balA.multipliedBy(rateA).plus(balB.multipliedBy(rateB)); // TODO update this to take into account net pool tvl, see case 2 note
       }
+      // -----------------------------------------
       // case 3
+      // only 1 token has net pool
+      // use min net pool tvl, this pool tvl
+      // -----------------------------------------
       else if ((!isANTPool && isBNTPool) || (isANTPool && !isBNTPool)) {
         if (isANTPool) {
           const balA2 = new BigNumber(info.poolBals[0]).dividedBy(
@@ -849,7 +856,7 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
             );
             rate = balB.dividedBy(balA);
           }
-          return balA2.multipliedBy(rate)//.multipliedBy(2);
+          return  balA2.multipliedBy(rate); //.multipliedBy(2);
         }
         // isBNTPool
         else {
@@ -876,10 +883,14 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
             );
             rate = balB.dividedBy(balA);
           }
-          return balA2.multipliedBy(rate)//.multipliedBy(2);
+          return balA2.multipliedBy(rate); // TODO update this, take into account net pool tvl
         }
       }
+      // -----------------------------------------
       // case 4
+      // neither token has net pool
+      // use 0 as tvl
+      // -----------------------------------------
       else {
         return new BigNumber(0);
       }
@@ -897,6 +908,7 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
   // anualizedFee / tvl * 100
   const apr = useMemo(() => {
     if (!totalVolumeBn || !tvlBn) return "";
+    if (tvlBn.eq(new BigNumber(0))) return new BigNumber(0).toFixed(2);
     const weeks = 52;
     // anualizedFee
     // tv * (30/10000) * 52
@@ -904,6 +916,7 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
     const aprBn = annualizedFee.multipliedBy(100).div(tvlBn);
     return aprBn.toFixed(2);
   }, [totalVolumeBn, tvlBn]);
+
   const [value, setValue] = useState("0");
   useEffect(() => {
     if (!poolBals || poolBals.length === 0 || !balance) return;
