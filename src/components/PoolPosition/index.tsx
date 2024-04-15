@@ -172,7 +172,8 @@ const PoolPosition = () => {
     const { algodClient, indexerClient } = getAlgorandClients();
     (async () => {
       const positions = [];
-      for (const pool of pools.slice(0, 5)) {
+      //for (const pool of pools.slice(0, 5)) {
+      for (const pool of pools.slice(0)) {
         const ci = new arc200(pool.poolId, algodClient, indexerClient, {
           acc: {
             addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",

@@ -517,7 +517,8 @@ const PoolList: FC<PoolListProps> = () => {
         </Heading>
       </Columns>
       {pools.length > 0 ? (
-        pools.slice(0, 10).map((p: PoolI) => {
+        //pools.slice(0, 10).map((p: PoolI) => {
+        pools.slice(0).map((p: PoolI) => {
           return <PoolCard key={p.poolId} pool={p} />;
         })
       ) : (
