@@ -21,11 +21,15 @@ export const routes = [
     Component: Page.PoolRemove,
   },
   {
+    path: "/pool/create",
+    Component: Page.PoolCreate,
+  },
+  {
     path: "/farm",
     Component: Page.Farm,
   },
   {
     path: "/token",
-    Component: Page.Token
-  }
+    Component: Page.Token,
+  },
 ];

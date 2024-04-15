@@ -323,14 +323,14 @@ const Navbar = () => {
           <NavButtonGroup sx={{ display: { xs: "none", md: "flex" } }}>
             {[
               {
-                label: "Token",
-                href: "/token",
-                icon: TokenIcon
-              },
-              {
                 label: "Swap",
                 href: "/swap",
                 icon: SwapIcon,
+              },
+              {
+                label: "Token",
+                href: "/token",
+                icon: TokenIcon,
               },
               {
                 label: "Pool",

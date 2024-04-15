@@ -1,10 +1,14 @@
 import styled from "@emotion/styled";
-import React, { FC, useEffect } from "react";
+import React, { FC, useEffect, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import PoolCard from "../PoolCard";
 import { ARC200LPTokenI, ARC200TokenI, PoolI } from "../../types";
 import TokenCard from "../TokenCard";
+import CreateTokenModal from "../modals/CreateTokenModal";
+import AddTokenModal from "../modals/AddTokenModal";
+import { Stack } from "@mui/system";
+import { useWallet } from "@txnlab/use-wallet";
 
 const TokenListRoot = styled.div`
   width: 90%;
@@ -484,50 +488,156 @@ const SwapButtonLabel = styled.div`
   line-height: 120%; /* 16.8px */
 `;
 
+const BaseButton = styled(Button)`
+  display: flex;
+  padding: var(--Spacing-400, 8px) var(--Spacing-600, 12px);
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  border-radius: var(--Radius-600, 13px);
+`;
+
+const AddTokenButton = styled(BaseButton)`
+  background: var(--Color-Accent-CTA-Background-Default, grey);
+`;
+
+const CreateTokenButton = styled(BaseButton)`
+  background: var(--Color-Accent-CTA-Background-Default, #2958ff);
+`;
+
+const CreateButtonInner = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+`;
+
+const CreateButtonLabel = styled.div`
+  color: var(--Color-Neutral-Element-Primary, #fff);
+  leading-trim: both;
+  text-edge: cap;
+  font-feature-settings: "clig" off, "liga" off;
+  font-family: "Plus Jakarta Sans";
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 120%; /* 16.8px */
+`;
+
+const PoolIcon = () => {
+  return (
+    <svg
+      width="23"
+      height="24"
+      viewBox="0 0 23 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M14.3231 15.6665C14.3231 19.3865 11.3122 22.3974 7.59224 22.3974C3.87224 22.3974 0.861328 19.3865 0.861328 15.6665C0.861328 11.9465 3.87224 8.93555 7.59224 8.93555C7.76679 8.93555 7.93042 8.94648 8.11588 8.95739C11.4213 9.2083 14.0613 11.8483 14.3122 15.1537C14.3122 15.3174 14.3231 15.4811 14.3231 15.6665Z"
+        stroke="white"
+        stroke-width="1.5"
+        stroke-miterlimit="10"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M21.5778 8.40081C21.5778 12.1208 18.5669 15.1318 14.8469 15.1318H14.3123C14.0614 11.8263 11.4214 9.18626 8.11597 8.93535V8.40081C8.11597 4.68081 11.1269 1.66992 14.8469 1.66992C18.5669 1.66992 21.5778 4.68081 21.5778 8.40081Z"
+        fill="white"
+        stroke-width="1.5"
+        stroke-miterlimit="10"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  );
+};
+
 interface TokenListProps {}
 
 const TokenList: FC<TokenListProps> = () => {
+  const { activeAccount } = useWallet()
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
   const tokens = useSelector((state: RootState) => state.tokens.tokens);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   return (
-    <TokenListRoot className={isDarkTheme ? "dark" : "light"}>
-      <HeadingRow className="heading-row">
-        <SectionTitle>Popular Tokens</SectionTitle>
-      </HeadingRow>
-      <Columns>
-        <Heading>
-          <ColumnPair>
-            <ColumnLabel>Token</ColumnLabel>
-          </ColumnPair>
+    <>
+      <TokenListRoot className={isDarkTheme ? "dark" : "light"}>
+        <HeadingRow className="heading-row">
+          <SectionTitle>Popular Tokens</SectionTitle>
+          {activeAccount ? <Stack direction="row" gap={2}>
+            <AddTokenButton
+              onClick={() => {
+                setShowAddModal(true);
+              }}
+            >
+              <CreateButtonInner>
+                <CreateButtonLabel>Add token</CreateButtonLabel>
+                <PoolIcon />
+              </CreateButtonInner>
+            </AddTokenButton>
+            <CreateTokenButton
+              onClick={() => {
+                setShowCreateModal(true);
+              }}
+            >
+              <CreateButtonInner>
+                <CreateButtonLabel>Create token</CreateButtonLabel>
+                <PoolIcon />
+              </CreateButtonInner>
+            </CreateTokenButton>
+          </Stack>: null}
 
-          <ColumnTVL>
-            <ColumnLabel>Price</ColumnLabel>
-            <InfoCircleIcon />
-          </ColumnTVL>
-          <ColumnTVL>
-            <ColumnLabel>TVL</ColumnLabel>
-            <InfoCircleIcon />
-          </ColumnTVL>
-          <ColumnVolume>
-            <ColumnLabel>Pools</ColumnLabel>
-            <InfoCircleIcon />
-          </ColumnVolume>
-          <ColumnAPR>
-            <ColumnLabel>&nbsp;</ColumnLabel>
-            {/*<InfoCircleIcon />*/}
-          </ColumnAPR>
-        </Heading>
-      </Columns>
-      {tokens.length > 0 ? (
-        tokens.map((t: ARC200TokenI) => {
-          return <TokenCard key={t.tokenId} token={t} />;
-        })
-      ) : (
-        <div>No tokens</div>
-      )}
-    </TokenListRoot>
+        </HeadingRow>
+        <Columns>
+          <Heading>
+            <ColumnPair>
+              <ColumnLabel>Token</ColumnLabel>
+            </ColumnPair>
+
+            <ColumnTVL>
+              <ColumnLabel>Price</ColumnLabel>
+              <InfoCircleIcon />
+            </ColumnTVL>
+            <ColumnTVL>
+              <ColumnLabel>TVL</ColumnLabel>
+              <InfoCircleIcon />
+            </ColumnTVL>
+            <ColumnVolume>
+              <ColumnLabel>Pools</ColumnLabel>
+              <InfoCircleIcon />
+            </ColumnVolume>
+            <ColumnAPR>
+              <ColumnLabel>&nbsp;</ColumnLabel>
+              {/*<InfoCircleIcon />*/}
+            </ColumnAPR>
+          </Heading>
+        </Columns>
+        {tokens.length > 0 ? (
+          tokens.map((t: ARC200TokenI) => {
+            return <TokenCard key={t.tokenId} token={t} />;
+          })
+        ) : (
+          <div>No tokens</div>
+        )}
+      </TokenListRoot>
+      <CreateTokenModal
+        open={showCreateModal}
+        handleClose={() => {
+          setShowCreateModal(false);
+        }}
+      />
+      <AddTokenModal
+        open={showAddModal}
+        handleClose={() => {
+          setShowAddModal(false);
+        }}
+      />
+    </>
   );
 };
 

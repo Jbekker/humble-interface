@@ -836,6 +836,31 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
       toast.error(e.message);
     }
   };
+  const handleApprove = async () => {
+    if (!activeAccount || !tokenB) return;
+    try {
+      const amtStr = window.prompt("Enter amount to stake", "0");
+      const amt = new BigNumber(amtStr || "0");
+      if (amt.isNaN()) throw new Error("Invalid amount");
+      const amtAU = amt.times(10 ** tokenB.decimals);
+      const { algodClient, indexerClient } = getAlgorandClients();
+      const ci = new arc200(tokenB.tokenId, algodClient, indexerClient);
+      const arc200_approveR = await ci.arc200_approve(
+        algosdk.getApplicationAddress(CTCINFO_STAKR_200),
+        BigInt(amtAU.toFixed(0)),
+        true,
+        false
+      );
+      if (!arc200_approveR.success) throw new Error(arc200_approveR.error);
+      await signTransactions(
+        arc200_approveR.txns.map(
+          (txn) => new Uint8Array(Buffer.from(txn, "base64"))
+        )
+      ).then(sendTransactions);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
   const handleStake = async () => {
     if (!activeAccount || !tokenB) return;
     try {
@@ -1149,6 +1174,7 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
           </AccordionDetails>
           <AccordionActions>
             <ButtonGroup size="small">
+              <Button onClick={handleApprove}>Approve</Button>
               <Button onClick={handleStake}>Stake</Button>
               <Button onClick={handleUnstake}>Unstake</Button>
               <Button onClick={handleHarvest}>Claim</Button>

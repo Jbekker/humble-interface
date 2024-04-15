@@ -14,7 +14,7 @@ export interface TokensState {
   error: string | null;
 }
 
-export const getToken = async (tokenId: number) => {
+export const fetchToken = async (tokenId: number) => {
   const { algodClient, indexerClient } = getAlgorandClients();
   const makeCi = (ctcInfo: number) =>
     new arc200(ctcInfo, algodClient, indexerClient, {
@@ -24,32 +24,70 @@ export const getToken = async (tokenId: number) => {
       },
       formatBytes: true,
     });
+  const ci = makeCi(Number(tokenId));
+  const arc200_nameR = await ci.arc200_name();
+  const arc200_symbolR = await ci.arc200_symbol();
+  const arc200_decimalsR = await ci.arc200_decimals();
+  const arc200_totalSupplyR = await ci.arc200_totalSupply();
+  if (
+    arc200_nameR.success &&
+    arc200_symbolR.success &&
+    arc200_decimalsR.success &&
+    arc200_totalSupplyR.success
+  ) {
+    const token = {
+      tokenId,
+      name: arc200_nameR.returnValue,
+      symbol: arc200_symbolR.returnValue,
+      decimals: Number(arc200_decimalsR.returnValue),
+      totalSupply: arc200_totalSupplyR.returnValue,
+    };
+    return token;
+  }
+};
+
+export const getToken = async (tokenId: number) => {
+  // const { algodClient, indexerClient } = getAlgorandClients();
+  // const makeCi = (ctcInfo: number) =>
+  //   new arc200(ctcInfo, algodClient, indexerClient, {
+  //     acc: {
+  //       addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+  //       sk: new Uint8Array(0),
+  //     },
+  //     formatBytes: true,
+  //   });
   try {
     const tokenTable = db.table("tokens");
     const token = await tokenTable.get({ tokenId });
     if (!token) {
-      const ci = makeCi(Number(tokenId));
-      const arc200_nameR = await ci.arc200_name();
-      const arc200_symbolR = await ci.arc200_symbol();
-      const arc200_decimalsR = await ci.arc200_decimals();
-      const arc200_totalSupplyR = await ci.arc200_totalSupply();
-      if (
-        arc200_nameR.success &&
-        arc200_symbolR.success &&
-        arc200_decimalsR.success &&
-        arc200_totalSupplyR.success
-      ) {
-        const token = {
-          tokenId,
-          name: arc200_nameR.returnValue,
-          symbol: arc200_symbolR.returnValue,
-          decimals: Number(arc200_decimalsR.returnValue),
-          totalSupply: arc200_totalSupplyR.returnValue,
-        };
-        db.table("tokens").put(token);
-        return token;
+      const newToken = await fetchToken(tokenId);
+      if (newToken) {
+        db.table("tokens").put(newToken);
+        return newToken;
       }
     }
+    //   const ci = makeCi(Number(tokenId));
+    //   const arc200_nameR = await ci.arc200_name();
+    //   const arc200_symbolR = await ci.arc200_symbol();
+    //   const arc200_decimalsR = await ci.arc200_decimals();
+    //   const arc200_totalSupplyR = await ci.arc200_totalSupply();
+    //   if (
+    //     arc200_nameR.success &&
+    //     arc200_symbolR.success &&
+    //     arc200_decimalsR.success &&
+    //     arc200_totalSupplyR.success
+    //   ) {
+    //     const token = {
+    //       tokenId,
+    //       name: arc200_nameR.returnValue,
+    //       symbol: arc200_symbolR.returnValue,
+    //       decimals: Number(arc200_decimalsR.returnValue),
+    //       totalSupply: arc200_totalSupplyR.returnValue,
+    //     };
+    //     db.table("tokens").put(token);
+    //     return token;
+    //   }
+    // }
     return token;
   } catch (error: any) {
     return error.message;

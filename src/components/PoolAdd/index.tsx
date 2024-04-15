@@ -1291,6 +1291,7 @@ const Swap = () => {
       const pool = eligiblePools.slice(-1)[0];
       const { poolId, tokA, tokB } = pool;
 
+      // ----------------------------------------
       // ensure pool has tokens to create future boxes
       // ensure pool tokA balance box
       // ensure pool tokB balance box
@@ -1548,12 +1549,12 @@ const Swap = () => {
         console.log("depositAForB");
 
         const inA = BigInt(
-          new BigNumber(fromAmount.replace(",", ""))
+          new BigNumber(fromAmount.replace(/,/g, ""))
             .times(new BigNumber(10).pow(token.decimals))
             .toFixed()
         );
         const inB = BigInt(
-          new BigNumber(toAmount.replace(",", ""))
+          new BigNumber(toAmount.replace(/,/g, ""))
             .times(new BigNumber(10).pow(token2.decimals))
             .toFixed()
         );
@@ -1571,8 +1572,8 @@ const Swap = () => {
         const poolAddr = algosdk.getApplicationAddress(poolId);
 
         const buildN = [];
-        console.log({ token });
-        if (token.tokenId === 0) {
+        // include wnt deposit if network token
+        if ([0].includes(token.tokenId)) {
           buildN.push(builder.arc200.tokA.deposit(inA));
         }
         buildN.push(
@@ -1584,7 +1585,8 @@ const Swap = () => {
         );
         const buildP = (await Promise.all(buildN)).map((res: any) => res.obj);
         ciTokA.setFee(4000);
-        ciTokA.setBeaconId(tokA);
+        if ([0, TOKEN_WVOI1].includes(token.tokenId)) ciTokA.setBeaconId(tokA);
+        // Include PaymentTxn if network token
         if (token.tokenId === 0) {
           ciTokA.setPaymentAmount(Number(inA));
         }

@@ -22,6 +22,7 @@ import { tokenId, tokenSymbol } from "../../utils/dex";
 import BigNumber from "bignumber.js";
 import { CTCINFO_DEFAULT_LP } from "../../constants/dex";
 import SwapSuccessfulModal from "../modals/SwapSuccessfulModal";
+import { hasBalance } from "ulujs/types/arc200";
 
 const spec = {
   name: "pool",
@@ -981,6 +982,16 @@ const Swap = () => {
       if (pool.tokA === tokenId(token)) {
         console.log("swapAForB");
         // ---------------------------------------
+        // begin ensure
+        // ensure approval for tokA
+        // ensure tokB balance
+        // if tokA wVOI ensure tokA balance
+        // end ensure
+        // ---------------------------------------
+        // begin ensure
+        // ---------------------------------------
+        console.log("begin ensure");
+        // ---------------------------------------
         // ensure approval for tokA
         // ---------------------------------------
         console.log("ensure approval for tokA");
@@ -1026,13 +1037,22 @@ const Swap = () => {
         // ---------------------------------------
         console.log("ensure balance for tokB");
         do {
-          const ci = new arc200(tokB, algodClient, indexerClient, {
-            acc: {
-              addr: activeAccount?.address || "",
-              sk: new Uint8Array(0),
-            },
+          const ci = new CONTRACT(tokB, algodClient, indexerClient, spec, {
+            addr: activeAccount?.address || "",
+            sk: new Uint8Array(0),
           });
-          const hasBalance = await ci.hasBalance(activeAccount.address);
+          const hasBalanceR = await ci.hasBalance(activeAccount.address);
+          const BOX_BALANCE = 1;
+          const hasBoxR = await ci.hasBox([
+            BOX_BALANCE,
+            [
+              ...algosdk.decodeAddress(activeAccount.address).publicKey,
+              ...new Uint8Array(32),
+            ],
+          ]);
+          if (!hasBalanceR.success && !hasBoxR.success)
+            throw new Error("Balance check failed");
+          const hasBalance = hasBalanceR.success ? hasBalanceR : hasBoxR; // switch has balance resposne
           if (!hasBalance.success) return new Error("Balance check failed");
           if (!hasBalance.returnValue) {
             const arc200_transferR = await ci.arc200_transfer(
@@ -1063,6 +1083,7 @@ const Swap = () => {
             );
           }
         } while (0);
+        console.log("tokB balance ok");
         // ---------------------------------------
         // if tokA wVOI ensure tokA balance
         // ---------------------------------------
@@ -1094,6 +1115,9 @@ const Swap = () => {
           }
         } while (0);
         // ---------------------------------------
+        // end ensure
+        // ---------------------------------------
+        console.log("end ensure");
         const inABN = new BigNumber(fromAmount);
         if (inABN.isNaN()) return new Error("Invalid amount");
         const inABI = BigInt(
@@ -1115,6 +1139,7 @@ const Swap = () => {
         buildN.push(builder.arc200.tokA.arc200_approve(poolAddr, inABI));
         buildN.push(builder.pool.Trader_swapAForB(0, inABI, outBSl));
         const buildP = (await Promise.all(buildN)).map((res: any) => res.obj);
+        console.log({ buildP });
         let customR;
         if (token.tokenId === 0) {
           const ci = makeCi(tokA);

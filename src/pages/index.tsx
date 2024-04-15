@@ -1,6 +1,7 @@
 export { Home } from "./Home";
 export { Swap } from "./Swap";
 export { Pool } from "./Pool";
+export { PoolCreate } from "./PoolCreate";
 export { PoolAdd } from "./PoolAdd";
 export { PoolRemove } from "./PoolRemove";
 export { Farm } from "./Farm";

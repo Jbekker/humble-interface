@@ -618,6 +618,8 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
     }
   }, [dispatch]);
 
+  const pools = useSelector((state: RootState) => state.pools.pools);
+
   const poolBals = useSelector(
     (state: RootState) => state.poolBals.poolBals
   ).filter((p) => p.poolId === pool.poolId);
@@ -627,14 +629,26 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
   ).filter((v) => v.poolId === pool.poolId);
 
   const [info, setInfo] = useState<any>();
-  // EFFECT get pool info
-  useEffect(() => {
+  const [infoA, setInfoA] = useState<any>();
+  const [infoB, setInfoB] = useState<any>();
+  const getInfo = (poolId: number) => {
     const { algodClient, indexerClient } = getAlgorandClients();
-    const ci = new CONTRACT(pool.poolId, algodClient, indexerClient, spec, {
+    const ci = new CONTRACT(poolId, algodClient, indexerClient, spec, {
       addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
       sk: new Uint8Array(0),
     });
-    ci.Info().then((info: any) => {
+    return ci.Info();
+  };
+  // EFFECT get pool info
+  useEffect(() => {
+    // const { algodClient, indexerClient } = getAlgorandClients();
+    // const ci = new CONTRACT(pool.poolId, algodClient, indexerClient, spec, {
+    //   addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+    //   sk: new Uint8Array(0),
+    // });
+    // ci.Info();
+    const infoP = getInfo(pool.poolId);
+    infoP.then((info: any) => {
       if (info.success) {
         const [lptBals, poolBals, protoInfo, protoBals, tokB, tokA] =
           info.returnValue;
@@ -648,6 +662,55 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
         });
       }
     });
+    if (![pool.tokA, pool.tokB].includes(TOKEN_WVOI1)) {
+      const poolsA = pools.filter(
+        (p) =>
+          (p.tokA === TOKEN_WVOI1 && p.tokB === pool.tokA) ||
+          (p.tokA === pool.tokA && p.tokB === TOKEN_WVOI1)
+      );
+      const poolsB = pools.filter(
+        (p) =>
+          (p.tokA === TOKEN_WVOI1 && p.tokB === pool.tokB) ||
+          (p.tokA === pool.tokB && p.tokB === TOKEN_WVOI1)
+      );
+      // select 1 from each
+      const poolA = poolsA.pop();
+      const poolB = poolsB.pop();
+      if (poolA) {
+        const infoAP = getInfo(poolA.poolId);
+        infoAP.then((info: any) => {
+          if (info.success) {
+            const [lptBals, poolBals, protoInfo, protoBals, tokB, tokA] =
+              info.returnValue;
+            setInfoA({
+              lptBals,
+              poolBals,
+              protoInfo,
+              protoBals,
+              tokB: Number(tokB),
+              tokA: Number(tokA),
+            });
+          }
+        });
+      }
+      if (poolB) {
+        const infoBP = getInfo(poolB.poolId);
+        infoBP.then((info: any) => {
+          if (info.success) {
+            const [lptBals, poolBals, protoInfo, protoBals, tokB, tokA] =
+              info.returnValue;
+            setInfoB({
+              lptBals,
+              poolBals,
+              protoInfo,
+              protoBals,
+              tokB: Number(tokB),
+              tokA: Number(tokA),
+            });
+          }
+        });
+      }
+    }
   }, []);
 
   const totalVolumeBn = useMemo(() => {
@@ -678,11 +741,18 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
   const symbolA = tokA?.symbol ? tokenSymbol(tokA, true) : "...";
   const symbolB = tokB?.symbol ? tokenSymbol(tokB, true) : "...";
 
+  // case 1 is voi pool
+  // case 2 is not voi pool but each token has voi pool
+  // case 3 is not voi pool but one token has voi pool
+  // case 4 is not voi pool and nether token has voi pool
   const tvlBn = useMemo(() => {
     if (!info || !tokA || !tokB) return new BigNumber(0);
+
+    // case 1
     if (
       [tokA, tokB].map((t: ARC200TokenI) => t.tokenId).includes(TOKEN_WVOI1)
     ) {
+      // tvl
       if (info.tokA === TOKEN_WVOI1) {
         return new BigNumber(info.poolBals[0])
           .multipliedBy(2)
@@ -692,11 +762,129 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
           .multipliedBy(2)
           .div(new BigNumber(10).pow(tokB.decimals));
       }
-    } else {
-      // TVL is value of pool tokens
-      return new BigNumber(0);
     }
-  }, [tokA, tokB, info]);
+    // case 2, 3, 4
+    else {
+      //if (!infoA || !infoB) return;
+
+      const isNTPool = (info: any) =>
+        [info?.tokA, info?.tokB].includes(TOKEN_WVOI1);
+
+      const isANTPool = isNTPool(infoA);
+      const isBNTPool = isNTPool(infoB);
+
+      console.log(isANTPool, isBNTPool);
+
+      // case 2
+      if (isANTPool && isBNTPool) {
+        // tokA tvl
+        let rateA = new BigNumber(1);
+        if (infoA.tokA === TOKEN_WVOI1) {
+          const balA = new BigNumber(infoA.poolBals[0]).dividedBy(
+            new BigNumber(10).pow(6)
+          );
+          const balB = new BigNumber(infoA.poolBals[1]).dividedBy(
+            new BigNumber(10).pow(tokA.decimals)
+          );
+          rateA = balA.dividedBy(balB);
+        } else if (infoA.tokB === TOKEN_WVOI1) {
+          const balA = new BigNumber(infoA.poolBals[0]).dividedBy(
+            new BigNumber(10).pow(tokA.decimals)
+          );
+          const balB = new BigNumber(infoA.poolBals[1]).dividedBy(
+            new BigNumber(10).pow(6)
+          );
+          rateA = balB.dividedBy(balA);
+        }
+        // tokB tvl
+        let rateB = new BigNumber(1);
+        if (infoB.tokA === TOKEN_WVOI1) {
+          const balA = new BigNumber(infoB.poolBals[0]).dividedBy(
+            new BigNumber(10).pow(6)
+          );
+          const balB = new BigNumber(infoB.poolBals[1]).dividedBy(
+            new BigNumber(10).pow(tokB.decimals)
+          );
+          rateB = balA.dividedBy(balB);
+        } else if (infoB.tokB === TOKEN_WVOI1) {
+          const balA = new BigNumber(infoB.poolBals[0]).dividedBy(
+            new BigNumber(10).pow(tokB.decimals)
+          );
+          const balB = new BigNumber(infoB.poolBals[1]).dividedBy(
+            new BigNumber(10).pow(6)
+          );
+          rateB = balB.dividedBy(balA);
+        }
+        const balA = new BigNumber(info.poolBals[0]).dividedBy(
+          new BigNumber(10).pow(tokA.decimals)
+        );
+        const balB = new BigNumber(info.poolBals[1]).dividedBy(
+          new BigNumber(10).pow(tokB.decimals)
+        );
+        return balA.multipliedBy(rateA).plus(balB.multipliedBy(rateB));
+      }
+      // case 3
+      else if ((!isANTPool && isBNTPool) || (isANTPool && !isBNTPool)) {
+        if (isANTPool) {
+          const balA2 = new BigNumber(info.poolBals[0]).dividedBy(
+            new BigNumber(10).pow(tokA.decimals)
+          );
+          let rate;
+          if ([TOKEN_WVOI1].includes(infoA.tokA)) {
+            const balA = new BigNumber(infoA.poolBals[0]).dividedBy(
+              new BigNumber(10).pow(6)
+            );
+            const balB = new BigNumber(infoA.poolBals[1]).dividedBy(
+              new BigNumber(10).pow(tokA.decimals)
+            );
+            rate = balA.dividedBy(balB);
+          }
+          // [TOKEN_WVOI1].includes(infoA.tokB)
+          else {
+            const balA = new BigNumber(infoA.poolBals[0]).dividedBy(
+              new BigNumber(10).pow(tokA.decimals)
+            );
+            const balB = new BigNumber(infoA.poolBals[1]).dividedBy(
+              new BigNumber(10).pow(6)
+            );
+            rate = balB.dividedBy(balA);
+          }
+          return balA2.multipliedBy(rate)//.multipliedBy(2);
+        }
+        // isBNTPool
+        else {
+          const balA2 = new BigNumber(info.poolBals[1]).dividedBy(
+            new BigNumber(10).pow(tokB.decimals)
+          );
+          let rate;
+          if ([TOKEN_WVOI1].includes(infoB.tokA)) {
+            const balA = new BigNumber(infoB.poolBals[0]).dividedBy(
+              new BigNumber(10).pow(6)
+            );
+            const balB = new BigNumber(infoB.poolBals[1]).dividedBy(
+              new BigNumber(10).pow(tokB.decimals)
+            );
+            rate = balA.dividedBy(balB);
+          }
+          // [TOKEN_WVOI1].includes(infoA.tokB)
+          else {
+            const balA = new BigNumber(infoB.poolBals[0]).dividedBy(
+              new BigNumber(10).pow(tokB.decimals)
+            );
+            const balB = new BigNumber(infoB.poolBals[1]).dividedBy(
+              new BigNumber(10).pow(6)
+            );
+            rate = balB.dividedBy(balA);
+          }
+          return balA2.multipliedBy(rate)//.multipliedBy(2);
+        }
+      }
+      // case 4
+      else {
+        return new BigNumber(0);
+      }
+    }
+  }, [tokA, tokB, info, infoA, infoB, pools]);
 
   const tvl = useMemo(() => {
     if (!tvlBn) return "";
