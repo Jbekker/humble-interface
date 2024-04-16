@@ -5,7 +5,7 @@ import { RootState } from "./store";
 import { CONTRACT, abi, arc200 } from "ulujs";
 import { getAlgorandClients } from "../wallets";
 import { PoolI } from "../types";
-import { CTCINFO_TRI } from "../constants/dex";
+import { BAD_POOLS, CTCINFO_TRI } from "../constants/dex";
 import axios from "axios";
 
 interface Pool {
@@ -105,7 +105,9 @@ export const getPools = createAsyncThunk<
     const wl: number[] = [];
     return ([...pools, ...newPools] as Pool[]).filter(
       (pool) =>
-        pool.round >= minRound && (wl.length > 0 || !wl.includes(pool.poolId))
+        pool.round >= minRound &&
+        (wl.length > 0 || !wl.includes(pool.poolId)) &&
+        !BAD_POOLS.includes(pool.poolId)
     );
   } catch (error: any) {
     return rejectWithValue(error.message);
