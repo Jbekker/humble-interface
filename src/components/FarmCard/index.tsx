@@ -879,6 +879,18 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
           sk: new Uint8Array(0),
         }
       );
+      const arc200_allowanceR = await ciArc200.arc200_allowance(
+        activeAccount.address,
+        algosdk.getApplicationAddress(CTCINFO_STAKR_200)
+      );
+      if (!arc200_allowanceR.success)
+        throw new Error("Failed to get allowance");
+      const arc200_allowance = arc200_allowanceR.returnValue;
+      const arc200_balanceOfR = await ciArc200.arc200_balanceOf(
+        algosdk.getApplicationAddress(CTCINFO_STAKR_200)
+      );
+      if (!arc200_balanceOfR.success) throw new Error("Failed to get balance");
+      const arc200_balanceOf = arc200_balanceOfR.returnValue;
       do {
         // ensure wvoi box
         if (![TOKEN_WVOI1].includes(farm.stakeToken)) {
@@ -1019,7 +1031,14 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
         buildN.push(
           builder.arc200.arc200_approve(
             algosdk.getApplicationAddress(CTCINFO_STAKR_200),
-            BigInt(amtAU.toFixed(0))
+            arc200_allowance + BigInt(amtAU.toFixed(0))
+          )
+        );
+        // if pool balance is zero
+        buildN.push(
+          builder.arc200.arc200_transfer(
+            algosdk.getApplicationAddress(CTCINFO_STAKR_200),
+            0
           )
         );
         buildN.push(
@@ -1056,6 +1075,7 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
               sk: new Uint8Array(0),
             }
           );
+          ci.setPaymentAmount(1e6);
           ci.setFee(2000);
           ci.setExtraTxns(buildP);
           ci.setEnableGroupResourceSharing(true);
@@ -1174,7 +1194,8 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
           </AccordionDetails>
           <AccordionActions>
             <ButtonGroup size="small">
-              <Button onClick={handleApprove}>Approve</Button>
+              {false ? farm?.poolId : null}
+              {<Button onClick={handleApprove}>Approve</Button>}
               <Button onClick={handleStake}>Stake</Button>
               <Button onClick={handleUnstake}>Unstake</Button>
               <Button onClick={handleHarvest}>Claim</Button>

@@ -5,7 +5,7 @@ import { RootState } from "./store";
 import { CONTRACT, abi } from "ulujs";
 import { getAlgorandClients } from "../wallets";
 import { FarmI } from "../types";
-import { CTCINFO_STAKR_200 } from "../constants/dex";
+import { BAD_FARMS, CTCINFO_STAKR_200 } from "../constants/dex";
 
 export interface FarmState {
   farms: FarmI[];
@@ -78,7 +78,9 @@ export const getFarms = createAsyncThunk<
     const wl: number[] = [];
     return ([...pools, ...newPools] as FarmI[]).filter(
       (pool) =>
-        pool.round >= minRound && (wl.length > 0 || !wl.includes(pool.poolId))
+        pool.round >= minRound &&
+        (wl.length > 0 || !wl.includes(pool.poolId)) &&
+        !BAD_FARMS.includes(pool.poolId)
     );
   } catch (error: any) {
     return rejectWithValue(error.message);

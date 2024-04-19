@@ -1432,35 +1432,35 @@ const Swap = () => {
       console.log("Ensuring allowance box for tokA");
 
       do {
-        const arc200_approveR = await ciTokA.arc200_approve(
-          algosdk.getApplicationAddress(poolId),
-          0
-        );
-        console.log({ arc200_approveR });
-        if (!arc200_approveR.success) {
-          ciTokA.setPaymentAmount(28100);
-          const arc200_approveR = await ciTokA.arc200_approve(
-            algosdk.getApplicationAddress(poolId),
-            0
-          );
-          console.log({ arc200_approveR });
-          if (!arc200_approveR.success) {
-            throw new Error("Approve failed");
-          }
-          await toast.promise(
-            signTransactions(
-              arc200_approveR.txns.map(
-                (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-              )
-            ).then(sendTransactions),
-            {
-              pending: `Pending transaction to spend ${tokenSymbol(
-                token2
-              )} in pool`,
-              success: `${tokenSymbol(token2)} pool spending setup complete!`,
-            }
-          );
-        }
+        // const arc200_approveR = await ciTokA.arc200_approve(
+        //   algosdk.getApplicationAddress(poolId),
+        //   0
+        // );
+        // console.log({ arc200_approveR });
+        // if (!arc200_approveR.success) {
+        //   ciTokA.setPaymentAmount(28100);
+        //   const arc200_approveR = await ciTokA.arc200_approve(
+        //     algosdk.getApplicationAddress(poolId),
+        //     0
+        //   );
+        //   console.log({ arc200_approveR });
+        //   if (!arc200_approveR.success) {
+        //     throw new Error("Approve failed");
+        //   }
+        //   await toast.promise(
+        //     signTransactions(
+        //       arc200_approveR.txns.map(
+        //         (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        //       )
+        //     ).then(sendTransactions),
+        //     {
+        //       pending: `Pending transaction to spend ${tokenSymbol(
+        //         token2
+        //       )} in pool`,
+        //       success: `${tokenSymbol(token2)} pool spending setup complete!`,
+        //     }
+        //   );
+        // }
       } while (0);
       console.log("tokA allowance box ok");
 
@@ -1470,35 +1470,53 @@ const Swap = () => {
 
       console.log("Ensuring boxes for tokB");
 
-      const arc200_approveR2 = await ciTokB.arc200_approve(
-        algosdk.getApplicationAddress(poolId),
-        0
-      );
-      console.log({ arc200_approveR2 });
-      if (!arc200_approveR2.success) {
-        ciTokB.setPaymentAmount(28100);
+      let ensureTokBApproval = false;
+      do {
         const arc200_approveR = await ciTokB.arc200_approve(
           algosdk.getApplicationAddress(poolId),
           0
         );
-        console.log({ arc200_approveR });
         if (!arc200_approveR.success) {
-          return new Error("Approve failed");
-        }
-        await toast.promise(
-          signTransactions(
-            arc200_approveR.txns.map(
-              (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-            )
-          ).then(sendTransactions),
-          {
-            pending: `Pending transaction to spend ${tokenSymbol(
-              token2
-            )} in pool`,
-            success: `${tokenSymbol(token2)} pool spending setup complete!`,
+          ciTokB.setPaymentAmount(28100);
+          const arc200_approveR = await ciTokB.arc200_approve(
+            algosdk.getApplicationAddress(poolId),
+            0
+          );
+          if (arc200_approveR.success) {
+            ensureTokBApproval = true;
           }
-        );
-      }
+        }
+        // ---
+        // const arc200_approveR2 = await ciTokB.arc200_approve(
+        //   algosdk.getApplicationAddress(poolId),
+        //   0
+        // );
+        // console.log({ arc200_approveR2 });
+        // if (!arc200_approveR2.success) {
+        //   ciTokB.setPaymentAmount(28100);
+        //   const arc200_approveR = await ciTokB.arc200_approve(
+        //     algosdk.getApplicationAddress(poolId),
+        //     0
+        //   );
+        //   console.log({ arc200_approveR });
+        //   if (!arc200_approveR.success) {
+        //     return new Error("Approve failed");
+        //   }
+        //   await toast.promise(
+        //     signTransactions(
+        //       arc200_approveR.txns.map(
+        //         (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        //       )
+        //     ).then(sendTransactions),
+        //     {
+        //       pending: `Pending transaction to spend ${tokenSymbol(
+        //         token2
+        //       )} in pool`,
+        //       success: `${tokenSymbol(token2)} pool spending setup complete!`,
+        //     }
+        //   );
+        // }
+      } while (0);
 
       // ----------------------------------------
       do {
@@ -1572,8 +1590,14 @@ const Swap = () => {
         const poolAddr = algosdk.getApplicationAddress(poolId);
 
         const buildN = [];
+        let extraPaymentAmount = 0;
+        if (ensureTokBApproval) {
+          extraPaymentAmount += 28100;
+          buildN.push(builder.arc200.tokB.arc200_approve(poolAddr, 0));
+        }
         // include wnt deposit if network token
         if ([0].includes(token.tokenId)) {
+          extraPaymentAmount += 28500;
           buildN.push(builder.arc200.tokA.deposit(inA));
         }
         buildN.push(
@@ -1588,7 +1612,9 @@ const Swap = () => {
         if ([0, TOKEN_WVOI1].includes(token.tokenId)) ciTokA.setBeaconId(tokA);
         // Include PaymentTxn if network token
         if (token.tokenId === 0) {
-          ciTokA.setPaymentAmount(Number(inA));
+          ciTokA.setPaymentAmount(Number(inA) + extraPaymentAmount);
+        } else {
+          ciTokA.setPaymentAmount(extraPaymentAmount);
         }
         ciTokA.setAccounts([poolAddr]);
         ciTokA.setEnableGroupResourceSharing(true);

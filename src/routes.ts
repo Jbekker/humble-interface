@@ -29,6 +29,10 @@ export const routes = [
     Component: Page.Farm,
   },
   {
+    path: "/farm/create",
+    Component: Page.FarmCreate,
+  },
+  {
     path: "/token",
     Component: Page.Token,
   },

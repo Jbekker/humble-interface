@@ -21,4 +21,12 @@ export const BAD_POOLS = [
   36052046, // VOI/JG3
   36051980, // VOI/GRVB
   36051790, // VOI/PIX
-]
+];
+export const BAD_FARMS = [
+  4, // VRC200 -> VRC200
+  5, // VRC200 -> VRC200
+  6, // ROCKET -> ROCKET
+  7, // VOI -> VIA
+  8, // VOI -> VIA
+  9, // VOI -> VIA
+];

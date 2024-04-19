@@ -994,8 +994,35 @@ const Swap = () => {
         // ---------------------------------------
         // ensure approval for tokA
         // ---------------------------------------
-        console.log("ensure approval for tokA");
+        let ensureTokAApproval = false;
         do {
+          const ci = new CONTRACT(
+            tokA,
+            algodClient,
+            indexerClient,
+            abi.arc200,
+            {
+              addr: activeAccount?.address || "",
+              sk: new Uint8Array(0),
+            }
+          );
+          const arc200_approveR = await ci.arc200_approve(
+            algosdk.getApplicationAddress(poolId),
+            BigInt(0)
+          );
+          if (!arc200_approveR.success) {
+            ci.setPaymentAmount(28100);
+            const arc200_approveR = await ci.arc200_approve(
+              algosdk.getApplicationAddress(poolId),
+              BigInt(0)
+            );
+            if (arc200_approveR.success) {
+              console.log("ensure approval for tokA");
+              ensureTokAApproval = true;
+            }
+          }
+          // ---
+          /*
           const ci = new CONTRACT(
             tokA,
             algodClient,
@@ -1030,89 +1057,116 @@ const Swap = () => {
               }
             );
           }
+          */
         } while (0);
-        console.log("tokA approval ok");
         // ---------------------------------------
         // ensure tokB balance
         // ---------------------------------------
-        console.log("ensure balance for tokB");
+        let ensureTokBBalance = false;
         do {
+          // TODO use supportsInterface to detect new token
           const ci = new CONTRACT(tokB, algodClient, indexerClient, spec, {
             addr: activeAccount?.address || "",
             sk: new Uint8Array(0),
           });
-          const hasBalanceR = await ci.hasBalance(activeAccount.address);
-          const BOX_BALANCE = 1;
-          const hasBoxR = await ci.hasBox([
-            BOX_BALANCE,
-            [
-              ...algosdk.decodeAddress(activeAccount.address).publicKey,
-              ...new Uint8Array(32),
-            ],
-          ]);
-          if (!hasBalanceR.success && !hasBoxR.success)
-            throw new Error("Balance check failed");
-          const hasBalance = hasBalanceR.success ? hasBalanceR : hasBoxR; // switch has balance resposne
-          if (!hasBalance.success) return new Error("Balance check failed");
-          if (!hasBalance.returnValue) {
+          const arc200_transferR = await ci.arc200_transfer(
+            activeAccount?.address || "",
+            0
+          );
+          console.log(arc200_transferR);
+          if (!arc200_transferR.success) {
+            ci.setPaymentAmount(28500);
             const arc200_transferR = await ci.arc200_transfer(
-              activeAccount.address,
-              BigInt(0),
-              true,
-              false
+              activeAccount?.address || "",
+              0
             );
-            if (!arc200_transferR.success) return new Error("Transfer failed");
-            await toast.promise(
-              signTransactions(
-                arc200_transferR.txns.map(
-                  (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-                )
-              ).then(sendTransactions),
-              {
-                pending: `Pending transaction to setup wallet to receive ${tokenSymbol(
-                  token2
-                )}`,
-                success: `Transfer successful!`,
-                //error: "Transfer failed",
-              },
-              {
-                type: "default",
-                position: "top-center",
-                theme: isDarkTheme ? "dark" : "light",
-              }
-            );
+            if (arc200_transferR.success) {
+              console.log("ensure balance for tokB");
+              ensureTokBBalance = true;
+            }
+            // ci.setPaymentAmount(1);
+            // const arc200_transferR = await ci.arc200_transfer(
+            //   activeAccount?.address || "",
+            //   0
+            // );
+            // console.log(arc200_transferR);
           }
+          // --- previous code before switching to box check using self transfer
+          // const ci = new CONTRACT(tokB, algodClient, indexerClient, spec, {
+          //   addr: activeAccount?.address || "",
+          //   sk: new Uint8Array(0),
+          // });
+          // const hasBalanceR = await ci.hasBalance(activeAccount.address);
+          // const BOX_BALANCE = 1;
+          // const hasBoxR = await ci.hasBox([
+          //   BOX_BALANCE,
+          //   [
+          //     ...algosdk.decodeAddress(activeAccount.address).publicKey,
+          //     ...new Uint8Array(32),
+          //   ],
+          // ]);
+          // if (!hasBalanceR.success && !hasBoxR.success)
+          //   throw new Error("Balance check failed");
+          // const hasBalance = hasBalanceR.success ? hasBalanceR : hasBoxR; // switch has balance resposne
+          // if (!hasBalance.success) return new Error("Balance check failed");
+          // if (!hasBalance.returnValue) {
+          //   const arc200_transferR = await ci.arc200_transfer(
+          //     activeAccount.address,
+          //     BigInt(0),
+          //     true,
+          //     false
+          //   );
+          //   if (!arc200_transferR.success) return new Error("Transfer failed");
+          //   await toast.promise(
+          //     signTransactions(
+          //       arc200_transferR.txns.map(
+          //         (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+          //       )
+          //     ).then(sendTransactions),
+          //     {
+          //       pending: `Pending transaction to setup wallet to receive ${tokenSymbol(
+          //         token2
+          //       )}`,
+          //       success: `Transfer successful!`,
+          //       //error: "Transfer failed",
+          //     },
+          //     {
+          //       type: "default",
+          //       position: "top-center",
+          //       theme: isDarkTheme ? "dark" : "light",
+          //     }
+          //   );
+          // }
         } while (0);
-        console.log("tokB balance ok");
         // ---------------------------------------
         // if tokA wVOI ensure tokA balance
         // ---------------------------------------
         do {
-          const ci = new CONTRACT(tokA, algodClient, indexerClient, abi.nt200, {
-            addr: activeAccount?.address || "",
-            sk: new Uint8Array(0),
-          });
-          ci.setPaymentAmount(28500);
-          const createBalanceBoxR = await ci.createBalanceBox(
-            activeAccount.address
-          );
-          console.log({ createBalanceBoxR });
-          if (createBalanceBoxR.success) {
-            await toast.promise(
-              signTransactions(
-                createBalanceBoxR.txns.map(
-                  (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-                )
-              ).then(sendTransactions),
-              {
-                pending: `Pending transaction to setup wallet for ${tokenSymbol(
-                  token
-                )}/ARC200 swaps`,
-                success: `Wallet setup complete!`,
-                //error: "Wallet setup failed",
-              }
-            );
-          }
+          // const ci = new CONTRACT(tokA, algodClient, indexerClient, abi.nt200, {
+          //   addr: activeAccount?.address || "",
+          //   sk: new Uint8Array(0),
+          // });
+          // ci.setPaymentAmount(28500);
+          // const createBalanceBoxR = await ci.createBalanceBox(
+          //   activeAccount.address
+          // );
+          // console.log({ createBalanceBoxR });
+          // if (createBalanceBoxR.success) {
+          //   await toast.promise(
+          //     signTransactions(
+          //       createBalanceBoxR.txns.map(
+          //         (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+          //       )
+          //     ).then(sendTransactions),
+          //     {
+          //       pending: `Pending transaction to setup wallet for ${tokenSymbol(
+          //         token
+          //       )}/ARC200 swaps`,
+          //       success: `Wallet setup complete!`,
+          //       //error: "Wallet setup failed",
+          //     }
+          //   );
+          // }
         } while (0);
         // ---------------------------------------
         // end ensure
@@ -1133,8 +1187,21 @@ const Swap = () => {
         const builder = makeBuilder(poolId, tokA, tokB);
         const poolAddr = algosdk.getApplicationAddress(poolId);
         const buildN = [];
+        let extraPaymentAmount = 1;
         if (token.tokenId === 0) {
+          extraPaymentAmount += 28500;
           buildN.push(builder.arc200.tokA.deposit(inABI));
+        }
+        if (ensureTokAApproval) {
+          extraPaymentAmount += 28100;
+          buildN.push(builder.arc200.tokA.arc200_approve(poolAddr, 0));
+        }
+        // conditionally add ensure txn for tokB balance
+        if (ensureTokBBalance) {
+          extraPaymentAmount += 28500;
+          buildN.push(
+            builder.arc200.tokB.arc200_transfer(activeAccount.address, 0)
+          );
         }
         buildN.push(builder.arc200.tokA.arc200_approve(poolAddr, inABI));
         buildN.push(builder.pool.Trader_swapAForB(0, inABI, outBSl));
@@ -1144,12 +1211,14 @@ const Swap = () => {
         if (token.tokenId === 0) {
           const ci = makeCi(tokA);
           ci.setFee(4000);
-          ci.setPaymentAmount(Number(inABI));
+          ci.setPaymentAmount(Number(inABI) + extraPaymentAmount);
           ci.setAccounts([algosdk.getApplicationAddress(tokA)]);
           ci.setEnableGroupResourceSharing(true);
           ci.setExtraTxns(buildP);
           customR = await ci.custom();
         } else {
+          ci.setFee(4000);
+          ci.setPaymentAmount(extraPaymentAmount);
           ci.setAccounts([poolAddr]);
           ci.setEnableGroupResourceSharing(true);
           ci.setExtraTxns(buildP);
@@ -1210,7 +1279,7 @@ const Swap = () => {
         // ---------------------------------------
         // ensure approval
         // ---------------------------------------
-        console.log("ensure approval for tokB");
+        let ensureTokBApproval = false;
         do {
           const ci = new CONTRACT(tokA, algodClient, indexerClient, spec, {
             addr: activeAccount?.address || "",
@@ -1220,42 +1289,57 @@ const Swap = () => {
             algosdk.getApplicationAddress(poolId),
             BigInt(0)
           );
-          console.log({ arc200_approveR });
           if (!arc200_approveR.success) {
             ci.setPaymentAmount(28100);
             const arc200_approveR = await ci.arc200_approve(
               algosdk.getApplicationAddress(poolId),
               BigInt(0)
             );
-            await toast.promise(
-              signTransactions(
-                arc200_approveR.txns.map(
-                  (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-                )
-              ).then(sendTransactions),
-              {
-                pending: `Approve ${tokenSymbol(token)} spend for pool`,
-                success: `Approve successful!`,
-                //error: "Approve failed",
-              },
-              {
-                type: "default",
-                position: "top-center",
-                theme: isDarkTheme ? "dark" : "light",
-              }
-            );
+            if (arc200_approveR.success) {
+              console.log("ensure approval for tokB");
+              ensureTokBApproval = true;
+            }
           }
+          // ---
+          // const ci = new CONTRACT(tokA, algodClient, indexerClient, spec, {
+          //   addr: activeAccount?.address || "",
+          //   sk: new Uint8Array(0),
+          // });
+          // const arc200_approveR = await ci.arc200_approve(
+          //   algosdk.getApplicationAddress(poolId),
+          //   BigInt(0)
+          // );
+          // console.log({ arc200_approveR });
+          // if (!arc200_approveR.success) {
+          //   ci.setPaymentAmount(28100);
+          //   const arc200_approveR = await ci.arc200_approve(
+          //     algosdk.getApplicationAddress(poolId),
+          //     BigInt(0)
+          //   );
+          //   await toast.promise(
+          //     signTransactions(
+          //       arc200_approveR.txns.map(
+          //         (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+          //       )
+          //     ).then(sendTransactions),
+          //     {
+          //       pending: `Approve ${tokenSymbol(token)} spend for pool`,
+          //       success: `Approve successful!`,
+          //       //error: "Approve failed",
+          //     },
+          //     {
+          //       type: "default",
+          //       position: "top-center",
+          //       theme: isDarkTheme ? "dark" : "light",
+          //     }
+          //   );
+          // }
         } while (0);
-        console.log("tokB approval ok");
         // ---------------------------------------
         // ensure tokA balance
         // ---------------------------------------
-        console.log("ensure balance for tokA");
+        let ensureTokABalance = false;
         do {
-          const pending = `Pending transaction to setup wallete to receive ${tokenSymbol(
-            token2
-          )}`;
-          const success = "Wallet setup complete";
           const ci = new CONTRACT(tokA, algodClient, indexerClient, spec, {
             addr: activeAccount?.address || "",
             sk: new Uint8Array(0),
@@ -1264,94 +1348,117 @@ const Swap = () => {
             activeAccount.address,
             BigInt(0)
           );
-          console.log({ arc200_transferR });
           if (!arc200_transferR.success) {
             ci.setPaymentAmount(28500);
             const arc200_transferR = await ci.arc200_transfer(
               activeAccount.address,
               BigInt(0)
             );
-            console.log({ arc200_transferR });
-            if (!arc200_transferR.success) {
-              const ci = new CONTRACT(
-                tokA,
-                algodClient,
-                indexerClient,
-                {
-                  name: "",
-                  desc: "",
-                  methods: [
-                    //createBalanceBoxes(address)void
-                    {
-                      name: "createBalanceBox",
-                      desc: "Creates a balance box",
-                      args: [
-                        {
-                          type: "address",
-                        },
-                      ],
-                      returns: {
-                        type: "byte",
-                      },
-                    },
-                  ],
-                  events: [],
-                },
-                {
-                  addr: activeAccount?.address || "",
-                  sk: new Uint8Array(0),
-                }
-              );
-              ci.setPaymentAmount(28500);
-              const createBalanceBoxR = await ci.createBalanceBox(
-                activeAccount.address
-              );
-              if (!createBalanceBoxR.success) {
-                break;
-              }
-              await toast.promise(
-                signTransactions(
-                  createBalanceBoxR.txns.map(
-                    (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-                  )
-                ).then(sendTransactions),
-                {
-                  pending,
-                  success,
-                  //error: "Balance box creation failed",
-                },
-                {
-                  type: "default",
-                  position: "top-center",
-                  theme: isDarkTheme ? "dark" : "light",
-                }
-              );
-              break;
+            if (arc200_transferR.success) {
+              console.log("ensure balance for tokA");
+              ensureTokABalance = true;
             }
-            // user can transfer to self to create balance box
-            await toast.promise(
-              signTransactions(
-                arc200_transferR.txns.map(
-                  (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-                )
-              ).then(sendTransactions),
-              {
-                pending,
-                success,
-                //error: "Transfer failed",
-              },
-              {
-                type: "default",
-                position: "top-center",
-                theme: isDarkTheme ? "dark" : "light",
-              }
-            );
-            break;
           }
-          // user can transfer to self to create balance box but it is not needed
-          break;
+          // ---
+          // const pending = `Pending transaction to setup wallete to receive ${tokenSymbol(
+          //   token2
+          // )}`;
+          // const success = "Wallet setup complete";
+          // const ci = new CONTRACT(tokA, algodClient, indexerClient, spec, {
+          //   addr: activeAccount?.address || "",
+          //   sk: new Uint8Array(0),
+          // });
+          // const arc200_transferR = await ci.arc200_transfer(
+          //   activeAccount.address,
+          //   BigInt(0)
+          // );
+          // console.log({ arc200_transferR });
+          // if (!arc200_transferR.success) {
+          //   ci.setPaymentAmount(28500);
+          //   const arc200_transferR = await ci.arc200_transfer(
+          //     activeAccount.address,
+          //     BigInt(0)
+          //   );
+          //   console.log({ arc200_transferR });
+          //   if (!arc200_transferR.success) {
+          //     const ci = new CONTRACT(
+          //       tokA,
+          //       algodClient,
+          //       indexerClient,
+          //       {
+          //         name: "",
+          //         desc: "",
+          //         methods: [
+          //           //createBalanceBoxes(address)void
+          //           {
+          //             name: "createBalanceBox",
+          //             desc: "Creates a balance box",
+          //             args: [
+          //               {
+          //                 type: "address",
+          //               },
+          //             ],
+          //             returns: {
+          //               type: "byte",
+          //             },
+          //           },
+          //         ],
+          //         events: [],
+          //       },
+          //       {
+          //         addr: activeAccount?.address || "",
+          //         sk: new Uint8Array(0),
+          //       }
+          //     );
+          //     ci.setPaymentAmount(28500);
+          //     const createBalanceBoxR = await ci.createBalanceBox(
+          //       activeAccount.address
+          //     );
+          //     if (!createBalanceBoxR.success) {
+          //       break;
+          //     }
+          //     await toast.promise(
+          //       signTransactions(
+          //         createBalanceBoxR.txns.map(
+          //           (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+          //         )
+          //       ).then(sendTransactions),
+          //       {
+          //         pending,
+          //         success,
+          //         //error: "Balance box creation failed",
+          //       },
+          //       {
+          //         type: "default",
+          //         position: "top-center",
+          //         theme: isDarkTheme ? "dark" : "light",
+          //       }
+          //     );
+          //     break;
+          //   }
+          //   // user can transfer to self to create balance box
+          //   await toast.promise(
+          //     signTransactions(
+          //       arc200_transferR.txns.map(
+          //         (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+          //       )
+          //     ).then(sendTransactions),
+          //     {
+          //       pending,
+          //       success,
+          //       //error: "Transfer failed",
+          //     },
+          //     {
+          //       type: "default",
+          //       position: "top-center",
+          //       theme: isDarkTheme ? "dark" : "light",
+          //     }
+          //   );
+          //   break;
+          // }
+          // // user can transfer to self to create balance box but it is not needed
+          // break;
         } while (0);
-        console.log("tokA balance ok");
         // ---------------------------------------
         const inBBN = new BigNumber(fromAmount);
         if (inBBN.isNaN()) return new Error("Invalid amount");
@@ -1367,18 +1474,30 @@ const Swap = () => {
         const outASl = outA;
         const builder = makeBuilder(poolId, tokA, tokB);
         const poolAddr = algosdk.getApplicationAddress(poolId);
-        const buildN = [
-          builder.arc200.tokB.arc200_approve(poolAddr, inBBI),
-          builder.pool.Trader_swapBForA(0, inBBI, outASl),
-        ];
+        const buildN = [];
+        let extraPaymentAmount = 28500;
+        if (ensureTokABalance) {
+          extraPaymentAmount += 28500;
+          buildN.push(
+            builder.arc200.tokA.arc200_transfer(activeAccount.address, 0)
+          );
+        }
+        if (ensureTokBApproval) {
+          extraPaymentAmount += 28100; // 0.0281 NT to approve tokB spend in pool
+          buildN.push(builder.arc200.tokB.arc200_approve(poolAddr, 0));
+        }
+        buildN.push(builder.arc200.tokB.arc200_approve(poolAddr, inBBI));
+        buildN.push(builder.pool.Trader_swapBForA(0, inBBI, outASl));
         if (token2.tokenId === 0) {
+          extraPaymentAmount += 28500; // 0.0285 NT to burn wNT
           buildN.push(builder.arc200.tokA.withdraw(outA));
         }
         const buildP = (await Promise.all(buildN)).map((res: any) => res.obj);
+        console.log("extraPaymentAmount", extraPaymentAmount);
         let customR;
         if (token2.tokenId === 0) {
           const ci = makeCi(tokB);
-          ci.setPaymentAmount(28500); // 0.0285 NT to burn wNT
+          ci.setPaymentAmount(extraPaymentAmount);
           ci.setFee(4000);
           ci.setAccounts([poolAddr]);
           ci.setEnableGroupResourceSharing(true);
@@ -1386,11 +1505,13 @@ const Swap = () => {
           customR = await ci.custom();
         } else {
           ci.setFee(4000);
+          ci.setPaymentAmount(extraPaymentAmount);
           ci.setAccounts([poolAddr]);
           ci.setEnableGroupResourceSharing(true);
           ci.setExtraTxns(buildP);
           customR = await ci.custom();
         }
+        console.log({ customR });
         if (!customR.success) return new Error("Swap group simulation failed");
         await toast.promise(
           signTransactions(
