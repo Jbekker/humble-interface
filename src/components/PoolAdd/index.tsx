@@ -1286,10 +1286,73 @@ const Swap = () => {
           },
         };
       };
+      const makeArc200 = (ctcInfo: number) => {
+        const acc = {
+          addr: activeAccount?.address || "",
+          sk: new Uint8Array(0),
+        };
+        return new CONTRACT(
+          ctcInfo,
+          algodClient,
+          indexerClient,
+          abi.arc200,
+          acc
+        );
+      };
 
       // pick a pool
       const pool = eligiblePools.slice(-1)[0];
       const { poolId, tokA, tokB } = pool;
+
+      // handle special cases
+      for (const tok of [tokA, tokB]) {
+        switch (tok) {
+          case TOKEN_VIA:
+            const ci = makeArc200(tok);
+            // ensure pool balance box
+            const hasBalanceR = await ci.hasBalance(
+              algosdk.getApplicationAddress(poolId)
+            );
+            const hasAllowanceR = await ci.hasAllowance(
+              activeAccount.address,
+              algosdk.getApplicationAddress(poolId)
+            );
+            if (!hasBalanceR.success || !hasAllowanceR.success)
+              throw new Error("Failed to check balance or allowance");
+            const hasBalance = hasBalanceR.returnValue;
+            const hasAllowance = hasAllowanceR.returnValue;
+            // TODO use builder to combine into single txngroup
+            if (hasBalance === 0) {
+              ci.setPaymentAmount(28500);
+              const arc200_transferR = await ci.arc200_transfer(
+                algosdk.getApplicationAddress(poolId),
+                0
+              );
+              if (!arc200_transferR.success) throw new Error("Transfer failed");
+              await signTransactions(
+                arc200_transferR.txns.map(
+                  (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+                )
+              ).then(sendTransactions);
+            }
+            if (hasAllowance === 0) {
+              ci.setPaymentAmount(28100);
+              const arc200_approveR = await ci.arc200_approve(
+                algosdk.getApplicationAddress(poolId),
+                0
+              );
+              if (!arc200_approveR.success) throw new Error("Approve failed");
+              await signTransactions(
+                arc200_approveR.txns.map(
+                  (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+                )
+              ).then(sendTransactions);
+            }
+            break;
+          default:
+            break;
+        }
+      }
 
       // ----------------------------------------
       // ensure pool has tokens to create future boxes
@@ -1590,7 +1653,9 @@ const Swap = () => {
         const poolAddr = algosdk.getApplicationAddress(poolId);
 
         const buildN = [];
-        let extraPaymentAmount = 0;
+        let extraPaymentAmount = 28500;
+        buildN.push(builder.arc200.tokA.arc200_transfer(poolAddr, 0));
+        buildN.push(builder.arc200.tokB.arc200_transfer(poolAddr, 0));
         if (ensureTokBApproval) {
           extraPaymentAmount += 28100;
           buildN.push(builder.arc200.tokB.arc200_approve(poolAddr, 0));
@@ -1608,18 +1673,27 @@ const Swap = () => {
           ]
         );
         const buildP = (await Promise.all(buildN)).map((res: any) => res.obj);
-        ciTokA.setFee(4000);
-        if ([0, TOKEN_WVOI1].includes(token.tokenId)) ciTokA.setBeaconId(tokA);
-        // Include PaymentTxn if network token
-        if (token.tokenId === 0) {
-          ciTokA.setPaymentAmount(Number(inA) + extraPaymentAmount);
-        } else {
+
+        // use ciTokA
+
+        let customR;
+        if (TOKEN_VIA === token.tokenId) {
+          ciTokA.setFee(4000);
           ciTokA.setPaymentAmount(extraPaymentAmount);
+          ciTokA.setAccounts([poolAddr]);
+          ciTokA.setEnableGroupResourceSharing(true);
+          ciTokA.setExtraTxns(buildP);
+          customR = await ciTokA.custom();
+        } else if ([0, TOKEN_WVOI1].includes(token.tokenId)) {
+        } else {
+          ci.setFee(4000);
+          ci.setPaymentAmount(extraPaymentAmount);
+          ci.setAccounts([poolAddr]);
+          ci.setEnableGroupResourceSharing(true);
+          ci.setExtraTxns(buildP);
+          customR = await ci.custom();
         }
-        ciTokA.setAccounts([poolAddr]);
-        ciTokA.setEnableGroupResourceSharing(true);
-        ciTokA.setExtraTxns(buildP);
-        const customR = await ciTokA.custom();
+
         console.log({ customR });
         if (!customR.success)
           return new Error("Add liquidity group simulation failed");
