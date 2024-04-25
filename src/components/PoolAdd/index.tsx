@@ -1654,17 +1654,21 @@ const Swap = () => {
 
         const buildN = [];
         let extraPaymentAmount = 28500;
+
+        // include wnt deposit if network token (MUST BE FIRST)
+        if ([0].includes(token.tokenId)) {
+          extraPaymentAmount += 28500 + Number(inA);
+          buildN.push(builder.arc200.tokA.deposit(inA));
+        }
+
         buildN.push(builder.arc200.tokA.arc200_transfer(poolAddr, 0));
         buildN.push(builder.arc200.tokB.arc200_transfer(poolAddr, 0));
+
         if (ensureTokBApproval) {
           extraPaymentAmount += 28100;
           buildN.push(builder.arc200.tokB.arc200_approve(poolAddr, 0));
         }
-        // include wnt deposit if network token
-        if ([0].includes(token.tokenId)) {
-          extraPaymentAmount += 28500;
-          buildN.push(builder.arc200.tokA.deposit(inA));
-        }
+
         buildN.push(
           ...[
             builder.arc200.tokA.arc200_approve(poolAddr, inA),
@@ -1677,14 +1681,13 @@ const Swap = () => {
         // use ciTokA
 
         let customR;
-        if (TOKEN_VIA === token.tokenId) {
+        if ([0, TOKEN_VIA].includes(token.tokenId)) {
           ciTokA.setFee(4000);
           ciTokA.setPaymentAmount(extraPaymentAmount);
           ciTokA.setAccounts([poolAddr]);
           ciTokA.setEnableGroupResourceSharing(true);
           ciTokA.setExtraTxns(buildP);
           customR = await ciTokA.custom();
-        } else if ([0, TOKEN_WVOI1].includes(token.tokenId)) {
         } else {
           ci.setFee(4000);
           ci.setPaymentAmount(extraPaymentAmount);
@@ -1695,6 +1698,7 @@ const Swap = () => {
         }
 
         console.log({ customR });
+
         if (!customR.success)
           return new Error("Add liquidity group simulation failed");
         await toast.promise(
