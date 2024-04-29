@@ -650,12 +650,19 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
           sk: new Uint8Array(0),
         }
       );
+      ci.setFee(3000); // 2000u added to simulate Staker_harvest
       Promise.all([
         ci.staked(farm.poolId, activeAccount?.address || ""),
         ci.rewardsAvailable(farm.poolId, activeAccount?.address || ""),
+        ci.Staker_harvest(farm.poolId),
       ]).then((r: any[]) => {
-        const [stakedR, rewardsR] = r;
+        const [stakedR, rewardsR, harvestR] = r;
         if (!stakedR.success || !rewardsR.success) return;
+        if (!harvestR.success) {
+          setStaked("0");
+          setRewards("0");
+          return;
+        }
         const staked = stakedR.returnValue;
         const stakedBn = new BigNumber(staked).div(
           new BigNumber(10).pow(tokenB.decimals)
@@ -664,8 +671,12 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
         const rewardsBn = new BigNumber(rewards).div(
           new BigNumber(10).pow(tokenA.decimals)
         );
+        const [[userRewards], [totalRewards]] = harvestR.returnValue;
+        const userRewardsBN = new BigNumber(userRewards).div(
+          new BigNumber(10).pow(tokenA.decimals)
+        );
         setStaked(stakedBn.toFixed(0));
-        setRewards(rewardsBn.toFixed(tokenA.decimals));
+        setRewards(userRewardsBN.toFixed(tokenA.decimals));
       });
     }
   };
@@ -1117,14 +1128,6 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
               </PairTokens>
             </PairInfo>
             <PairIds>
-              {/*<Field>
-                <FieldLabel>ID:</FieldLabel>
-                <FieldValue>{farm.stakeToken}</FieldValue>
-              </Field>
-              <Field>
-                <FieldLabel>ID:</FieldLabel>
-                <FieldValue>{farm.rewardsToken}</FieldValue>
-              </Field>*/}
               <Field>
                 <FieldLabel>
                   {timestamp > farm.end ? "Ended" : "Ends"}
