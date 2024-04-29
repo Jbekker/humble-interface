@@ -502,6 +502,9 @@ const Swap = () => {
   } = useWallet();
 
   const [pool, setPool] = useState<PoolI>();
+  const [txId, setTxId] = useState<string>(
+    "YE6LE6TJY3IKZILM7YEOO3BWXU6CY7MD7HZV3N6YRQKZVAN5ABVQ"
+  );
   const [swapIn, setSwapIn] = useState("1");
   const [swapOut, setSwapOut] = useState("2");
   const [tokIn, setTokIn] = useState("TOKA");
@@ -1504,7 +1507,7 @@ const Swap = () => {
           new BigNumber(10).pow(token.decimals)
         );
         const swapIn = inAmtBn.toFixed(token.decimals);
-
+        const txId = lastTransfer[0][0];
         const outAmtBi: any = lastTransfer[0][5];
         const outAmtBn = new BigNumber(outAmtBi).div(
           new BigNumber(10).pow(token2.decimals)
@@ -1516,6 +1519,7 @@ const Swap = () => {
         setTokIn(tokenSymbol(token));
         setTokOut(tokenSymbol(token2));
         setSwapModalOpen(true);
+        setTxId(txId);
       }
     } catch (e: any) {
       toast.error(e.message);
@@ -1664,6 +1668,7 @@ const Swap = () => {
         tokOut={tokOut}
         swapIn={swapIn}
         swapOut={swapOut}
+        txId={txId}
       />
     </>
   ) : null;
