@@ -1195,7 +1195,7 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
           <AccordionActions>
             <ButtonGroup size="small">
               {false ? farm?.poolId : null}
-              {<Button onClick={handleApprove}>Approve</Button>}
+              {false ? <Button onClick={handleApprove}>Approve</Button> : null}
               <Button onClick={handleStake}>Stake</Button>
               <Button onClick={handleUnstake}>Unstake</Button>
               <Button onClick={handleHarvest}>Claim</Button>
