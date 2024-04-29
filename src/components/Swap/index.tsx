@@ -1282,7 +1282,7 @@ const Swap = () => {
         }
         console.log({ customR });
         if (!customR.success) return new Error("Swap group simulation failed");
-        await toast.promise(
+        const custom = await toast.promise(
           signTransactions(
             customR.txns.map(
               (t: string) => new Uint8Array(Buffer.from(t, "base64"))
@@ -1328,6 +1328,7 @@ const Swap = () => {
         setSwapOut(swapOut);
         setTokIn(tokenSymbol(token));
         setTokOut(tokenSymbol(token2));
+        setTxId(custom.txId);
         setSwapModalOpen(true);
       } else if (pool.tokB === tokenId(token)) {
         console.log("swapBForA");
@@ -1470,7 +1471,7 @@ const Swap = () => {
         }
         console.log({ customR });
         if (!customR.success) return new Error("Swap group simulation failed");
-        await toast.promise(
+        const custom = await toast.promise(
           signTransactions(
             customR.txns.map(
               (t: string) => new Uint8Array(Buffer.from(t, "base64"))
@@ -1507,7 +1508,6 @@ const Swap = () => {
           new BigNumber(10).pow(token.decimals)
         );
         const swapIn = inAmtBn.toFixed(token.decimals);
-        const txId = lastTransfer[0][0];
         const outAmtBi: any = lastTransfer[0][5];
         const outAmtBn = new BigNumber(outAmtBi).div(
           new BigNumber(10).pow(token2.decimals)
@@ -1519,7 +1519,7 @@ const Swap = () => {
         setTokIn(tokenSymbol(token));
         setTokOut(tokenSymbol(token2));
         setSwapModalOpen(true);
-        setTxId(txId);
+        setTxId(custom.id);
       }
     } catch (e: any) {
       toast.error(e.message);
