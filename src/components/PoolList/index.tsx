@@ -492,6 +492,7 @@ const PoolList: FC<PoolListProps> = () => {
   const dispatch = useDispatch();
   const pools = useSelector((state: RootState) => state.pools.pools);
   const tokens = useSelector((state: RootState) => state.tokens.tokens);
+  console.log({ pools, tokens });
   return (
     <PopularPoolsRoot className={isDarkTheme ? "dark" : "light"}>
       <HeadingRow className="heading-row">
