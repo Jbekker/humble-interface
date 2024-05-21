@@ -6,7 +6,7 @@ import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
 import { CircularProgress, Stack } from "@mui/material";
-import { CONTRACT, abi, arc200, swap200 } from "ulujs";
+import { CONTRACT, abi, arc200, swap } from "ulujs";
 import { TOKEN_VIA, TOKEN_WVOI1 } from "../../constants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import TokenInput from "../TokenInput";
@@ -608,6 +608,7 @@ const Swap = () => {
   useEffect(() => {
     dispatch(getTokens() as unknown as UnknownAction);
   }, [dispatch]);
+
   /* Pools */
   const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
   const poolsStatus = useSelector((state: RootState) => state.pools.status);
@@ -703,6 +704,7 @@ const Swap = () => {
   //   setToken(tokenOptions[0]);
   // }, [token, tokenOptions]);
 
+  // EFFECT: get eligible pools
   const eligiblePools = useMemo(() => {
     return pools.filter((p: PoolI) => {
       return (
@@ -717,61 +719,74 @@ const Swap = () => {
 
   // EFFECT
   useEffect(() => {
-    setPool(eligiblePools[0]);
-    setReady(true);
+    if (paramPoolId) {
+      const pool = pools.find((p: PoolI) => `${p.poolId}` === `${paramPoolId}`);
+      if (pool) {
+        setPool(pool);
+        setReady(true);
+      }
+    } else if (eligiblePools.length > 0) {
+      // pick a pool (highest tvl)
+      const { algodClient, indexerClient } = getAlgorandClients();
+      new swap(0, algodClient, indexerClient)
+        .selectPool(eligiblePools, null, null, "round")
+        .then((pool: any) => {
+          if (!pool) return;
+          setPool(pool);
+          setReady(true);
+        });
+    }
   }, [eligiblePools]);
 
-  const [info, setInfo] = useState<any>();
+  console.log({ pool, eligiblePools });
 
-  // EFFECT
+  const [info, setInfo] = useState<any>();
+  // EFFECT: set pool info
   useEffect(() => {
     if (!pool) return;
     const { algodClient, indexerClient } = getAlgorandClients();
-    const ci = new swap200(pool.poolId, algodClient, indexerClient);
+    const { tokA, tokB } = pool;
+    const token = tokens.find((t: ARC200TokenI) => t.tokenId === tokA);
+    const token2 = tokens.find((t: ARC200TokenI) => t.tokenId === tokB);
+    if (!token || !token2) return;
+    const A = { ...token, tokenId: tokenId(token) };
+    const B = { ...token2, tokenId: tokenId(token2) };
+    //new swap(0, algodClient, indexerClient)
+    //  .selectPool(eligiblePools, A, B)
+    //  .then((pool: any) => {
+    //    if (!pool) return;
+    const ci = new swap(pool.poolId, algodClient, indexerClient);
     ci.Info().then((info: any) => {
-      setInfo(
-        ((info: any) => ({
-          lptBals: info[0],
-          poolBals: info[1],
-          protoInfo: ((pi: any) => ({
-            protoFee: Number(pi[0]),
-            lpFee: Number(pi[1]),
-            totFee: Number(pi[2]),
-            protoAddr: pi[3],
-            locked: pi[4],
-          }))(info[2]),
-          protoBals: info[3],
-          tokB: Number(info[4]),
-          tokA: Number(info[5]),
-        }))(info.returnValue)
-      );
+      setInfo(info.returnValue);
     });
   }, [pool, on]);
 
   console.log("info", info);
 
   const [poolBalance, setPoolBalance] = useState<BigInt>();
-
   // EFFECT
   useEffect(() => {
     if (!activeAccount || !pool) return;
+    console.log({ activeAccount, pool });
     const { algodClient, indexerClient } = getAlgorandClients();
-    const ci = new arc200(pool?.poolId, algodClient, indexerClient);
-    ci.arc200_balanceOf(activeAccount.address).then(
-      (arc200_balanceOfR: any) => {
+    new arc200(pool.poolId, algodClient, indexerClient)
+      .arc200_balanceOf(activeAccount.address)
+      .then((arc200_balanceOfR: any) => {
         if (arc200_balanceOfR.success) {
           setPoolBalance(arc200_balanceOfR.returnValue);
         }
-      }
-    );
+      });
   }, [activeAccount, pool, on]);
+
+  console.log("poolBalance", poolBalance);
 
   const [poolShare, setPoolShare] = useState<string>("0");
 
   // EFFECT
   useEffect(() => {
     if (!activeAccount || !pool || !info || !poolBalance) return;
-    const newShare = (100 * Number(poolBalance)) / Number(info.lptBals[1]);
+    const newShare =
+      (100 * Number(poolBalance)) / Number(info.lptBals.lpMinted);
     setPoolShare(newShare.toFixed(2));
   }, [activeAccount, pool, info, poolBalance]);
 
@@ -854,7 +869,7 @@ const Swap = () => {
     }
     const newShare = (
       (100 * (Number(poolBalance || 0) + Number(expectedOutcome))) /
-      (Number(info.lptBals[1]) + Number(expectedOutcome))
+      (Number(info.lptBals.lpMinted) + Number(expectedOutcome))
     ).toFixed(2);
     setNewShare(newShare);
   }, [expectedOutcome, poolBalance, info]);
@@ -867,12 +882,12 @@ const Swap = () => {
     if (!info || !token || !token2) return;
     if (info.tokA === tokenId(token)) {
       return (
-        (Number(info.poolBals[1]) / Number(info.poolBals[0])) *
+        (Number(info.poolBals.B) / Number(info.poolBals.A)) *
         10 ** (token.decimals - token2.decimals)
       );
     } else if (info.tokB === tokenId(token)) {
       return (
-        (Number(info.poolBals[0]) / Number(info.poolBals[1])) *
+        (Number(info.poolBals.A) / Number(info.poolBals.B)) *
         10 ** (token.decimals - token2.decimals)
       );
     }
@@ -900,8 +915,7 @@ const Swap = () => {
       !info
     )
       return;
-    if (info.poolBals[0] === BigInt(0) || info.poolBals[1] === BigInt(0))
-      return;
+    if (info.poolBals.A === BigInt(0) || info.poolBals.B === BigInt(0)) return;
     if (focus === "from") {
       const toAmountBN = new BigNumber(fromAmount.replace(/,/g, ""));
       if (toAmountBN.isNaN()) return;
@@ -924,8 +938,7 @@ const Swap = () => {
   useEffect(() => {
     if (!pool || !token || !token2 || !toAmount || focus !== "to" || !!info)
       return;
-    if (info.poolBals[0] === BigInt(0) || info.poolBals[1] === BigInt(0))
-      return;
+    if (info.poolBals.A === BigInt(0) || info.poolBals.B === BigInt(0)) return;
     const { algodClient, indexerClient } = getAlgorandClients();
     const acc = {
       addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
