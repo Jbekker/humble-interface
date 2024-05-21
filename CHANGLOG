@@ -1,0 +1,9 @@
+1.0.0-beta.0 - 20 May 2024
+
+- Use new ulujs swap implementation
+  ** Replace swap function with implemntation from ulujs, single sign swap for new users
+  ** Use new swap.Info function, JSON format pool info
+  ** Use swap util methods such as rate, selectPool
+  ** Add support for multiple swap pools for single pair
+  ** Update dependencies
+  ** Bump ulujs, arccjs
