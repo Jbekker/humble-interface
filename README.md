@@ -1,3 +1,3 @@
-# Nautilus NFT Marketplace: Front End Interface
+# HumbleSwap : Front End Interface
 
-An open source repository for Nautilus front end interface. Nautilus is a NFT Marketplace on Voi Network.
+An open source repository for HumbleSwap front end interface. HumbleSwap is a Decentralized Exchange on Voi Network.
