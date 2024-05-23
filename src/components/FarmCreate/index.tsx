@@ -4,7 +4,7 @@ import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
 import { CircularProgress, Stack } from "@mui/material";
-import { CONTRACT, abi, arc200, swap200 } from "ulujs";
+import { CONTRACT, abi, arc200 } from "ulujs";
 import { TOKEN_WVOI1 } from "../../constants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import TokenInput from "../TokenInput";
@@ -13,347 +13,12 @@ import { ARC200TokenI, PoolI } from "../../types";
 import { getTokens } from "../../store/tokenSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
 import { getPools } from "../../store/poolSlice";
-import algosdk, { decodeAddress } from "algosdk";
+import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { Toast } from "react-toastify/dist/components";
-import axios from "axios";
-import { hasAllowance } from "ulujs/types/arc200";
 import { tokenId, tokenSymbol } from "../../utils/dex";
 import BigNumber from "bignumber.js";
-import { CTCINFO_TRI } from "../../constants/dex";
-import { ZERO_ADDRESS } from "../../constants/avm";
 import BasicDateCalendar from "../BasicDateCalendar";
 import moment from "moment";
-
-const spec = {
-  name: "pool",
-  desc: "pool",
-  methods: [
-    {
-      name: "custom",
-      args: [],
-      returns: {
-        type: "void",
-      },
-    },
-    {
-      name: "Info",
-      args: [],
-      returns: {
-        type: "((uint256,uint256),(uint256,uint256),(uint256,uint256,uint256,address,byte),(uint256,uint256),uint64,uint64)",
-      },
-      readonly: true,
-    },
-    {
-      name: "Provider_deposit",
-      args: [
-        { type: "byte" },
-        { type: "(uint256,uint256)" },
-        { type: "uint256" },
-      ],
-      returns: { type: "uint256" },
-    },
-    {
-      name: "Provider_withdraw",
-      args: [{ type: "uint256" }, { type: "(uint256,uint256)" }],
-      returns: { type: "(uint256,uint256)" },
-    },
-    {
-      name: "Provider_withdrawA",
-      args: [{ type: "uint256" }],
-      returns: { type: "uint256" },
-    },
-    {
-      name: "Provider_withdrawB",
-      args: [{ type: "uint256" }],
-      returns: { type: "uint256" },
-    },
-    {
-      name: "Trader_swapAForB",
-      args: [{ type: "byte" }, { type: "uint256" }, { type: "uint256" }],
-      returns: { type: "(uint256,uint256)" },
-    },
-    {
-      name: "Trader_swapBForA",
-      args: [{ type: "byte" }, { type: "uint256" }, { type: "uint256" }],
-      returns: { type: "(uint256,uint256)" },
-    },
-    {
-      name: "arc200_approve",
-      desc: "Approve spender for a token",
-      args: [
-        {
-          type: "address",
-          name: "spender",
-          desc: "The address of the spender",
-        },
-        {
-          type: "uint256",
-          name: "value",
-          desc: "The amount of tokens to approve",
-        },
-      ],
-      returns: {
-        type: "bool",
-        desc: "Success",
-      },
-    },
-    {
-      name: "arc200_balanceOf",
-      desc: "Returns the current balance of the owner of the token",
-      readonly: true,
-      args: [
-        {
-          type: "address",
-          name: "owner",
-          desc: "The address of the owner of the token",
-        },
-      ],
-      returns: {
-        type: "uint256",
-        desc: "The current balance of the holder of the token",
-      },
-    },
-    {
-      name: "arc200_transfer",
-      desc: "Transfers tokens",
-      readonly: false,
-      args: [
-        {
-          type: "address",
-          name: "to",
-          desc: "The destination of the transfer",
-        },
-        {
-          type: "uint256",
-          name: "value",
-          desc: "Amount of tokens to transfer",
-        },
-      ],
-      returns: {
-        type: "bool",
-        desc: "Success",
-      },
-    },
-    {
-      name: "createBalanceBox",
-      desc: "Creates a balance box",
-      args: [
-        {
-          type: "address",
-        },
-      ],
-      returns: {
-        type: "byte",
-      },
-    },
-    //createAllowanceBox(address,address)void
-    {
-      name: "createAllowanceBox",
-      desc: "Creates an allowance box",
-      args: [
-        {
-          type: "address",
-        },
-        {
-          type: "address",
-        },
-      ],
-      returns: {
-        type: "byte",
-      },
-    },
-    //createBalanceBoxes(address)void
-    {
-      name: "createBalanceBoxes",
-      desc: "Creates a balance box",
-      args: [
-        {
-          type: "address",
-        },
-      ],
-      returns: {
-        type: "void",
-      },
-    },
-    // hasBox((byte,byte[64]))byte
-    {
-      name: "hasBox",
-      desc: "Checks if the account has a box",
-      args: [
-        {
-          type: "(byte,byte[64])",
-        },
-      ],
-      returns: {
-        type: "byte",
-      },
-    },
-    {
-      name: "reserve",
-      args: [
-        {
-          type: "address",
-        },
-      ],
-      returns: {
-        type: "(uint256,uint256)",
-      },
-      readonly: true,
-    },
-    // wnt
-    {
-      name: "deposit",
-      args: [
-        {
-          name: "amount",
-          type: "uint64",
-          desc: "Amount to deposit",
-        },
-      ],
-      returns: {
-        type: "uint256",
-        desc: "Amount deposited",
-      },
-    },
-  ],
-  events: [],
-};
-
-interface AddIconProps {
-  theme: "light" | "dark";
-}
-const AddIcon: FC<AddIconProps> = ({ theme }) => {
-  return theme === "dark" ? (
-    <svg
-      width="49"
-      height="71"
-      viewBox="0 0 49 71"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <line
-        x1="22.0342"
-        y1="-2.18557e-08"
-        x2="22.0342"
-        y2="71"
-        stroke="white"
-        stroke-opacity="0.2"
-      />
-      <rect x="0.53418" y="11" width="48" height="48" rx="24" fill="black" />
-      <rect
-        x="1.03418"
-        y="11.5"
-        width="47"
-        height="47"
-        rx="23.5"
-        stroke="white"
-        stroke-opacity="0.2"
-      />
-      <path
-        d="M8.53418 35H40.5342"
-        stroke="white"
-        stroke-width="3"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M24.5342 51V19"
-        stroke="white"
-        stroke-width="3"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
-  ) : (
-    <svg
-      width="49"
-      height="71"
-      viewBox="0 0 49 71"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <line
-        x1="22.0342"
-        y1="-2.18557e-08"
-        x2="22.0342"
-        y2="71"
-        stroke="#D8D8E1"
-      />
-      <rect
-        x="1.03418"
-        y="11.5"
-        width="47"
-        height="47"
-        rx="23.5"
-        fill="white"
-      />
-      <rect
-        x="1.03418"
-        y="11.5"
-        width="47"
-        height="47"
-        rx="23.5"
-        stroke="#D8D8E1"
-      />
-      <path
-        d="M8.53418 35H40.5342"
-        stroke="#141010"
-        stroke-width="3"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M24.5342 51V19"
-        stroke="#141010"
-        stroke-width="3"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
-  );
-};
-
-const SpinnerIcon = () => {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="26"
-      height="24"
-      viewBox="0 0 26 24"
-      fill="none"
-    >
-      <path
-        d="M4.78886 10.618L2.89155 8.7207L1.00513 10.618"
-        stroke="white"
-        stroke-width="1.63562"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M21.2104 13.3828L23.1078 15.2801L25.0051 13.3828"
-        stroke="white"
-        stroke-width="1.63562"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M23.0966 14.5293V11.9996C23.0966 6.41666 18.5714 1.90234 12.9994 1.90234C9.81541 1.90234 6.96943 3.38534 5.11572 5.68611"
-        stroke="white"
-        stroke-width="3"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M2.90234 9.4707V12.0005C2.90234 17.5834 7.42756 22.0977 12.9996 22.0977C16.1836 22.0977 19.0296 20.6147 20.8833 18.3139"
-        stroke="white"
-        stroke-width="3"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
-  );
-};
 
 const Note = styled.div`
   align-self: stretch;
@@ -437,201 +102,6 @@ const Button = styled(BaseButton)`
     border-radius: var(--Radius-700, 16px);
     background: var(--Color-Accent-CTA-Background-Default, #2958ff);
   }
-`;
-
-const SummaryContainer = styled.div`
-  display: flex;
-  padding: 0px var(--Spacing-900, 32px);
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
-  align-self: stretch;
-`;
-
-const RateContainer = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  align-self: stretch;
-  &.has-divider {
-    padding-bottom: 12px;
-    border-bottom: 1px solid
-      var(--Color-Neutral-Stroke-Primary, rgba(255, 255, 255, 0.2));
-  }
-`;
-
-const RateLabel = styled.div`
-  width: 200px;
-  font-feature-settings: "clig" off, "liga" off;
-  font-family: "Plus Jakarta Sans";
-  font-size: 16px;
-  font-style: normal;
-  font-weight: 700;
-  line-height: 120%; /* 19.2px */
-  &.dark {
-    color: var(--Color-Neutral-Stroke-Black, #fff);
-  }
-  &.light {
-    color: var(--Color-Neutral-Stroke-Black, #141010);
-  }
-`;
-
-const RateValue = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-`;
-
-const RateMain = styled.div`
-  leading-trim: both;
-  text-edge: cap;
-  font-feature-settings: "clig" off, "liga" off;
-  font-family: "Plus Jakarta Sans";
-  font-size: 16px;
-  font-style: normal;
-  font-weight: 700;
-  line-height: 120%; /* 19.2px */
-  &.dark {
-    color: var(--Color-Neutral-Stroke-Black, #fff);
-  }
-  &.light {
-    color: var(--Color-Neutral-Stroke-Black, #141010);
-  }
-`;
-
-const RateSub = styled.div`
-  color: #009c5a;
-  font-feature-settings: "clig" off, "liga" off;
-  font-family: "IBM Plex Sans Condensed";
-  font-size: 13px;
-  font-style: normal;
-  font-weight: 400;
-  line-height: 120%; /* 15.6px */
-`;
-
-const BreakdownContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  align-self: stretch;
-`;
-
-const BreakdownStack = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: -4px;
-  align-self: stretch;
-`;
-
-const BreakdownRow = styled.div`
-  display: flex;
-  padding: 4px 0px;
-  justify-content: space-between;
-  align-items: flex-start;
-  align-self: stretch;
-`;
-
-const BreakdownLabel = styled.div`
-  font-feature-settings: "clig" off, "liga" off;
-  font-family: "IBM Plex Sans Condensed";
-  font-size: 16px;
-  font-style: normal;
-  font-weight: 400;
-  line-height: 180%; /* 28.8px */
-  gap: 4px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  &.dark {
-    color: var(--Color-Neutral-Element-Primary, #fff);
-  }
-  &.light {
-    color: var(--Color-Neutral-Element-Primary, #0c0c10);
-  }
-`;
-
-const BreakdownValueContiner = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
-`;
-
-const BreakdownValue = styled.div`
-  leading-trim: both;
-  text-edge: cap;
-  font-feature-settings: "clig" off, "liga" off;
-  font-family: "IBM Plex Sans Condensed";
-  font-size: 15px;
-  font-style: normal;
-  font-weight: 600;:sp
-  line-height: 120%; /* 18px */
-  &.dark {
-    color: var(--Color-Neutral-Element-Primary, #fff);
-  }
-  &.light {
-    color: var(--Color-Neutral-Element-Primary, #0c0c10);
-  }
-`;
-
-const InfoCircleIcon = () => {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-    >
-      <path
-        d="M7.99992 14.6663C11.6666 14.6663 14.6666 11.6663 14.6666 7.99967C14.6666 4.33301 11.6666 1.33301 7.99992 1.33301C4.33325 1.33301 1.33325 4.33301 1.33325 7.99967C1.33325 11.6663 4.33325 14.6663 7.99992 14.6663Z"
-        stroke="white"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M8 8V11.3333"
-        stroke="white"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M7.99634 5.33301H8.00233"
-        stroke="white"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
-  );
-};
-
-const ArrowIcon = () => {
-  return (
-    <svg
-      width="16"
-      height="28"
-      viewBox="0 0 16 28"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M2 26L14 14L2 2"
-        stroke="#fff"
-        stroke-width="3"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
-  );
-};
-
-const IconContainer = styled.div`
-  transform: rotate(90deg);
 `;
 
 const SubHeading = styled.h4`
@@ -931,10 +401,11 @@ const Swap = () => {
           indexerClient,
           abi.arc200,
           {
-            addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+            addr: activeAccount.address,
             sk: new Uint8Array(0),
           }
         );
+
         const arc200_allowanceR = await ciRTok.arc200_allowance(
           activeAccount.address,
           algosdk.getApplicationAddress(ctcInfo)
@@ -944,6 +415,16 @@ const Swap = () => {
         const arc200_allowance = arc200_allowanceR.returnValue;
         const newAllowance = arc200_allowance + rewardAmount;
 
+        const allowanceSU = new BigNumber(arc200_allowance)
+          .div(new BigNumber(10).pow(token2.decimals))
+          .toFixed(0);
+        const newAllowanceSU = new BigNumber(newAllowance)
+          .div(new BigNumber(10).pow(token2.decimals))
+          .toFixed(0);
+        const rewardSU = new BigNumber(rewardAmount.toString())
+          .div(new BigNumber(10).pow(token2.decimals))
+          .toFixed(0);
+
         const builder = {
           arc200: new CONTRACT(
             rewardToken,
@@ -951,7 +432,7 @@ const Swap = () => {
             indexerClient,
             abi.arc200,
             {
-              addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+              addr: activeAccount.address,
               sk: new Uint8Array(0),
             },
             true,
@@ -973,29 +454,58 @@ const Swap = () => {
           ),
         };
 
-        const buildN = [
-          builder.arc200.arc200_approve(
-            algosdk.getApplicationAddress(ctcInfo),
-            newAllowance
-          ),
-          builder.stakr200.Funder_deployPool([
-            [rewardToken],
-            stakeToken,
-            [rewardAmount],
-            start / 1000,
-            end / 1000,
-          ]),
-        ];
-
-        const buildP = (await Promise.all(buildN)).map(({ obj }) => obj);
-        console.log({ buildP });
-        ci.setPaymentAmount(102100);
-        ci.setFee(2000);
-        ci.setExtraTxns(buildP);
-        ci.setAccounts([algosdk.getApplicationAddress(ctcInfo)]);
-        ci.setEnableGroupResourceSharing(true);
-        const customR = await ci.custom();
-        console.log({ customR });
+        let customR;
+        for (const p1 of [0, 28100]) {
+          const txns = [];
+          const txnO = (
+            await builder.arc200.arc200_approve(
+              algosdk.getApplicationAddress(ctcInfo),
+              newAllowance
+            )
+          ).obj;
+          txns.push({
+            ...txnO,
+            payment: p1,
+            note: new TextEncoder().encode(
+              `${token2.symbol} arc200_approve ${
+                activeAccount.address
+              } ${algosdk.getApplicationAddress(
+                ctcInfo
+              )} ${newAllowanceSU} (${allowanceSU} -> ${newAllowanceSU}) +${rewardSU}`
+            ),
+          });
+          const txn1 = (
+            await builder.stakr200.Funder_deployPool([
+              [rewardToken],
+              stakeToken,
+              [rewardAmount],
+              start / 1000,
+              end / 1000,
+            ])
+          ).obj;
+          txns.push({
+            ...txn1,
+            payment: 102100,
+            note: new TextEncoder().encode(
+              `deploy farm ${token.symbol} -> ${
+                token2.symbol
+              } ${rewardSU} starting: ${moment(start).format(
+                "LL"
+              )} ending: ${moment(end).format("LL")}
+              `
+            ),
+          });
+          console.log(txns);
+          ci.setFee(2000);
+          ci.setExtraTxns(txns);
+          ci.setAccounts([algosdk.getApplicationAddress(ctcInfo)]);
+          ci.setEnableGroupResourceSharing(true);
+          customR = await ci.custom();
+          console.log({ customR });
+          if (customR.success) {
+            break;
+          }
+        }
         await toast.promise(
           signTransactions(
             customR.txns.map(
@@ -1003,7 +513,8 @@ const Swap = () => {
             )
           ).then(sendTransactions),
           {
-            pending: "Pending transaction",
+            pending: "Pending transaction to create farm",
+            success: "Successfully created farm",
           }
         );
       } while (0);

@@ -212,6 +212,14 @@ const Farm = () => {
     return Array.from(stakeMap.values());
   }, [activeAccount, stake]);
 
+  const farmList = useMemo(() => {
+    if (!farms || !pools || !tokens) return [] as FarmI[];
+    const farmList: FarmI[] = [...farms];
+    console.log({ farmList });
+    farmList.sort((a, b) => b.poolId - a.poolId);
+    return farmList;
+  }, [farms]);
+
   const isLoading = !pools || !tokens || !farms || !stake;
 
   return !isLoading ? (
@@ -220,7 +228,7 @@ const Farm = () => {
         <FarmLiquidity farms={farms} pools={pools} stake={userStake} />
       ) : null}
 
-      <FarmList farms={farms} />
+      <FarmList farms={farmList} />
       <ViewMoreButton>
         <ButtonLabelContainer>
           <DropdownIcon />
