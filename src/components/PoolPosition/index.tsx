@@ -7,6 +7,7 @@ import PoolCard from "../PoolCard";
 import { useWallet } from "@txnlab/use-wallet";
 import { Stack } from "@mui/material";
 import axios from "axios";
+import BigNumber from "bignumber.js";
 
 const YourLiquidityRoot = styled.div`
   width: 90%;
@@ -101,8 +102,20 @@ const PoolPosition = () => {
         setBalances(res.data.balances);
       });
   }, [activeAccount]);
+
+  const [tokens, setTokens] = React.useState<any[]>();
+  useEffect(() => {
+    if (!activeAccount) return;
+    axios
+      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`)
+      .then((res) => {
+        setTokens(res.data.tokens);
+      });
+  }, [activeAccount]);
+
   console.log({
     balances,
+    tokens,
   });
   const [positions, setPositions] = React.useState<PositionI[]>([]);
   React.useEffect(() => {
@@ -110,8 +123,9 @@ const PoolPosition = () => {
     (async () => {
       const positions = [];
       for (const bal of balances) {
+        const balance = BigInt(bal.balance);
         const pool = pools.find((p) => p.poolId === bal.contractId);
-        if (!pool) continue;
+        if (!pool || balance === BigInt(0)) continue;
         positions.push({
           ...pool,
           balance: BigInt(bal.balance),
@@ -120,6 +134,7 @@ const PoolPosition = () => {
       setPositions(positions);
     })();
   }, [activeAccount, pools, balances]);
+
   return (
     <YourLiquidityRoot className={isDarkTheme ? "dark" : "light"}>
       <HeadingRow className="heading-row">
@@ -135,8 +150,11 @@ const PoolPosition = () => {
           >
             {positions.map((position) => (
               <PoolCard
+                tokens={tokens || []}
                 pool={position}
-                balance={(Number(position.balance) / 10 ** 6).toFixed(6)}
+                balance={new BigNumber(position.balance.toString())
+                  .div(new BigNumber(10).pow(6))
+                  .toFixed(6)}
               />
             ))}
           </Stack>

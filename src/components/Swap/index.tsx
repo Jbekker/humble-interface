@@ -596,7 +596,7 @@ const Swap = () => {
     const A = { ...token, tokenId: tokenId(token) };
     const B = { ...token2, tokenId: tokenId(token2) };
     new swap(0, algodClient, indexerClient)
-      .selectPool(eligiblePools, A, B)
+      .selectPool(eligiblePools, A, B, "round")
       .then((pool: any) => {
         if (!pool) return;
         const ci = new swap(pool.poolId, algodClient, indexerClient);
@@ -649,7 +649,7 @@ const Swap = () => {
     const A = { ...token, tokenId: tokenId(token) };
     const B = { ...token2, tokenId: tokenId(token2) };
     new swap(0, algodClient, indexerClient)
-      .selectPool(eligiblePools, A, B)
+      .selectPool(eligiblePools, A, B, "round")
       .then((pool: any) => {
         const acc = {
           addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
@@ -942,7 +942,8 @@ const Swap = () => {
       const pool2 = await ci.selectPool(
         eligiblePools,
         { ...token, tokenId: tokenId(token) },
-        { ...token2, tokenId: tokenId(token2) }
+        { ...token2, tokenId: tokenId(token2) },
+        "round"
       );
 
       if (!pool || !pool2) throw new Error("No pool found");

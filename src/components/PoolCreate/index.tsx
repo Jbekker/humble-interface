@@ -627,6 +627,18 @@ const Swap = () => {
   useEffect(() => {
     dispatch(getTokens() as unknown as UnknownAction);
   }, [dispatch]);
+
+  const [tokens2, setTokens] = React.useState<any[]>();
+  useEffect(() => {
+    axios
+      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`)
+      .then((res) => {
+        setTokens(res.data.tokens);
+      });
+  }, []);
+
+  console.log({ tokens2 });
+
   /* Pools */
   const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
   const poolsStatus = useSelector((state: RootState) => state.pools.status);
@@ -734,8 +746,11 @@ const Swap = () => {
 
   // EFFECT
   useEffect(() => {
-    if (!token || !activeAccount) return;
+    if (!token || !activeAccount || !tokens2) return;
     const { algodClient, indexerClient } = getAlgorandClients();
+    const wrappedTokenId = Number(
+      tokens2.find((t) => t.contractId === token.tokenId)?.tokenId
+    );
     if (token.tokenId === 0) {
       algodClient
         .accountInformation(activeAccount.address)
@@ -745,6 +760,22 @@ const Swap = () => {
           const minBalance = accInfo["min-balance"];
           const availableBalance = balance - minBalance;
           setBalance((availableBalance / 1e6).toLocaleString());
+        });
+    } else if (wrappedTokenId !== 0 && !isNaN(wrappedTokenId)) {
+      algodClient
+        .accountAssetInformation(activeAccount.address, wrappedTokenId)
+        .do()
+        .then((accAssetInfo: any) => {
+          indexerClient
+            .lookupAssetByID(wrappedTokenId)
+            .do()
+            .then((assetInfo: any) => {
+              const decimals = assetInfo.asset.params.decimals;
+              const balance = new BigNumber(
+                accAssetInfo["asset-holding"].amount
+              ).dividedBy(new BigNumber(10).pow(decimals));
+              setBalance(balance.toFixed(Math.min(6, decimals)));
+            });
         });
     } else {
       const ci = new arc200(token.tokenId, algodClient, indexerClient);
@@ -761,13 +792,16 @@ const Swap = () => {
         }
       );
     }
-  }, [token, activeAccount]);
+  }, [tokens2, token, activeAccount]);
 
   // EFFECT
   useEffect(() => {
-    if (!token2 || !activeAccount) return;
+    if (!token2 || !activeAccount || !tokens2) return;
     const { algodClient, indexerClient } = getAlgorandClients();
     const ci = new arc200(token2.tokenId, algodClient, indexerClient);
+    const wrappedTokenId = Number(
+      tokens2.find((t) => t.contractId === token2.tokenId)?.tokenId
+    );
     if (token2.tokenId === 0) {
       algodClient
         .accountInformation(activeAccount.address)
@@ -777,6 +811,22 @@ const Swap = () => {
           const minBalance = accInfo["min-balance"];
           const availableBalance = balance - minBalance;
           setBalance2((availableBalance / 1e6).toLocaleString());
+        });
+    } else if (wrappedTokenId !== 0 && !isNaN(wrappedTokenId)) {
+      algodClient
+        .accountAssetInformation(activeAccount.address, wrappedTokenId)
+        .do()
+        .then((accAssetInfo: any) => {
+          indexerClient
+            .lookupAssetByID(wrappedTokenId)
+            .do()
+            .then((assetInfo: any) => {
+              const decimals = assetInfo.asset.params.decimals;
+              const balance = new BigNumber(
+                accAssetInfo["asset-holding"].amount
+              ).dividedBy(new BigNumber(10).pow(decimals));
+              setBalance2(balance.toFixed(Math.min(6, decimals)));
+            });
         });
     } else {
       ci.arc200_balanceOf(activeAccount.address).then(

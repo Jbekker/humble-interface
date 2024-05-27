@@ -8,7 +8,7 @@ import { tokenSymbol } from "../../utils/dex";
 import { getToken, getTokens, updateToken } from "../../store/tokenSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
 import { Skeleton } from "@mui/material";
-import { CONTRACT, abi } from "ulujs";
+import { CONTRACT, abi, swap } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
 import { TOKEN_WVOI1 } from "../../constants/tokens";
 import BigNumber from "bignumber.js";
@@ -587,10 +587,11 @@ const SwapButtonLabel = styled.div`
 
 interface PoolCardProps {
   pool: PoolI;
+  tokens?: any[];
   balance?: string;
   tvl?: string;
 }
-const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
+const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
   const { activeAccount } = useWallet();
   const [tokA, setTokA] = useState<ARC200TokenI>();
   const [tokB, setTokB] = useState<ARC200TokenI>();
@@ -631,6 +632,7 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
   const [info, setInfo] = useState<any>();
   const [infoA, setInfoA] = useState<any>();
   const [infoB, setInfoB] = useState<any>();
+
   const getInfo = (poolId: number) => {
     const { algodClient, indexerClient } = getAlgorandClients();
     const ci = new CONTRACT(poolId, algodClient, indexerClient, spec, {
@@ -639,6 +641,7 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
     });
     return ci.Info();
   };
+
   // EFFECT get pool info
   useEffect(() => {
     // const { algodClient, indexerClient } = getAlgorandClients();
@@ -663,19 +666,32 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
       }
     });
     if (![pool.tokA, pool.tokB].includes(TOKEN_WVOI1)) {
-      const poolsA = pools.filter(
+      const poolsA: PoolI[] = pools.filter(
         (p) =>
           (p.tokA === TOKEN_WVOI1 && p.tokB === pool.tokA) ||
           (p.tokA === pool.tokA && p.tokB === TOKEN_WVOI1)
       );
-      const poolsB = pools.filter(
+      const poolsB: PoolI[] = pools.filter(
         (p) =>
           (p.tokA === TOKEN_WVOI1 && p.tokB === pool.tokB) ||
           (p.tokA === pool.tokB && p.tokB === TOKEN_WVOI1)
       );
+
       // select 1 from each
-      const poolA = poolsA.pop();
-      const poolB = poolsB.pop();
+
+      //const poolA = poolsA.pop();
+      const poolA = poolsA.reduce((acc: PoolI, p: PoolI) => {
+        if (p.round <= acc.round) return p;
+        return acc;
+      }, poolsA.pop() as PoolI);
+      console.log({ poolA });
+
+      //const poolB = poolsB.pop();
+      const poolB = poolsB.reduce((acc: PoolI, p: PoolI) => {
+        if (p.round <= acc.round) return p;
+        return acc;
+      }, poolsB.pop() as PoolI);
+
       if (poolA) {
         const infoAP = getInfo(poolA.poolId);
         infoAP.then((info: any) => {
@@ -746,156 +762,168 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
   // case 3 is not voi pool but one token has voi pool
   // case 4 is not voi pool and nether token has voi pool
   const tvlBn = useMemo(() => {
-    if (!info || !tokA || !tokB) return new BigNumber(0);
+    if (!info || !tokA || !tokB || !tokens) return new BigNumber(0);
+    const priceA = new BigNumber(
+      tokens.find((t) => t.contractId === tokA.tokenId)?.price || "0"
+    );
+    const priceB = new BigNumber(
+      tokens.find((t) => t.contractId === tokB.tokenId)?.price || "0"
+    );
+    const balA = new BigNumber(info.poolBals[0]).div(
+      new BigNumber(10).pow(tokA.decimals)
+    );
+    const balB = new BigNumber(info.poolBals[1]).div(
+      new BigNumber(10).pow(tokB.decimals)
+    );
+    return balA.times(priceA).plus(balB.times(priceB));
+    // if (
+    //   [tokA, tokB].map((t: ARC200TokenI) => t.tokenId).includes(TOKEN_WVOI1)
+    // ) {
+    //   console.log("case 1");
+    //   // tvl
+    //   if (info.tokA === TOKEN_WVOI1) {
+    //     return new BigNumber(info.poolBals[0])
+    //       .multipliedBy(2)
+    //       .div(new BigNumber(10).pow(tokA.decimals));
+    //   } else if (info.tokB === TOKEN_WVOI1) {
+    //     return new BigNumber(info.poolBals[1])
+    //       .multipliedBy(2)
+    //       .div(new BigNumber(10).pow(tokB.decimals));
+    //   }
+    // }
+    // // case 2, 3, 4
+    // else {
+    //   //if (!infoA || !infoB) return;
 
-    // case 1
-    if (
-      [tokA, tokB].map((t: ARC200TokenI) => t.tokenId).includes(TOKEN_WVOI1)
-    ) {
-      // tvl
-      if (info.tokA === TOKEN_WVOI1) {
-        return new BigNumber(info.poolBals[0])
-          .multipliedBy(2)
-          .div(new BigNumber(10).pow(tokA.decimals));
-      } else if (info.tokB === TOKEN_WVOI1) {
-        return new BigNumber(info.poolBals[1])
-          .multipliedBy(2)
-          .div(new BigNumber(10).pow(tokB.decimals));
-      }
-    }
-    // case 2, 3, 4
-    else {
-      //if (!infoA || !infoB) return;
+    //   const isNTPool = (info: any) =>
+    //     [info?.tokA, info?.tokB].includes(TOKEN_WVOI1);
 
-      const isNTPool = (info: any) =>
-        [info?.tokA, info?.tokB].includes(TOKEN_WVOI1);
+    //   const isANTPool = isNTPool(infoA);
+    //   const isBNTPool = isNTPool(infoB);
 
-      const isANTPool = isNTPool(infoA);
-      const isBNTPool = isNTPool(infoB);
-
-      console.log(isANTPool, isBNTPool);
-      // -----------------------------------------
-      // case 2
-      // both have net pool
-      // use min sum net pools, this pools tvl
-      // -----------------------------------------
-      if (isANTPool && isBNTPool) {
-        // tokA tvl
-        let rateA = new BigNumber(1);
-        if (infoA.tokA === TOKEN_WVOI1) {
-          const balA = new BigNumber(infoA.poolBals[0]).dividedBy(
-            new BigNumber(10).pow(6)
-          );
-          const balB = new BigNumber(infoA.poolBals[1]).dividedBy(
-            new BigNumber(10).pow(tokA.decimals)
-          );
-          rateA = balA.dividedBy(balB);
-        } else if (infoA.tokB === TOKEN_WVOI1) {
-          const balA = new BigNumber(infoA.poolBals[0]).dividedBy(
-            new BigNumber(10).pow(tokA.decimals)
-          );
-          const balB = new BigNumber(infoA.poolBals[1]).dividedBy(
-            new BigNumber(10).pow(6)
-          );
-          rateA = balB.dividedBy(balA);
-        }
-        // tokB tvl
-        let rateB = new BigNumber(1);
-        if (infoB.tokA === TOKEN_WVOI1) {
-          const balA = new BigNumber(infoB.poolBals[0]).dividedBy(
-            new BigNumber(10).pow(6)
-          );
-          const balB = new BigNumber(infoB.poolBals[1]).dividedBy(
-            new BigNumber(10).pow(tokB.decimals)
-          );
-          rateB = balA.dividedBy(balB);
-        } else if (infoB.tokB === TOKEN_WVOI1) {
-          const balA = new BigNumber(infoB.poolBals[0]).dividedBy(
-            new BigNumber(10).pow(tokB.decimals)
-          );
-          const balB = new BigNumber(infoB.poolBals[1]).dividedBy(
-            new BigNumber(10).pow(6)
-          );
-          rateB = balB.dividedBy(balA);
-        }
-        const balA = new BigNumber(info.poolBals[0]).dividedBy(
-          new BigNumber(10).pow(tokA.decimals)
-        );
-        const balB = new BigNumber(info.poolBals[1]).dividedBy(
-          new BigNumber(10).pow(tokB.decimals)
-        );
-        return balA.multipliedBy(rateA).plus(balB.multipliedBy(rateB)); // TODO update this to take into account net pool tvl, see case 2 note
-      }
-      // -----------------------------------------
-      // case 3
-      // only 1 token has net pool
-      // use min net pool tvl, this pool tvl
-      // -----------------------------------------
-      else if ((!isANTPool && isBNTPool) || (isANTPool && !isBNTPool)) {
-        if (isANTPool) {
-          const balA2 = new BigNumber(info.poolBals[0]).dividedBy(
-            new BigNumber(10).pow(tokA.decimals)
-          );
-          let rate;
-          if ([TOKEN_WVOI1].includes(infoA.tokA)) {
-            const balA = new BigNumber(infoA.poolBals[0]).dividedBy(
-              new BigNumber(10).pow(6)
-            );
-            const balB = new BigNumber(infoA.poolBals[1]).dividedBy(
-              new BigNumber(10).pow(tokA.decimals)
-            );
-            rate = balA.dividedBy(balB);
-          }
-          // [TOKEN_WVOI1].includes(infoA.tokB)
-          else {
-            const balA = new BigNumber(infoA.poolBals[0]).dividedBy(
-              new BigNumber(10).pow(tokA.decimals)
-            );
-            const balB = new BigNumber(infoA.poolBals[1]).dividedBy(
-              new BigNumber(10).pow(6)
-            );
-            rate = balB.dividedBy(balA);
-          }
-          return  balA2.multipliedBy(rate); //.multipliedBy(2);
-        }
-        // isBNTPool
-        else {
-          const balA2 = new BigNumber(info.poolBals[1]).dividedBy(
-            new BigNumber(10).pow(tokB.decimals)
-          );
-          let rate;
-          if ([TOKEN_WVOI1].includes(infoB.tokA)) {
-            const balA = new BigNumber(infoB.poolBals[0]).dividedBy(
-              new BigNumber(10).pow(6)
-            );
-            const balB = new BigNumber(infoB.poolBals[1]).dividedBy(
-              new BigNumber(10).pow(tokB.decimals)
-            );
-            rate = balA.dividedBy(balB);
-          }
-          // [TOKEN_WVOI1].includes(infoA.tokB)
-          else {
-            const balA = new BigNumber(infoB.poolBals[0]).dividedBy(
-              new BigNumber(10).pow(tokB.decimals)
-            );
-            const balB = new BigNumber(infoB.poolBals[1]).dividedBy(
-              new BigNumber(10).pow(6)
-            );
-            rate = balB.dividedBy(balA);
-          }
-          return balA2.multipliedBy(rate); // TODO update this, take into account net pool tvl
-        }
-      }
-      // -----------------------------------------
-      // case 4
-      // neither token has net pool
-      // use 0 as tvl
-      // -----------------------------------------
-      else {
-        return new BigNumber(0);
-      }
-    }
-  }, [tokA, tokB, info, infoA, infoB, pools]);
+    //   console.log(isANTPool, isBNTPool);
+    //   // -----------------------------------------
+    //   // case 2
+    //   // both have net pool
+    //   // use min sum net pools, this pools tvl
+    //   // -----------------------------------------
+    //   if (isANTPool && isBNTPool) {
+    //     // tokA tvl
+    //     let rateA = new BigNumber(1);
+    //     if (infoA.tokA === TOKEN_WVOI1) {
+    //       const balA = new BigNumber(infoA.poolBals[0]).dividedBy(
+    //         new BigNumber(10).pow(6)
+    //       );
+    //       const balB = new BigNumber(infoA.poolBals[1]).dividedBy(
+    //         new BigNumber(10).pow(tokA.decimals)
+    //       );
+    //       rateA = balA.dividedBy(balB);
+    //     } else if (infoA.tokB === TOKEN_WVOI1) {
+    //       const balA = new BigNumber(infoA.poolBals[0]).dividedBy(
+    //         new BigNumber(10).pow(tokA.decimals)
+    //       );
+    //       const balB = new BigNumber(infoA.poolBals[1]).dividedBy(
+    //         new BigNumber(10).pow(6)
+    //       );
+    //       rateA = balB.dividedBy(balA);
+    //     }
+    //     // tokB tvl
+    //     let rateB = new BigNumber(1);
+    //     if (infoB.tokA === TOKEN_WVOI1) {
+    //       const balA = new BigNumber(infoB.poolBals[0]).dividedBy(
+    //         new BigNumber(10).pow(6)
+    //       );
+    //       const balB = new BigNumber(infoB.poolBals[1]).dividedBy(
+    //         new BigNumber(10).pow(tokB.decimals)
+    //       );
+    //       rateB = balA.dividedBy(balB);
+    //     } else if (infoB.tokB === TOKEN_WVOI1) {
+    //       const balA = new BigNumber(infoB.poolBals[0]).dividedBy(
+    //         new BigNumber(10).pow(tokB.decimals)
+    //       );
+    //       const balB = new BigNumber(infoB.poolBals[1]).dividedBy(
+    //         new BigNumber(10).pow(6)
+    //       );
+    //       rateB = balB.dividedBy(balA);
+    //     }
+    //     const balA = new BigNumber(info.poolBals[0]).dividedBy(
+    //       new BigNumber(10).pow(tokA.decimals)
+    //     );
+    //     const balB = new BigNumber(info.poolBals[1]).dividedBy(
+    //       new BigNumber(10).pow(tokB.decimals)
+    //     );
+    //     return balA.multipliedBy(rateA).plus(balB.multipliedBy(rateB)); // TODO update this to take into account net pool tvl, see case 2 note
+    //   }
+    //   // -----------------------------------------
+    //   // case 3
+    //   // only 1 token has net pool
+    //   // use min net pool tvl, this pool tvl
+    //   // -----------------------------------------
+    //   else if ((!isANTPool && isBNTPool) || (isANTPool && !isBNTPool)) {
+    //     if (isANTPool) {
+    //       const balA2 = new BigNumber(info.poolBals[0]).dividedBy(
+    //         new BigNumber(10).pow(tokA.decimals)
+    //       );
+    //       let rate;
+    //       if ([TOKEN_WVOI1].includes(infoA.tokA)) {
+    //         const balA = new BigNumber(infoA.poolBals[0]).dividedBy(
+    //           new BigNumber(10).pow(6)
+    //         );
+    //         const balB = new BigNumber(infoA.poolBals[1]).dividedBy(
+    //           new BigNumber(10).pow(tokA.decimals)
+    //         );
+    //         rate = balA.dividedBy(balB);
+    //       }
+    //       // [TOKEN_WVOI1].includes(infoA.tokB)
+    //       else {
+    //         const balA = new BigNumber(infoA.poolBals[0]).dividedBy(
+    //           new BigNumber(10).pow(tokA.decimals)
+    //         );
+    //         const balB = new BigNumber(infoA.poolBals[1]).dividedBy(
+    //           new BigNumber(10).pow(6)
+    //         );
+    //         rate = balB.dividedBy(balA);
+    //       }
+    //       return balA2.multipliedBy(rate); //.multipliedBy(2);
+    //     }
+    //     // isBNTPool
+    //     else {
+    //       const balA2 = new BigNumber(info.poolBals[1]).dividedBy(
+    //         new BigNumber(10).pow(tokB.decimals)
+    //       );
+    //       let rate;
+    //       if ([TOKEN_WVOI1].includes(infoB.tokA)) {
+    //         const balA = new BigNumber(infoB.poolBals[0]).dividedBy(
+    //           new BigNumber(10).pow(6)
+    //         );
+    //         const balB = new BigNumber(infoB.poolBals[1]).dividedBy(
+    //           new BigNumber(10).pow(tokB.decimals)
+    //         );
+    //         rate = balA.dividedBy(balB);
+    //       }
+    //       // [TOKEN_WVOI1].includes(infoA.tokB)
+    //       else {
+    //         const balA = new BigNumber(infoB.poolBals[0]).dividedBy(
+    //           new BigNumber(10).pow(tokB.decimals)
+    //         );
+    //         const balB = new BigNumber(infoB.poolBals[1]).dividedBy(
+    //           new BigNumber(10).pow(6)
+    //         );
+    //         rate = balB.dividedBy(balA);
+    //       }
+    //       return balA2.multipliedBy(rate); // TODO update this, take into account net pool tvl
+    //     }
+    //   }
+    //   // -----------------------------------------
+    //   // case 4
+    //   // neither token has net pool
+    //   // use 0 as tvl
+    //   // -----------------------------------------
+    //   else {
+    //     return new BigNumber(0);
+    //   }
+    // }
+  }, [tokA, tokB, info, infoA, infoB, pools, tokens]);
 
   const tvl = useMemo(() => {
     if (!tvlBn) return "";
@@ -918,83 +946,139 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
   }, [totalVolumeBn, tvlBn]);
 
   const [value, setValue] = useState("0");
+
   useEffect(() => {
     if (!poolBals || poolBals.length === 0 || !balance) return;
     // get most recent pool balance
-    const poolBal = poolBals[poolBals.length - 1];
-    const value = new BigNumber(balance).multipliedBy(
-      new BigNumber(poolBal.rate)
-    );
-    setValue(
-      new Intl.NumberFormat("en", { notation: "compact" }).format(
-        value.toNumber()
-      )
-    );
+    // const poolBal = poolBals[poolBals.length - 1];
+    // const value = new BigNumber(balance).multipliedBy(
+    //   new BigNumber(poolBal.rate)
+    // );
+    // setValue(
+    //   new Intl.NumberFormat("en", { notation: "compact" }).format(
+    //     value.toNumber()
+    //   )
+    // );
   }, [poolBals, balance]);
+
   useEffect(() => {
-    if (!info || !tokA || !tokB || !activeAccount || !balance) return;
-    if (
-      [tokA, tokB].map((t: ARC200TokenI) => t.tokenId).includes(TOKEN_WVOI1)
-    ) {
-      if (info.tokA === TOKEN_WVOI1) {
-        const aValue = new BigNumber(info.poolBals[0]).div(
-          new BigNumber(10).pow(tokA.decimals)
-        );
-        const bValue = new BigNumber(info.poolBals[1]).div(
-          new BigNumber(10).pow(tokB.decimals)
-        );
-        const rate = aValue.div(bValue);
-        const { algodClient, indexerClient } = getAlgorandClients();
-        const ci = new CONTRACT(
-          pool.poolId,
-          algodClient,
-          indexerClient,
-          abi.arc200,
-          {
-            addr: activeAccount.address,
-            sk: new Uint8Array(0),
-          }
-        );
-        ci.arc200_balanceOf(activeAccount.address).then((balance: any) => {
-          if (balance.success) {
-            const ci = new CONTRACT(
-              pool.poolId,
-              algodClient,
-              indexerClient,
-              spec,
-              {
-                addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
-                sk: new Uint8Array(0),
-              }
-            );
-            ci.setFee(2000);
-            ci.Provider_withdraw(1, balance.returnValue, [0, 0]).then(
-              (withdraw: any) => {
-                if (withdraw.success) {
-                  const balA = new BigNumber(withdraw.returnValue[0]).div(
-                    new BigNumber(10).pow(tokA.decimals)
-                  );
-                  const balB = new BigNumber(withdraw.returnValue[1]).div(
-                    new BigNumber(10).pow(tokB.decimals)
-                  );
-                  const value = balA.plus(balB.times(rate));
-                  setValue(
-                    new Intl.NumberFormat("en", { notation: "compact" }).format(
-                      value.toNumber()
-                    )
-                  );
-                }
-              }
-            );
-          }
-        });
-      } else if (info.tokB === TOKEN_WVOI1) {
-        // TODO in case tokB is wvoi
+    if (!info || !tokA || !tokB || !activeAccount || !balance || !tokens)
+      return;
+    const { algodClient, indexerClient } = getAlgorandClients();
+    const ci = new CONTRACT(
+      pool.poolId,
+      algodClient,
+      indexerClient,
+      abi.arc200,
+      {
+        addr: activeAccount.address,
+        sk: new Uint8Array(0),
       }
-    } else {
-      // TODO in case neither is wvoi
-    }
-  }, [info, tokA, tokB, activeAccount]);
+    );
+    ci.arc200_balanceOf(activeAccount.address).then((balance: any) => {
+      if (balance.success) {
+        const ci = new CONTRACT(pool.poolId, algodClient, indexerClient, spec, {
+          addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+          sk: new Uint8Array(0),
+        });
+        ci.setFee(2000);
+        ci.Provider_withdraw(1, balance.returnValue, [0, 0]).then(
+          (withdraw: any) => {
+            if (withdraw.success) {
+              const balA = new BigNumber(withdraw.returnValue[0]).div(
+                new BigNumber(10).pow(tokA.decimals)
+              );
+              const balB = new BigNumber(withdraw.returnValue[1]).div(
+                new BigNumber(10).pow(tokB.decimals)
+              );
+              const priceA = new BigNumber(
+                tokens.find((t) => t.contractId === tokA.tokenId)?.price || "0"
+              );
+              const priceB = new BigNumber(
+                tokens.find((t) => t.contractId === tokB.tokenId)?.price || "0"
+              );
+              const value = balA.times(priceA).plus(balB.times(priceB));
+              setValue(
+                new Intl.NumberFormat("en", { notation: "compact" }).format(
+                  value.toNumber()
+                )
+              );
+            }
+          }
+        );
+      }
+    });
+
+    // if (
+    //   [tokA, tokB].map((t: ARC200TokenI) => t.tokenId).includes(TOKEN_WVOI1)
+    // ) {
+    //   if (info.tokA === TOKEN_WVOI1) {
+    //     const aValue = new BigNumber(info.poolBals[0]).div(
+    //       new BigNumber(10).pow(tokA.decimals)
+    //     );
+    //     const bValue = new BigNumber(info.poolBals[1]).div(
+    //       new BigNumber(10).pow(tokB.decimals)
+    //     );
+    //     const rate = aValue.div(bValue);
+    //     const { algodClient, indexerClient } = getAlgorandClients();
+    //     const ci = new CONTRACT(
+    //       pool.poolId,
+    //       algodClient,
+    //       indexerClient,
+    //       abi.arc200,
+    //       {
+    //         addr: activeAccount.address,
+    //         sk: new Uint8Array(0),
+    //       }
+    //     );
+    //     ci.arc200_balanceOf(activeAccount.address).then((balance: any) => {
+    //       if (balance.success) {
+    //         const ci = new CONTRACT(
+    //           pool.poolId,
+    //           algodClient,
+    //           indexerClient,
+    //           spec,
+    //           {
+    //             addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+    //             sk: new Uint8Array(0),
+    //           }
+    //         );
+    //         ci.setFee(2000);
+    //         ci.Provider_withdraw(1, balance.returnValue, [0, 0]).then(
+    //           (withdraw: any) => {
+    //             if (withdraw.success) {
+    //               const balA = new BigNumber(withdraw.returnValue[0]).div(
+    //                 new BigNumber(10).pow(tokA.decimals)
+    //               );
+    //               const balB = new BigNumber(withdraw.returnValue[1]).div(
+    //                 new BigNumber(10).pow(tokB.decimals)
+    //               );
+    //               const value = balA.plus(balB.times(rate));
+    //               /*
+    //               setValue(
+    //                 new Intl.NumberFormat("en", { notation: "compact" }).format(
+    //                   value.toNumber()
+    //                 )
+    //               );
+    //               */
+    //             }
+    //           }
+    //         );
+    //       }
+    //     });
+    //   } else if (info.tokB === TOKEN_WVOI1) {
+    //     // TODO in case tokB is wvoi
+    //   }
+    // } else {
+    //   // TODO in case neither is wvoi
+    // }
+  }, [info, tokA, tokB, activeAccount, tokens]);
+  // if (
+  //   !info ||
+  //   info.poolBals.reduce((acc: bigint, val: bigint) => acc + val, BigInt(0)) ===
+  //     BigInt(0)
+  // )
+  //   return null;
   return (
     <PoolCardRoot className={isDarkTheme ? "dark" : "light"}>
       <PoolCardRow>
@@ -1072,7 +1156,9 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance }) => {
               <TVLLabel>{tvl} VOI</TVLLabel>
             </Col3>
             <Col3>
-              <VolumeLabel>{totalVolume} VOI</VolumeLabel>
+              <VolumeLabel>
+                {isNaN(Number(totalVolume)) ? "0 VOI" : `${totalVolume} VOI`}
+              </VolumeLabel>
             </Col3>
             <Col4>
               <APRLabelContainer>

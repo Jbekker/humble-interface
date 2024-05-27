@@ -103,12 +103,13 @@ export const getPools = createAsyncThunk<
       );
     }
     const wl: number[] = [];
-    return ([...pools, ...newPools] as Pool[]).filter(
+    const combinedPools = [...pools, ...newPools].filter(
       (pool) =>
         pool.round >= minRound &&
         (wl.length > 0 || !wl.includes(pool.poolId)) &&
         !BAD_POOLS.includes(pool.poolId)
     );
+    return combinedPools;
   } catch (error: any) {
     return rejectWithValue(error.message);
   }

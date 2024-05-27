@@ -277,8 +277,6 @@ const Navbar = () => {
     }
   }, [activeAccount, providers]);
 
-  console.log({ accInfo, balance });
-
   /* Theme */
 
   const isDarkTheme = useSelector(
@@ -328,14 +326,14 @@ const Navbar = () => {
                 icon: SwapIcon,
               },
               {
-                label: "Token",
-                href: "/token",
-                icon: TokenIcon,
-              },
-              {
                 label: "Pool",
                 href: "/pool",
                 icon: PoolIcon,
+              },
+              {
+                label: "Token",
+                href: "/token",
+                icon: TokenIcon,
               },
               {
                 label: "Farm",

@@ -705,17 +705,17 @@ const Swap = () => {
   // }, [token, tokenOptions]);
 
   // EFFECT: get eligible pools
-  const eligiblePools = useMemo(() => {
-    return pools.filter((p: PoolI) => {
-      return (
-        [p.tokA, p.tokB].includes(tokenId(token)) &&
-        [p.tokA, p.tokB].includes(tokenId(token2)) &&
-        p.tokA !== p.tokB
-      );
-    });
-  }, [pools, token, token2]);
+  // const eligiblePools = useMemo(() => {
+  //   return pools.filter((p: PoolI) => {
+  //     return (
+  //       [p.tokA, p.tokB].includes(tokenId(token)) &&
+  //       [p.tokA, p.tokB].includes(tokenId(token2)) &&
+  //       p.tokA !== p.tokB
+  //     );
+  //   });
+  // }, [pools, token, token2]);
 
-  console.log("eligiblePools", eligiblePools);
+  // console.log("eligiblePools", eligiblePools);
 
   // EFFECT
   useEffect(() => {
@@ -725,7 +725,8 @@ const Swap = () => {
         setPool(pool);
         setReady(true);
       }
-    } else if (eligiblePools.length > 0) {
+    }
+    /*else if (eligiblePools.length > 0) {
       // pick a pool (highest tvl)
       const { algodClient, indexerClient } = getAlgorandClients();
       new swap(0, algodClient, indexerClient)
@@ -736,9 +737,10 @@ const Swap = () => {
           setReady(true);
         });
     }
-  }, [eligiblePools]);
+    */
+  }, [pools, paramPoolId]);
 
-  console.log({ pool, eligiblePools });
+  //console.log({ pool, eligiblePools });
 
   const [info, setInfo] = useState<any>();
   // EFFECT: set pool info
@@ -767,7 +769,6 @@ const Swap = () => {
   // EFFECT
   useEffect(() => {
     if (!activeAccount || !pool) return;
-    console.log({ activeAccount, pool });
     const { algodClient, indexerClient } = getAlgorandClients();
     new arc200(pool.poolId, algodClient, indexerClient)
       .arc200_balanceOf(activeAccount.address)
@@ -1093,10 +1094,24 @@ const Swap = () => {
     setToAmount("");
   }, [token2]);
 
+  const [tokens2, setTokens] = React.useState<any[]>();
+  useEffect(() => {
+    axios
+      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`)
+      .then((res) => {
+        setTokens(res.data.tokens);
+      });
+  }, []);
+
+  console.log({ tokens2 });
+
   // EFFECT
   useEffect(() => {
-    if (!token || !activeAccount) return;
+    if (!token || !activeAccount || !tokens2) return;
     const { algodClient, indexerClient } = getAlgorandClients();
+    const wrappedTokenId = Number(
+      tokens2.find((t) => t.contractId === token.tokenId)?.tokenId
+    );
     if (token.tokenId === 0) {
       algodClient
         .accountInformation(activeAccount.address)
@@ -1106,6 +1121,22 @@ const Swap = () => {
           const minBalance = accInfo["min-balance"];
           const availableBalance = balance - minBalance;
           setBalance((availableBalance / 1e6).toLocaleString());
+        });
+    } else if (wrappedTokenId !== 0 && !isNaN(wrappedTokenId)) {
+      algodClient
+        .accountAssetInformation(activeAccount.address, wrappedTokenId)
+        .do()
+        .then((accAssetInfo: any) => {
+          indexerClient
+            .lookupAssetByID(wrappedTokenId)
+            .do()
+            .then((assetInfo: any) => {
+              const decimals = assetInfo.asset.params.decimals;
+              const balance = new BigNumber(
+                accAssetInfo["asset-holding"].amount
+              ).dividedBy(new BigNumber(10).pow(decimals));
+              setBalance(balance.toFixed(Math.min(6, decimals)));
+            });
         });
     } else {
       const ci = new arc200(token.tokenId, algodClient, indexerClient);
@@ -1122,13 +1153,16 @@ const Swap = () => {
         }
       );
     }
-  }, [token, activeAccount]);
+  }, [token, activeAccount, tokens2]);
 
   // EFFECT
   useEffect(() => {
-    if (!token2 || !activeAccount) return;
+    if (!token2 || !activeAccount || !tokens2) return;
     const { algodClient, indexerClient } = getAlgorandClients();
     const ci = new arc200(token2.tokenId, algodClient, indexerClient);
+    const wrappedTokenId = Number(
+      tokens2.find((t) => t.contractId === token2.tokenId)?.tokenId
+    );
     if (token2.tokenId === 0) {
       algodClient
         .accountInformation(activeAccount.address)
@@ -1138,6 +1172,22 @@ const Swap = () => {
           const minBalance = accInfo["min-balance"];
           const availableBalance = balance - minBalance;
           setBalance2((availableBalance / 1e6).toLocaleString());
+        });
+    } else if (wrappedTokenId !== 0 && !isNaN(wrappedTokenId)) {
+      algodClient
+        .accountAssetInformation(activeAccount.address, wrappedTokenId)
+        .do()
+        .then((accAssetInfo: any) => {
+          indexerClient
+            .lookupAssetByID(wrappedTokenId)
+            .do()
+            .then((assetInfo: any) => {
+              const decimals = assetInfo.asset.params.decimals;
+              const balance = new BigNumber(
+                accAssetInfo["asset-holding"].amount
+              ).dividedBy(new BigNumber(10).pow(decimals));
+              setBalance2(balance.toFixed(Math.min(6, decimals)));
+            });
         });
     } else {
       ci.arc200_balanceOf(activeAccount.address).then(
@@ -1153,7 +1203,7 @@ const Swap = () => {
         }
       );
     }
-  }, [token2, activeAccount]);
+  }, [token2, activeAccount, tokens2]);
 
   // EFFECT: get voi balance
   useEffect(() => {
@@ -1202,7 +1252,7 @@ const Swap = () => {
   }, [isValid, fromAmount, toAmount, balance, balance2, token, token2]);
 
   const handleProviderDeposit = async () => {
-    if (!isValid || !token || !token2) return;
+    if (!isValid || !token || !token2 || !pool) return;
     if (!activeAccount) {
       toast.info("Please connect your wallet first");
       return;
@@ -1314,7 +1364,7 @@ const Swap = () => {
       };
 
       // pick a pool
-      const pool = eligiblePools.slice(-1)[0];
+      //const pool = eligiblePools.slice(-1)[0];
       const { poolId, tokA, tokB } = pool;
 
       // handle special cases

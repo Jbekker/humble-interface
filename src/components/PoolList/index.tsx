@@ -1,11 +1,13 @@
 import styled from "@emotion/styled";
-import React, { FC } from "react";
+import React, { FC, useEffect, useMemo } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import PoolCard from "../PoolCard";
 import { PoolI } from "../../types";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet";
+import axios from "axios";
+import BigNumber from "bignumber.js";
 
 const PopularPoolsRoot = styled.div`
   width: 90%;
@@ -222,7 +224,35 @@ const PoolList: FC<PoolListProps> = () => {
   );
   const pools = useSelector((state: RootState) => state.pools.pools);
   const tokens = useSelector((state: RootState) => state.tokens.tokens);
+
+  const [tokens2, setTokens] = React.useState<any[]>();
+  useEffect(() => {
+    if (!activeAccount) return;
+    axios
+      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`)
+      .then((res) => {
+        setTokens(res.data.tokens);
+      });
+  }, [activeAccount]);
+
+  const filteredPools = useMemo(() => {
+    if (!tokens2) return [];
+    const fPools = [];
+    for (const pool of pools) {
+      const priceA = new BigNumber(
+        tokens2.find((t) => t.contractId === pool.tokA)?.price || "0"
+      );
+      const priceB = new BigNumber(
+        tokens2.find((t) => t.contractId === pool.tokB)?.price || "0"
+      );
+      console.log({ priceA, priceB });
+      fPools.push({ ...pool, price: priceA.dividedBy(priceB).toNumber() });
+    }
+    fPools.sort((a, b) => b.price - a.price);
+    return fPools;
+  }, [pools, tokens2]);
   console.log({ pools, tokens });
+
   return (
     <PopularPoolsRoot className={isDarkTheme ? "dark" : "light"}>
       <HeadingRow className="heading-row">
@@ -259,10 +289,10 @@ const PoolList: FC<PoolListProps> = () => {
           </ColumnAPR>
         </Heading>
       </Columns>
-      {pools.length > 0 ? (
+      {filteredPools.length > 0 ? (
         //pools.slice(0, 10).map((p: PoolI) => {
-        pools.slice(0).map((p: PoolI) => {
-          return <PoolCard key={p.poolId} pool={p} />;
+        filteredPools.slice(0).map((p: PoolI) => {
+          return <PoolCard tokens={tokens2} key={p.poolId} pool={p} />;
         })
       ) : (
         <div>No pools</div>
