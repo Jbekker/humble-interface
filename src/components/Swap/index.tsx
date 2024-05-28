@@ -961,7 +961,7 @@ const Swap = () => {
           contractId: tokenId(token2),
           tokenId: token2.tokenId === 0 ? "0" : undefined,
           symbol: token2.symbol,
-          decimals: token2.decimals,
+          decimals: `${token2?.decimals || 0}`,
         }
       );
       console.log(swapR);
