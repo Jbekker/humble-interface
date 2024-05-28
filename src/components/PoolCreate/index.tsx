@@ -5,8 +5,8 @@ import ActiveSwapIcon from "static/icon/icon-swap-active-light.svg";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { custom, useWallet } from "@txnlab/use-wallet";
-import { CircularProgress, Stack } from "@mui/material";
-import { CONTRACT, abi, arc200, swap200 } from "ulujs";
+import { CircularProgress, Stack, Button as MButton } from "@mui/material";
+import { CONTRACT, abi, arc200, swap, swap200 } from "ulujs";
 import {
   CONNECTOR_ALGO_SWAP200,
   TOKEN_VIA,
@@ -677,6 +677,8 @@ const Swap = () => {
   const [balance, setBalance] = React.useState<string>();
   const [balance2, setBalance2] = React.useState<string>();
 
+  const [poolExists, setPoolExists] = useState<boolean>(false);
+
   // EFFECT
   useEffect(() => {
     if (!pools || !tokens || pool) return;
@@ -851,6 +853,50 @@ const Swap = () => {
     }
   }, [activeAccount, providers]);
 
+  // EFFECT: get eligible pools
+  const eligiblePools = useMemo(() => {
+    return pools.filter((p: PoolI) => {
+      return (
+        [p.tokA, p.tokB].includes(tokenId(token)) &&
+        [p.tokA, p.tokB].includes(tokenId(token2)) &&
+        p.tokA !== p.tokB
+      );
+    });
+  }, [pools, token, token2]);
+
+  useEffect(() => {
+    if (!token || !token2 || !eligiblePools) return;
+    const { algodClient, indexerClient } = getAlgorandClients();
+    const A = { ...token, tokenId: tokenId(token) };
+    const B = { ...token2, tokenId: tokenId(token2) };
+    new swap(0, algodClient, indexerClient)
+      .selectPool(eligiblePools, A, B, "round")
+      .then((pool: any) => {
+        if (!!pool) {
+          toast.info(
+            <div>
+              Existing {token.symbol}/{token2.symbol} pool found!
+              <br />
+              <MButton
+                onClick={() => {
+                  navigate(`/pool/add?poolId=${pool.poolId}`);
+                }}
+              >
+                Go to pool
+              </MButton>
+            </div>
+          );
+          setPoolExists(true);
+          setPool(pool);
+        } else {
+          setPoolExists(false);
+          setPool(undefined);
+        }
+      });
+  }, [eligiblePools, token, token2]);
+
+  console.log({ poolExists });
+
   const isValid = useMemo(() => {
     return (
       !!token &&
@@ -868,7 +914,9 @@ const Swap = () => {
   console.log("isValid", isValid);
 
   const buttonLabel = useMemo(() => {
-    if (isValid) {
+    if (poolExists) {
+      return "Go to pool";
+    } else if (isValid) {
       return "Add liquidity";
     } else {
       if (
@@ -888,11 +936,22 @@ const Swap = () => {
         return "Invalid input";
       }
     }
-  }, [isValid, fromAmount, toAmount, balance, balance2, token, token2]);
+  }, [
+    isValid,
+    fromAmount,
+    toAmount,
+    balance,
+    balance2,
+    token,
+    token2,
+    poolExists,
+  ]);
 
   const handlePoolCreate = async () => {
-    if (!activeAccount || !token || !token2) return;
+    if (!activeAccount || !token || !token2 || !pools) return;
     try {
+      const { algodClient, indexerClient } = getAlgorandClients();
+      // -------------------------------------------
       // create app -> app id
       // approve spend tok A to app id
       // approve spend tok B to app id
@@ -900,8 +959,6 @@ const Swap = () => {
       // -------------------------------------------
       // create app -> app id
       // -------------------------------------------
-      const { algodClient, indexerClient } = getAlgorandClients();
-
       const {
         appApproval,
         appClear,
@@ -934,9 +991,7 @@ const Swap = () => {
           success: "Pool deployed",
         }
       );
-
       const ctcInfo: number = res["application-index"];
-
       // -------------------------------------------
       // reach_p0
       // -------------------------------------------
@@ -1009,274 +1064,7 @@ const Swap = () => {
         );
       } while (0);
       // -------------------------------------------
-
       navigate(`/pool/add?poolId=${ctcInfo}&newPool=true`);
-
-      // -------------------------------------------
-      // ensure
-      // -------------------------------------------
-      // - ensure lp tok balance
-      // -------------------------------------------
-      // do {
-      //   const ciTokA = new arc200(
-      //     ((tok) => (tok === 0 ? TOKEN_WVOI1 : tok))(token.tokenId),
-      //     algodClient,
-      //     indexerClient,
-      //     {
-      //       acc: { addr: activeAccount.address, sk: new Uint8Array(0) },
-      //     }
-      //   );
-      //   const arc200_transferR = await ciTokA.arc200_transfer(
-      //     algosdk.getApplicationAddress(ctcInfo),
-      //     BigInt(0),
-      //     true,
-      //     false
-      //   );
-      //   console.log({ arc200_transferR });
-      //   if (!arc200_transferR.success) throw new Error(arc200_transferR.error);
-      //   await toast.promise(
-      //     signTransactions(
-      //       arc200_transferR.txns.map(
-      //         (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-      //       )
-      //     ).then(sendTransactions),
-      //     {
-      //       pending: "Pending transaction to ensure lp tokA balance",
-      //       success: "Lp tokA balance setup complete",
-      //     }
-      //   );
-      // } while (0);
-      // -------------------------------------------
-      // - ensure lp tok balance
-      // -------------------------------------------
-      // do {
-      //   const ciTokB = new arc200(
-      //     ((tok) => (tok === 0 ? TOKEN_WVOI1 : tok))(token2.tokenId),
-      //     algodClient,
-      //     indexerClient,
-      //     {
-      //       acc: { addr: activeAccount.address, sk: new Uint8Array(0) },
-      //     }
-      //   );
-      //   const arc200_transferR = await ciTokB.arc200_transfer(
-      //     algosdk.getApplicationAddress(ctcInfo),
-      //     BigInt(0),
-      //     true,
-      //     false
-      //   );
-      //   console.log({ arc200_transferR });
-      //   if (!arc200_transferR.success) throw new Error(arc200_transferR.error);
-      //   await toast.promise(
-      //     signTransactions(
-      //       arc200_transferR.txns.map(
-      //         (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-      //       )
-      //     ).then(sendTransactions),
-      //     {
-      //       pending: "Pending transaction to ensure lp tokB balance",
-      //       success: "Lp tokB balance setup complete",
-      //     }
-      //   );
-      // } while (0);
-      // -------------------------------------------
-      // - ensure provider tokA spend approval
-      // -------------------------------------------
-      // do {
-      //   const ciTokA = new arc200(
-      //     ((tok) => (tok === 0 ? TOKEN_WVOI1 : tok))(token.tokenId),
-      //     algodClient,
-      //     indexerClient,
-      //     {
-      //       acc: { addr: activeAccount.address, sk: new Uint8Array(0) },
-      //     }
-      //   );
-      //   const arc200_approveR = await ciTokA.arc200_approve(
-      //     algosdk.getApplicationAddress(ctcInfo),
-      //     BigInt(0),
-      //     true,
-      //     false
-      //   );
-      //   if (!arc200_approveR.success) throw new Error(arc200_approveR.error);
-      //   await toast.promise(
-      //     signTransactions(
-      //       arc200_approveR.txns.map(
-      //         (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-      //       )
-      //     ).then(sendTransactions),
-      //     {
-      //       pending: "Pending transaction approve tokA spend",
-      //       success: "tokA spend approval complete",
-      //     }
-      //   );
-      // } while (0);
-      // -------------------------------------------
-      // - ensure provider tokB spend approval
-      // -------------------------------------------
-      // do {
-      //   const ci = new arc200(
-      //     ((tok) => (tok === 0 ? TOKEN_WVOI1 : tok))(token2.tokenId),
-      //     algodClient,
-      //     indexerClient,
-      //     {
-      //       acc: { addr: activeAccount.address, sk: new Uint8Array(0) },
-      //     }
-      //   );
-      //   const arc200_approveR = await ci.arc200_approve(
-      //     algosdk.getApplicationAddress(ctcInfo),
-      //     BigInt(0),
-      //     true,
-      //     false
-      //   );
-      //   if (!arc200_approveR.success) throw new Error(arc200_approveR.error);
-      //   await toast.promise(
-      //     signTransactions(
-      //       arc200_approveR.txns.map(
-      //         (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-      //       )
-      //     ).then(sendTransactions),
-      //     {
-      //       pending: "Pending transaction approve tokB spend",
-      //       success: "tokB spend approval complete",
-      //     }
-      //   );
-      // } while (0);
-      // -------------------------------------------
-
-      // const spec = {
-      //   name: "",
-      //   desc: "",
-      //   methods: [
-      //     {
-      //       name: "custom",
-      //       args: [],
-      //       returns: {
-      //         type: "void",
-      //       },
-      //     },
-      //     {
-      //       name: "Provider_deposit",
-      //       args: [
-      //         { type: "byte" },
-      //         { type: "(uint256,uint256)" },
-      //         { type: "uint256" },
-      //       ],
-      //       returns: { type: "uint256" },
-      //     },
-      //   ],
-      //   events: [],
-      // };
-      // const builder = {
-      //   swap200: new CONTRACT(
-      //     ctcInfo,
-      //     algodClient,
-      //     indexerClient,
-      //     spec,
-      //     {
-      //       addr: activeAccount.address,
-      //       sk: new Uint8Array(0),
-      //     },
-      //     true,
-      //     false,
-      //     true
-      //   ),
-      //   arc200: {
-      //     tokA: new CONTRACT(
-      //       ((tok) => (tok === 0 ? TOKEN_WVOI1 : tok))(token.tokenId),
-      //       algodClient,
-      //       indexerClient,
-      //       abi.arc200,
-      //       {
-      //         addr: activeAccount.address,
-      //         sk: new Uint8Array(0),
-      //       },
-      //       true,
-      //       false,
-      //       true
-      //     ),
-      //     tokB: new CONTRACT(
-      //       ((tok) => (tok === 0 ? TOKEN_WVOI1 : tok))(token2.tokenId),
-      //       algodClient,
-      //       indexerClient,
-      //       abi.arc200,
-      //       {
-      //         addr: activeAccount.address,
-      //         sk: new Uint8Array(0),
-      //       },
-      //       true,
-      //       false,
-      //       true
-      //     ),
-      //   },
-      // };
-
-      // const fromAmountBI = BigInt(
-      //   new BigNumber(Number(fromAmount))
-      //     .multipliedBy(new BigNumber(10).pow(token.decimals))
-      //     .toFixed(0)
-      // );
-      // const toAmountBI = BigInt(
-      //   new BigNumber(Number(toAmount))
-      //     .multipliedBy(new BigNumber(10).pow(token2.decimals))
-      //     .toFixed(0)
-      // );
-
-      // const buildN = [];
-      // -------------------------------------------
-      // approve spend tok A to app id
-      // -------------------------------------------
-      // buildN.push(
-      //   builder.arc200.tokA.arc200_approve(
-      //     algosdk.getApplicationAddress(ctcInfo),
-      //     fromAmountBI
-      //   )
-      // );
-      // -------------------------------------------
-      // approve spend tok B to app id
-      // -------------------------------------------
-      // buildN.push(
-      //   builder.arc200.tokB.arc200_approve(
-      //     algosdk.getApplicationAddress(ctcInfo),
-      //     toAmountBI
-      //   )
-      // );
-      // -------------------------------------------
-      // call provider deposit
-      // -------------------------------------------
-      // buildN.push(
-      //   builder.swap200.Provider_deposit(0, [fromAmountBI, toAmountBI], 0)
-      // );
-      // -------------------------------------------
-      // const buildP = (await Promise.all(buildN)).map(({ obj }) => obj);
-      // -------------------------------------------
-      // const ci = new CONTRACT(TOKEN_WVOI1, algodClient, indexerClient, spec, {
-      //   addr: activeAccount.address,
-      //   sk: new Uint8Array(0),
-      // });
-      // ci.setPaymentAmount(1e6);
-      // ci.setExtraTxns(buildP);
-      // ci.setFee(2000);
-      // ci.setEnableGroupResourceSharing(true);
-      // ci.setAccounts([algosdk.getApplicationAddress(ctcInfo)]);
-      // const customR = await ci.custom();
-
-      // if (!customR.success) throw new Error(customR.error);
-
-      // console.log({ customR });
-
-      // await toast.promise(
-      //   signTransactions(
-      //     customR.txns.map(
-      //       (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-      //     )
-      //   ).then(sendTransactions),
-      //   {
-      //     pending:
-      //       "Pending transaction to finalize initial liquidity provisions",
-      //     success: "Liquidity pool creation complete!",
-      //   }
-      // );
-
-      // -------------------------------------------
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -1315,10 +1103,15 @@ const Swap = () => {
         />
       </SwapContainer>
       <Button
-        className={isValid ? "active" : undefined}
+        className={isValid || poolExists ? "active" : undefined}
         onClick={() => {
           if (!on) {
-            handlePoolCreate();
+            if (!poolExists) {
+              handlePoolCreate();
+            } else {
+              if (!pool) return;
+              navigate(`/pool/add?poolId=${pool.poolId}`);
+            }
           }
         }}
       >
