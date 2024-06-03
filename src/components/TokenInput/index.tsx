@@ -6,6 +6,7 @@ import TokenSelect from "../TokenSelect";
 import { ARC200TokenI, PoolI } from "../../types";
 import { tokenSymbol } from "../../utils/dex";
 import { prepareString } from "../../utils/string";
+import { Fade } from "@mui/material";
 
 const MaxButton = styled.div`
   display: flex;
@@ -369,6 +370,7 @@ interface SwapProps {
   options?: ARC200TokenI[];
   balance?: string;
   onFocus: () => void;
+  showInput?: boolean;
 }
 const Swap: FC<SwapProps> = ({
   label,
@@ -380,6 +382,7 @@ const Swap: FC<SwapProps> = ({
   options,
   balance,
   onFocus,
+  showInput = true,
 }) => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
@@ -434,29 +437,31 @@ const Swap: FC<SwapProps> = ({
             </TokenButtonContainer>
           </TokenRow>
         </TokenContainer>
-        <TokenInputGroup>
-          <TokenInput>
-            <TokenInputContainer
-              className={[
-                isDarkTheme ? "dark" : "light",
-                amount !== "" ? "has-value" : "has-placeholder",
-              ].join(" ")}
-            >
-              <Input
-                className={isDarkTheme ? "dark" : "light"}
-                placeholder="0.00"
-                onKeyDown={() => onFocus()}
-                onChange={(e) => {
-                  setAmount(e.target.value);
-                }}
-                value={amount}
-              />
-            </TokenInputContainer>
-          </TokenInput>
-          <InputValueHelperText className={isDarkTheme ? "dark" : "light"}>
-            ~ 0 VOI
-          </InputValueHelperText>
-        </TokenInputGroup>
+        <Fade in={showInput} timeout={500}>
+          <TokenInputGroup>
+            <TokenInput>
+              <TokenInputContainer
+                className={[
+                  isDarkTheme ? "dark" : "light",
+                  amount !== "" ? "has-value" : "has-placeholder",
+                ].join(" ")}
+              >
+                <Input
+                  className={isDarkTheme ? "dark" : "light"}
+                  placeholder="0.00"
+                  onKeyDown={() => onFocus()}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                  }}
+                  value={amount}
+                />
+              </TokenInputContainer>
+            </TokenInput>
+            <InputValueHelperText className={isDarkTheme ? "dark" : "light"}>
+              ~ 0 VOI
+            </InputValueHelperText>
+          </TokenInputGroup>
+        </Fade>
       </Row1>
       <Row2>
         <BalanceContainer>
@@ -468,15 +473,17 @@ const Swap: FC<SwapProps> = ({
             {balance || ""} {tokenSymbol(token)}
           </BalanceValue>
         </BalanceContainer>
-        <MaxButton
-          onClick={() => {
-            onFocus();
-            handleMaxClick();
-          }}
-          className={isDarkTheme ? "dark" : "light"}
-        >
-          <MaxButtonLabel>Max</MaxButtonLabel>
-        </MaxButton>
+        <Fade in={showInput} timeout={500}>
+          <MaxButton
+            onClick={() => {
+              onFocus();
+              handleMaxClick();
+            }}
+            className={isDarkTheme ? "dark" : "light"}
+          >
+            <MaxButtonLabel>Max</MaxButtonLabel>
+          </MaxButton>
+        </Fade>
       </Row2>
     </SwapTokenContainer>
   );

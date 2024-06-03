@@ -148,7 +148,7 @@ const PoolPosition = () => {
               width: "100%",
             }}
           >
-            {positions.map((position) => (
+            {positions.slice(0, 10).map((position) => (
               <PoolCard
                 tokens={tokens || []}
                 pool={position}

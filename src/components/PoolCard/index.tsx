@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import { tokenSymbol } from "../../utils/dex";
 import { getToken, getTokens, updateToken } from "../../store/tokenSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
-import { Skeleton } from "@mui/material";
+import { Fade, Skeleton } from "@mui/material";
 import { CONTRACT, abi, swap } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
 import { TOKEN_WVOI1 } from "../../constants/tokens";
@@ -1080,116 +1080,118 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
   // )
   //   return null;
   return (
-    <PoolCardRoot className={isDarkTheme ? "dark" : "light"}>
-      <PoolCardRow>
-        <Col1>
-          <Col1Row1>
-            <PairIconPlaceholder />
-            <PairInfoContainer>
-              <PairInfo>
-                <PairTokens>
-                  <PairTokenLabel>{symbolA}</PairTokenLabel>
-                  <CryptoIconPlaceholder />
-                  <PairTokenLabel>/ {symbolB}</PairTokenLabel>
-                  <CryptoIconPlaceholder />
-                </PairTokens>
-              </PairInfo>
-              <PairIds>
-                <Field>
-                  <FieldLabel>ID:</FieldLabel>
-                  <FieldValue>{pool.tokA}</FieldValue>
-                </Field>
-                <Field>
-                  <FieldLabel>ID:</FieldLabel>
-                  <FieldValue>{pool.tokB}</FieldValue>
-                </Field>
-              </PairIds>
-            </PairInfoContainer>
-          </Col1Row1>
-        </Col1>
-        {balance ? (
-          <>
-            <Col2>
-              <TVLLabel>&nbsp;</TVLLabel>
-            </Col2>
-            <Col3>
-              <VolumeLabel>&nbsp;</VolumeLabel>
-            </Col3>
-            <Col4>
-              <APRLabelContainer>
-                <APRLabel
+    <Fade in={true} timeout={1500}>
+      <PoolCardRoot className={isDarkTheme ? "dark" : "light"}>
+        <PoolCardRow>
+          <Col1>
+            <Col1Row1>
+              <PairIconPlaceholder />
+              <PairInfoContainer>
+                <PairInfo>
+                  <PairTokens>
+                    <PairTokenLabel>{symbolA}</PairTokenLabel>
+                    <CryptoIconPlaceholder />
+                    <PairTokenLabel>/ {symbolB}</PairTokenLabel>
+                    <CryptoIconPlaceholder />
+                  </PairTokens>
+                </PairInfo>
+                <PairIds>
+                  <Field>
+                    <FieldLabel>ID:</FieldLabel>
+                    <FieldValue>{pool.tokA}</FieldValue>
+                  </Field>
+                  <Field>
+                    <FieldLabel>ID:</FieldLabel>
+                    <FieldValue>{pool.tokB}</FieldValue>
+                  </Field>
+                </PairIds>
+              </PairInfoContainer>
+            </Col1Row1>
+          </Col1>
+          {balance ? (
+            <>
+              <Col2>
+                <TVLLabel>&nbsp;</TVLLabel>
+              </Col2>
+              <Col3>
+                <VolumeLabel>&nbsp;</VolumeLabel>
+              </Col3>
+              <Col4>
+                <APRLabelContainer>
+                  <APRLabel
+                    style={{
+                      textAlign: "right",
+                    }}
+                  >
+                    {balance || ""}
+                    <br />
+                    {value !== "0" ? `≈${value} VOI` : ""}
+                  </APRLabel>
+                </APRLabelContainer>
+              </Col4>
+              <Col5>
+                <StyledLink
+                  to={`/pool/add?poolId=${pool.poolId}`}
                   style={{
-                    textAlign: "right",
+                    width: "100%",
                   }}
                 >
-                  {balance || ""}
-                  <br />
-                  {value !== "0" ? `≈${value} VOI` : ""}
-                </APRLabel>
-              </APRLabelContainer>
-            </Col4>
-            <Col5>
-              <StyledLink
-                to={`/pool/add?poolId=${pool.poolId}`}
-                style={{
-                  width: "100%",
-                }}
-              >
-                <AddButton>
-                  <ButtonLabelContainer>
-                    <AddButtonLabel>Add</AddButtonLabel>
-                  </ButtonLabelContainer>
-                </AddButton>
-              </StyledLink>
-              <StyledLink to={`/pool/remove?poolId=${pool.poolId}`}>
-                <SwapButton>
-                  <ButtonLabelContainer>
-                    <SwapButtonLabel>Remove</SwapButtonLabel>
-                  </ButtonLabelContainer>
-                </SwapButton>
-              </StyledLink>
-            </Col5>
-          </>
-        ) : (
-          <>
-            <Col3>
-              <TVLLabel>{tvl} VOI</TVLLabel>
-            </Col3>
-            <Col3>
-              <VolumeLabel>
-                {isNaN(Number(totalVolume)) ? "0 VOI" : `${totalVolume} VOI`}
-              </VolumeLabel>
-            </Col3>
-            <Col4>
-              <APRLabelContainer>
-                <APRLabel>{apr}%</APRLabel>
-              </APRLabelContainer>
-            </Col4>
-            <Col5>
-              <StyledLink
-                to={`/pool/add?poolId=${pool.poolId}`}
-                style={{
-                  width: "100%",
-                }}
-              >
-                <AddButton>
-                  <ButtonLabelContainer>
-                    <AddButtonLabel>Add</AddButtonLabel>
-                  </ButtonLabelContainer>
-                </AddButton>
-              </StyledLink>
-              <StyledLink to={`/swap?poolId=${pool.poolId}`}>
-                <SwapButton>
-                  <ButtonLabelContainer>
-                    <SwapButtonLabel>Swap</SwapButtonLabel>
-                  </ButtonLabelContainer>
-                </SwapButton>
-              </StyledLink>
-            </Col5>
-          </>
-        )}
-      </PoolCardRow>
-    </PoolCardRoot>
+                  <AddButton>
+                    <ButtonLabelContainer>
+                      <AddButtonLabel>Add</AddButtonLabel>
+                    </ButtonLabelContainer>
+                  </AddButton>
+                </StyledLink>
+                <StyledLink to={`/pool/remove?poolId=${pool.poolId}`}>
+                  <SwapButton>
+                    <ButtonLabelContainer>
+                      <SwapButtonLabel>Remove</SwapButtonLabel>
+                    </ButtonLabelContainer>
+                  </SwapButton>
+                </StyledLink>
+              </Col5>
+            </>
+          ) : (
+            <>
+              <Col3>
+                <TVLLabel>{tvl} VOI</TVLLabel>
+              </Col3>
+              <Col3>
+                <VolumeLabel>
+                  {isNaN(Number(totalVolume)) ? "0 VOI" : `${totalVolume} VOI`}
+                </VolumeLabel>
+              </Col3>
+              <Col4>
+                <APRLabelContainer>
+                  <APRLabel>{apr}%</APRLabel>
+                </APRLabelContainer>
+              </Col4>
+              <Col5>
+                <StyledLink
+                  to={`/pool/add?poolId=${pool.poolId}`}
+                  style={{
+                    width: "100%",
+                  }}
+                >
+                  <AddButton>
+                    <ButtonLabelContainer>
+                      <AddButtonLabel>Add</AddButtonLabel>
+                    </ButtonLabelContainer>
+                  </AddButton>
+                </StyledLink>
+                <StyledLink to={`/swap?poolId=${pool.poolId}`}>
+                  <SwapButton>
+                    <ButtonLabelContainer>
+                      <SwapButtonLabel>Swap</SwapButtonLabel>
+                    </ButtonLabelContainer>
+                  </SwapButton>
+                </StyledLink>
+              </Col5>
+            </>
+          )}
+        </PoolCardRow>
+      </PoolCardRoot>
+    </Fade>
   );
 };
 

@@ -1089,6 +1089,7 @@ const Swap = () => {
           balance={balance}
           onFocus={() => setFocus("from")}
           options={tokenOptions}
+          showInput={!poolExists}
         />
         <AddIcon theme={isDarkTheme ? "dark" : "light"} />
         <TokenInput
@@ -1100,6 +1101,7 @@ const Swap = () => {
           options={tokenOptions2}
           balance={balance2}
           onFocus={() => setFocus("to")}
+          showInput={!poolExists}
         />
       </SwapContainer>
       <Button

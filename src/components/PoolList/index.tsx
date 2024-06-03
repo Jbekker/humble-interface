@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet";
 import axios from "axios";
 import BigNumber from "bignumber.js";
+import { Fade } from "@mui/material";
 
 const PopularPoolsRoot = styled.div`
   width: 90%;
@@ -214,9 +215,11 @@ const PoolIcon = () => {
   );
 };
 
-interface PoolListProps {}
+interface PoolListProps {
+  showing: number;
+}
 
-const PoolList: FC<PoolListProps> = () => {
+const PoolList: FC<PoolListProps> = ({ showing }) => {
   const { activeAccount } = useWallet();
   const navigate = useNavigate();
   const isDarkTheme = useSelector(
@@ -290,9 +293,8 @@ const PoolList: FC<PoolListProps> = () => {
         </Heading>
       </Columns>
       {filteredPools.length > 0 ? (
-        //pools.slice(0, 10).map((p: PoolI) => {
-        filteredPools.slice(0).map((p: PoolI) => {
-          return <PoolCard tokens={tokens2} key={p.poolId} pool={p} />;
+        filteredPools.slice(0, showing).map((p: PoolI) => {
+          return <PoolCard tokens={tokens2} key={p.poolId} pool={p}></PoolCard>;
         })
       ) : (
         <div>No pools</div>

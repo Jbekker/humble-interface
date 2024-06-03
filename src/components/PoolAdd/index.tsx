@@ -10,7 +10,7 @@ import { CONTRACT, abi, arc200, swap } from "ulujs";
 import { TOKEN_VIA, TOKEN_WVOI1 } from "../../constants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import TokenInput from "../TokenInput";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ARC200TokenI, PoolI } from "../../types";
 import { getTokens } from "../../store/tokenSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
@@ -598,6 +598,7 @@ const InfoCircleIcon = () => {
 };
 
 const Swap = () => {
+  const navigate = useNavigate();
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
@@ -706,17 +707,17 @@ const Swap = () => {
   // }, [token, tokenOptions]);
 
   // EFFECT: get eligible pools
-  // const eligiblePools = useMemo(() => {
-  //   return pools.filter((p: PoolI) => {
-  //     return (
-  //       [p.tokA, p.tokB].includes(tokenId(token)) &&
-  //       [p.tokA, p.tokB].includes(tokenId(token2)) &&
-  //       p.tokA !== p.tokB
-  //     );
-  //   });
-  // }, [pools, token, token2]);
+  const eligiblePools = useMemo(() => {
+    return pools.filter((p: PoolI) => {
+      return (
+        [p.tokA, p.tokB].includes(tokenId(token)) &&
+        [p.tokA, p.tokB].includes(tokenId(token2)) &&
+        p.tokA !== p.tokB
+      );
+    });
+  }, [pools, token, token2]);
 
-  // console.log("eligiblePools", eligiblePools);
+  console.log("eligiblePools", eligiblePools);
 
   // EFFECT
   useEffect(() => {
@@ -726,20 +727,17 @@ const Swap = () => {
         setPool(pool);
         setReady(true);
       }
+      if (eligiblePools.length > 0) {
+        const { algodClient, indexerClient } = getAlgorandClients();
+        new swap(0, algodClient, indexerClient)
+          .selectPool(eligiblePools, null, null, "round")
+          .then((pool: any) => {
+            if (!pool || `${pool.poolId}` === `${paramPoolId}`) return;
+            navigate(`/pool/add?poolId=${pool.poolId}`);
+          });
+      }
     }
-    /*else if (eligiblePools.length > 0) {
-      // pick a pool (highest tvl)
-      const { algodClient, indexerClient } = getAlgorandClients();
-      new swap(0, algodClient, indexerClient)
-        .selectPool(eligiblePools, null, null, "round")
-        .then((pool: any) => {
-          if (!pool) return;
-          setPool(pool);
-          setReady(true);
-        });
-    }
-    */
-  }, [pools, paramPoolId]);
+  }, [pools, paramPoolId, eligiblePools]);
 
   //console.log({ pool, eligiblePools });
 
@@ -1995,6 +1993,8 @@ const Swap = () => {
       const B = { ...mB, amount: toAmount.replace(/,/g, "") };
 
       // TODO maybe abort
+
+      console.log({ A, B });
 
       const swapR = await ci.deposit(acc.addr, pool.poolId, A, B);
       if (!swapR.success) {

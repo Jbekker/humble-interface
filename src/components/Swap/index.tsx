@@ -579,38 +579,47 @@ const Swap = () => {
   }, [token2, tokens, pools]);
 
   const eligiblePools = useMemo(() => {
-    return pools.filter((p: PoolI) => {
+    const filteredPools = pools.filter((p: PoolI) => {
       return (
         [p.tokA, p.tokB].includes(tokenId(token)) &&
         [p.tokA, p.tokB].includes(tokenId(token2)) &&
         p.tokA !== p.tokB
       );
     });
+    const firstPool = filteredPools.reduce(
+      (acc, val) => (acc.round > val.round ? val : acc),
+      { round: Number.MAX_SAFE_INTEGER, poolId: 0 }
+    );
+    return !!firstPool ? [firstPool] : [];
   }, [pools, token, token2]);
+
+  console.log("eligiblePools", eligiblePools);
 
   const [info, setInfo] = useState<any>();
   // EFFECT: set pool info
   useEffect(() => {
-    if (!token || !token2) return;
+    if (!token || !token2 || !eligiblePools) return;
     const { algodClient, indexerClient } = getAlgorandClients();
     const A = { ...token, tokenId: tokenId(token) };
     const B = { ...token2, tokenId: tokenId(token2) };
-    new swap(0, algodClient, indexerClient)
-      .selectPool(eligiblePools, A, B, "round")
-      .then((pool: any) => {
-        if (!pool) return;
-        const ci = new swap(pool.poolId, algodClient, indexerClient);
-        ci.Info().then((info: any) => {
-          setInfo(info.returnValue);
-        });
+    new swap(eligiblePools[0].poolId, algodClient, indexerClient)
+      .Info()
+      .then((info: any) => {
+        setInfo(info.returnValue);
       });
   }, [eligiblePools, token, token2]);
 
   const rate = useMemo(() => {
     if (!info || !token || !token2) return;
+    console.log({ info, token, token2 });
     const A = { ...token, tokenId: tokenId(token) };
-    const B = { ...token2, tokenId: tokenId(token2) };
+    const B = {
+      ...token2,
+      tokenId: tokenId(token2),
+    };
     const res = swap.rate(info, A, B);
+    const res2 = swap.rate(info, B, A);
+    console.log({ res, res2 });
     return res;
   }, [info, token, token2]);
 
@@ -624,6 +633,7 @@ const Swap = () => {
   console.log("invRate", invRate);
 
   const fee = useMemo(() => {
+    if (!info) return "0";
     return ((fromAmount * info?.protoInfo.totFee) / 10000).toFixed(6);
   }, [info, fromAmount]);
 
@@ -638,82 +648,84 @@ const Swap = () => {
 
   const [actualOutcome, setActualOutcome] = useState<string>();
 
-  // EFFECT: update toAmount and actual outcome on fromAmount change
+  // EFFECT: on fromAmount change update toAmount and actual outcome
   useEffect(() => {
-    if (!token || !token2 || !fromAmount || focus !== "from") return;
+    if (!token || !token2 || !fromAmount || focus !== "from") {
+      return;
+    }
     if (focus === undefined || fromAmount === "") {
       setToAmount("");
       return;
     }
     const { algodClient, indexerClient } = getAlgorandClients();
-    const A = { ...token, tokenId: tokenId(token) };
-    const B = { ...token2, tokenId: tokenId(token2) };
-    new swap(0, algodClient, indexerClient)
-      .selectPool(eligiblePools, A, B, "round")
-      .then((pool: any) => {
-        const acc = {
-          addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
-          sk: new Uint8Array(0),
-        };
-        const ci = new CONTRACT(
-          pool.poolId,
-          algodClient,
-          indexerClient,
-          spec,
-          acc
-        );
-        ci.setFee(4000);
-        if (pool.tokA === tokenId(token)) {
-          const fromAmountBN = new BigNumber(fromAmount);
-          if (fromAmountBN.isNaN()) return;
-          const fromAmountBI = BigInt(
-            fromAmountBN.multipliedBy(10 ** token.decimals).toFixed()
-          );
-          ci.Trader_swapAForB(1, fromAmountBI, 0).then((r: any) => {
-            if (r.success) {
-              const toAmountBN = new BigNumber(r.returnValue[1]);
-              if (toAmountBN.isNaN()) return;
-              const toAmount = toAmountBN
-                .div(10 ** token2.decimals)
-                .toFixed(token2.decimals);
-              setActualOutcome(toAmount);
-              setToAmount(toAmount);
-            }
-          });
-        } else if (pool.tokB === tokenId(token)) {
-          const fromAmountBN = new BigNumber(fromAmount);
-          if (fromAmountBN.isNaN()) return;
-          const fromAmountBI = BigInt(
-            fromAmountBN.multipliedBy(10 ** token.decimals).toFixed()
-          );
-          ci.Trader_swapBForA(1, fromAmountBI, 0).then((r: any) => {
-            if (r.success) {
-              const toAmountBN = new BigNumber(r.returnValue[0]);
-              if (toAmountBN.isNaN()) return;
-              const toAmount = toAmountBN
-                .div(10 ** token2.decimals)
-                .toFixed(token2.decimals);
-              setActualOutcome(toAmount);
-              setToAmount(toAmount);
-            }
-          });
+    const pool: any = eligiblePools[0];
+    if (!pool) return;
+    const acc = {
+      addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+      sk: new Uint8Array(0),
+    };
+    const ci = new CONTRACT(
+      eligiblePools[0].poolId,
+      algodClient,
+      indexerClient,
+      spec,
+      acc
+    );
+    ci.setFee(4000);
+    if (pool.tokA === tokenId(token)) {
+      const fromAmountBN = new BigNumber(fromAmount);
+      if (fromAmountBN.isNaN()) return;
+      const fromAmountBI = BigInt(
+        fromAmountBN.multipliedBy(10 ** token.decimals).toFixed()
+      );
+      ci.Trader_swapAForB(1, fromAmountBI, 0).then((r: any) => {
+        console.log({ r });
+        if (r.success) {
+          const toAmountBN = new BigNumber(r.returnValue[1]);
+          if (toAmountBN.isNaN()) return;
+          const toAmount = toAmountBN
+            .div(10 ** token2.decimals)
+            .toFixed(token2.decimals);
+          setActualOutcome(toAmount);
+          setToAmount(toAmount);
+          console.log({ toAmount });
         }
       });
-  }, [pool, token, token2, fromAmount, focus]);
+    } else if (pool.tokB === tokenId(token)) {
+      const fromAmountBN = new BigNumber(fromAmount);
+      if (fromAmountBN.isNaN()) return;
+      const fromAmountBI = BigInt(
+        fromAmountBN.multipliedBy(10 ** token.decimals).toFixed()
+      );
+      ci.Trader_swapBForA(1, fromAmountBI, 0).then((r: any) => {
+        console.log({ r });
+        if (r.success) {
+          const toAmountBN = new BigNumber(r.returnValue[0]);
+          if (toAmountBN.isNaN()) return;
+          const toAmount = toAmountBN
+            .div(10 ** token2.decimals)
+            .toFixed(token2.decimals);
+          console.log({ toAmount });
+          setActualOutcome(toAmount);
+          setToAmount(toAmount);
+        }
+      });
+    }
+  }, [pool, token, token2, fromAmount, focus, eligiblePools]);
 
-  // EFFECT: update fromAmount and actual outcome on toAmount change
+  console.log("actualOutcome", actualOutcome);
+  console.log("toAmount", toAmount);
+
+  // EFFECT: on toAmount change update fromAmount and actual outcome
   useEffect(() => {
-    if (!token || !token2 || !toAmount || focus !== "to") return;
+    if (!token || !token2 || !toAmount || focus !== "to") {
+      return;
+    }
     if (focus === undefined || toAmount === "") {
       setFromAmount("");
       return;
     }
-    // TODO use selectPool
-    const pool = pools.find(
-      (p: PoolI) =>
-        [p.tokA, p.tokB].includes(tokenId(token)) &&
-        [p.tokA, p.tokB].includes(tokenId(token2))
-    );
+    const pool: any = eligiblePools[0];
     if (!pool) return;
     const { algodClient, indexerClient } = getAlgorandClients();
     const acc = {
@@ -722,40 +734,50 @@ const Swap = () => {
     };
     const ci = new CONTRACT(pool.poolId, algodClient, indexerClient, spec, acc);
     ci.setFee(4000);
-    if (tokenId(token2) === pool?.tokB) {
+    if (pool.tokA === tokenId(token2)) {
+      console.log("here2");
       const toAmountBN = new BigNumber(toAmount);
       if (toAmountBN.isNaN()) return;
       const toAmountBI = BigInt(
-        toAmountBN.multipliedBy(10 ** token2.decimals).toFixed()
-      );
-      ci.Trader_swapBForA(1, toAmountBI, 0).then((r: any) => {
-        if (r.success) {
-          const fromAmountBN = new BigNumber(r.returnValue[0]);
-          if (fromAmountBN.isNaN()) return;
-          const fromAmount = fromAmountBN
-            .div(10 ** token.decimals)
-            .toFixed(token.decimals);
-          setFromAmount(fromAmount);
-        }
-      });
-    } else if (tokenId(token2) === pool?.tokA) {
-      const toAmountBN = new BigNumber(toAmount);
-      if (toAmountBN.isNaN()) return;
-      const toAmountBI = BigInt(
-        toAmountBN.multipliedBy(10 ** token2.decimals).toFixed()
+        toAmountBN
+          .multipliedBy(new BigNumber(10).pow(token2.decimals))
+          .toFixed(0)
       );
       ci.Trader_swapAForB(1, toAmountBI, 0).then((r: any) => {
         if (r.success) {
           const fromAmountBN = new BigNumber(r.returnValue[1]);
           if (fromAmountBN.isNaN()) return;
           const fromAmount = fromAmountBN
-            .div(10 ** token.decimals)
+            .dividedBy(new BigNumber(10).pow(token.decimals))
+            .toFixed(token.decimals);
+          setFromAmount(fromAmount);
+        }
+      });
+    } else if (pool.tokA === tokenId(token)) {
+      console.log("here");
+      const toAmountBN = new BigNumber(toAmount);
+      if (toAmountBN.isNaN()) return;
+      // convert to atomic unit
+      const toAmountBI = BigInt(
+        toAmountBN
+          .multipliedBy(new BigNumber(10).pow(token2.decimals))
+          .toFixed(0)
+      );
+      ci.Trader_swapBForA(1, toAmountBI, 0).then((r: any) => {
+        if (r.success) {
+          const fromAmountBN = new BigNumber(r.returnValue[0]);
+          if (fromAmountBN.isNaN()) return;
+          const fromAmount = fromAmountBN
+            .dividedBy(new BigNumber(10).pow(token.decimals))
             .toFixed(token.decimals);
           setFromAmount(fromAmount);
         }
       });
     }
-  }, [pool, token, token2, toAmount, focus]);
+  }, [pool, token, token2, toAmount, focus, eligiblePools]);
+
+  console.log("fromAmount", fromAmount);
+  console.log("actualOutcome", actualOutcome);
 
   const slippage = useMemo(() => {
     if (!actualOutcome || !expectedOutcome) return;

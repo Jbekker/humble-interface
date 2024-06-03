@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
@@ -96,11 +96,16 @@ const Pool = () => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
+  const [showing, setShowing] = useState<number>(10);
   return (
     <PoolRoot className={isDarkTheme ? "dark" : "light"}>
       {activeAccount ? <PoolPosition /> : null}
-      <PoolList />
-      <ViewMoreButton>
+      <PoolList showing={showing} />
+      <ViewMoreButton
+        onClick={() => {
+          setShowing(showing + 10);
+        }}
+      >
         <ButtonLabelContainer>
           <DropdownIcon />
           <ButtonLabel>View More</ButtonLabel>
