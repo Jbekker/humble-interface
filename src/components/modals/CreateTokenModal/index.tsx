@@ -15,6 +15,7 @@ import { toast } from "react-toastify";
 import { getToken } from "../../../store/tokenSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
 import BigNumber from "bignumber.js";
+import { QUEST_ACTION, getActions, submitAction } from "../../../config/quest";
 
 const CustomDialog = mstyled(Dialog)(({ theme }) => {
   /* Theme */
@@ -577,6 +578,30 @@ const SwapSuccessfulModal: React.FC<SwapSuccessfulModalProps> = ({
       );
       getToken(ctcInfo);
       handleClose();
+      // -----------------------------------------
+      // QUEST HERE hmbl_token_create
+      // -----------------------------------------
+      do {
+        const address = activeAccount.address;
+        const actions: string[] = [QUEST_ACTION.CREATE_TOKEN];
+        (async () => {
+          const {
+            data: { results },
+          } = await getActions(address);
+          for (const action of actions) {
+            const address = activeAccount.address;
+            const key = `${action}:${address}`;
+            const completedAction = results.find((el: any) => el.key === key);
+            if (!completedAction) {
+              await submitAction(action, address, {
+                tokenId: ctcInfo,
+              });
+            }
+            // TODO notify quest completion here
+          }
+        })();
+      } while (0);
+      // -----------------------------------------
     } catch (e: any) {
       toast.error(e.message);
     } finally {

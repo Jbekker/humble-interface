@@ -2022,7 +2022,7 @@ const Swap = () => {
       setFromAmount("0");
 
       // -----------------------------------------
-      // QUEST HERE hmbl_pool_swap
+      // QUEST HERE hmbl_pool_add
       // -----------------------------------------
       do {
         const address = activeAccount.address;
@@ -2037,7 +2037,7 @@ const Swap = () => {
             const completedAction = results.find((el: any) => el.key === key);
             if (!completedAction) {
               await submitAction(action, address, {
-                poolId: pool.poolId
+                poolId: pool.poolId,
               });
             }
             // TODO notify quest completion here
