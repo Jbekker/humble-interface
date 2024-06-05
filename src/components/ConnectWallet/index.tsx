@@ -7,6 +7,7 @@ import ArrowDownwardIcon from "static/icon/icon-arrow-downward.svg";
 import OnIcon from "static/icon/icon-on.svg";
 import { compactAddress } from "../../utils/mp";
 import { Box, Divider } from "@mui/material";
+import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
 
 const AccountDropdown = styled.div`
   /* Layout */
@@ -274,6 +275,31 @@ function BasicMenu() {
   const handleClose = () => {
     setAnchorEl(null);
   };
+  React.useEffect(() => {
+    if (!activeAccount) return;
+    // -----------------------------------------
+    // QUEST HERE hmbl_pool_swap
+    // -----------------------------------------
+    do {
+      const address = activeAccount.address;
+      const actions: string[] = [QUEST_ACTION.CONNECT_WALLET];
+      (async () => {
+        const {
+          data: { results },
+        } = await getActions(address);
+        for (const action of actions) {
+          const address = activeAccount.address;
+          const key = `${action}:${address}`;
+          const completedAction = results.find((el: any) => el.key === key);
+          if (!completedAction) {
+            await submitAction(action, address);
+          }
+          // TODO notify quest completion here
+        }
+      })();
+    } while (0);
+    // -----------------------------------------
+  }, [activeAccount]);
   return (
     <div>
       {!activeAccount ? (
