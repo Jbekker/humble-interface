@@ -23,6 +23,7 @@ import { hasAllowance } from "ulujs/types/arc200";
 import { tokenId, tokenSymbol } from "../../utils/dex";
 import BigNumber from "bignumber.js";
 import { Asset } from "ulujs/types/swap";
+import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
 
 const spec = {
   name: "pool",
@@ -2019,6 +2020,31 @@ const Swap = () => {
         }
       );
       setFromAmount("0");
+
+      // -----------------------------------------
+      // QUEST HERE hmbl_pool_swap
+      // -----------------------------------------
+      do {
+        const address = activeAccount.address;
+        const actions: string[] = [QUEST_ACTION.ADD_LIQUIDITY];
+        (async () => {
+          const {
+            data: { results },
+          } = await getActions(address);
+          for (const action of actions) {
+            const address = activeAccount.address;
+            const key = `${action}:${address}`;
+            const completedAction = results.find((el: any) => el.key === key);
+            if (!completedAction) {
+              await submitAction(action, address, {
+                poolId: pool.poolId
+              });
+            }
+            // TODO notify quest completion here
+          }
+        })();
+      } while (0);
+      // -----------------------------------------
     } catch (e: any) {
       toast.error(e.message);
       console.error(e);
