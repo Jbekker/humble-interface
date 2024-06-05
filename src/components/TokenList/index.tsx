@@ -3,12 +3,13 @@ import React, { FC, useEffect, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import PoolCard from "../PoolCard";
-import { ARC200LPTokenI, ARC200TokenI, PoolI } from "../../types";
+import { ARC200LPTokenI, ARC200TokenI, PoolI, TokenI } from "../../types";
 import TokenCard from "../TokenCard";
 import CreateTokenModal from "../modals/CreateTokenModal";
 import AddTokenModal from "../modals/AddTokenModal";
 import { Stack } from "@mui/system";
 import { useWallet } from "@txnlab/use-wallet";
+import { Fade } from "@mui/material";
 
 const TokenListRoot = styled.div`
   width: 90%;
@@ -554,14 +555,16 @@ const PoolIcon = () => {
   );
 };
 
-interface TokenListProps {}
+interface TokenListProps {
+  tokens: ARC200TokenI[];
+  showing: number;
+}
 
-const TokenList: FC<TokenListProps> = () => {
-  const { activeAccount } = useWallet()
+const TokenList: FC<TokenListProps> = ({ tokens, showing }) => {
+  const { activeAccount } = useWallet();
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const tokens = useSelector((state: RootState) => state.tokens.tokens);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   return (
@@ -569,29 +572,30 @@ const TokenList: FC<TokenListProps> = () => {
       <TokenListRoot className={isDarkTheme ? "dark" : "light"}>
         <HeadingRow className="heading-row">
           <SectionTitle>Popular Tokens</SectionTitle>
-          {activeAccount ? <Stack direction="row" gap={2}>
-            <AddTokenButton
-              onClick={() => {
-                setShowAddModal(true);
-              }}
-            >
-              <CreateButtonInner>
-                <CreateButtonLabel>Add token</CreateButtonLabel>
-                <PoolIcon />
-              </CreateButtonInner>
-            </AddTokenButton>
-            <CreateTokenButton
-              onClick={() => {
-                setShowCreateModal(true);
-              }}
-            >
-              <CreateButtonInner>
-                <CreateButtonLabel>Create token</CreateButtonLabel>
-                <PoolIcon />
-              </CreateButtonInner>
-            </CreateTokenButton>
-          </Stack>: null}
-
+          {activeAccount ? (
+            <Stack direction="row" gap={2}>
+              <AddTokenButton
+                onClick={() => {
+                  setShowAddModal(true);
+                }}
+              >
+                <CreateButtonInner>
+                  <CreateButtonLabel>Add token</CreateButtonLabel>
+                  <PoolIcon />
+                </CreateButtonInner>
+              </AddTokenButton>
+              <CreateTokenButton
+                onClick={() => {
+                  setShowCreateModal(true);
+                }}
+              >
+                <CreateButtonInner>
+                  <CreateButtonLabel>Create token</CreateButtonLabel>
+                  <PoolIcon />
+                </CreateButtonInner>
+              </CreateTokenButton>
+            </Stack>
+          ) : null}
         </HeadingRow>
         <Columns>
           <Heading>
@@ -618,7 +622,7 @@ const TokenList: FC<TokenListProps> = () => {
           </Heading>
         </Columns>
         {tokens.length > 0 ? (
-          tokens.map((t: ARC200TokenI) => {
+          tokens.slice(0, showing).map((t: ARC200TokenI) => {
             return <TokenCard key={t.tokenId} token={t} />;
           })
         ) : (

@@ -217,89 +217,80 @@ const PoolIcon = () => {
 
 interface PoolListProps {
   showing: number;
+  pools: PoolI[];
+  tokens: any[];
 }
 
-const PoolList: FC<PoolListProps> = ({ showing }) => {
+const PoolList: FC<PoolListProps> = ({ pools, showing, tokens }) => {
   const { activeAccount } = useWallet();
   const navigate = useNavigate();
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const pools = useSelector((state: RootState) => state.pools.pools);
-  const tokens = useSelector((state: RootState) => state.tokens.tokens);
-
-  const [tokens2, setTokens] = React.useState<any[]>();
-  useEffect(() => {
-    if (!activeAccount) return;
-    axios
-      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`)
-      .then((res) => {
-        setTokens(res.data.tokens);
-      });
-  }, [activeAccount]);
-
-  const filteredPools = useMemo(() => {
-    if (!tokens2) return [];
-    const fPools = [];
-    for (const pool of pools) {
-      const priceA = new BigNumber(
-        tokens2.find((t) => t.contractId === pool.tokA)?.price || "0"
-      );
-      const priceB = new BigNumber(
-        tokens2.find((t) => t.contractId === pool.tokB)?.price || "0"
-      );
-      console.log({ priceA, priceB });
-      fPools.push({ ...pool, price: priceA.dividedBy(priceB).toNumber() });
-    }
-    fPools.sort((a, b) => b.price - a.price);
-    return fPools;
-  }, [pools, tokens2]);
-  console.log({ pools, tokens });
-
+  // const filteredPools = useMemo(() => {
+  //   if (!tokens) return [];
+  //   const fPools = [];
+  //   for (const pool of pools) {
+  //     const priceA = new BigNumber(
+  //       tokens.find((t) => t.contractId === pool.tokA)?.price || "0"
+  //     );
+  //     const priceB = new BigNumber(
+  //       tokens.find((t) => t.contractId === pool.tokB)?.price || "0"
+  //     );
+  //     console.log({ priceA, priceB });
+  //     fPools.push({ ...pool, price: priceA.dividedBy(priceB).toNumber() });
+  //   }
+  //   fPools.sort((a, b) => b.price - a.price);
+  //   return fPools;
+  // }, []);
   return (
-    <PopularPoolsRoot className={isDarkTheme ? "dark" : "light"}>
-      <HeadingRow className="heading-row">
-        <SectionTitle>Popular Pools</SectionTitle>
-        {activeAccount ? (
-          <CreateTokenButton
-            onClick={() => {
-              navigate(`/pool/create`);
-            }}
-          >
-            <CreateButtonInner>
-              <CreateButtonLabel>Create pool</CreateButtonLabel>
-              {<PoolIcon />}
-            </CreateButtonInner>
-          </CreateTokenButton>
-        ) : null}
-      </HeadingRow>
-      <Columns>
-        <Heading>
-          <ColumnPair>
-            <ColumnLabel>Pair</ColumnLabel>
-          </ColumnPair>
-          <ColumnTVL>
-            <ColumnLabel>TVL</ColumnLabel>
-            <InfoCircleIcon />
-          </ColumnTVL>
-          <ColumnVolume>
-            <ColumnLabel>Volume</ColumnLabel>
-            <InfoCircleIcon />
-          </ColumnVolume>
-          <ColumnAPR>
-            <ColumnLabel>APR</ColumnLabel>
-            <InfoCircleIcon />
-          </ColumnAPR>
-        </Heading>
-      </Columns>
-      {filteredPools.length > 0 ? (
-        filteredPools.slice(0, showing).map((p: PoolI) => {
-          return <PoolCard tokens={tokens2} key={p.poolId} pool={p}></PoolCard>;
-        })
-      ) : (
-        <div>No pools</div>
-      )}
-    </PopularPoolsRoot>
+    <>
+      <PopularPoolsRoot className={isDarkTheme ? "dark" : "light"}>
+        <HeadingRow className="heading-row">
+          <SectionTitle>Popular Pools</SectionTitle>
+          {activeAccount ? (
+            <CreateTokenButton
+              onClick={() => {
+                navigate(`/pool/create`);
+              }}
+            >
+              <CreateButtonInner>
+                <CreateButtonLabel>Create pool</CreateButtonLabel>
+                {<PoolIcon />}
+              </CreateButtonInner>
+            </CreateTokenButton>
+          ) : null}
+        </HeadingRow>
+        <Columns>
+          <Heading>
+            <ColumnPair>
+              <ColumnLabel>Pair</ColumnLabel>
+            </ColumnPair>
+            <ColumnTVL>
+              <ColumnLabel>TVL</ColumnLabel>
+              <InfoCircleIcon />
+            </ColumnTVL>
+            <ColumnVolume>
+              <ColumnLabel>Volume</ColumnLabel>
+              <InfoCircleIcon />
+            </ColumnVolume>
+            <ColumnAPR>
+              <ColumnLabel>APR</ColumnLabel>
+              <InfoCircleIcon />
+            </ColumnAPR>
+          </Heading>
+        </Columns>
+        {pools.length > 0 ? (
+          pools.slice(0, showing).map((p: PoolI) => {
+            return (
+              <PoolCard tokens={tokens} key={p.poolId} pool={p}></PoolCard>
+            );
+          })
+        ) : (
+          <div>No pools</div>
+        )}
+      </PopularPoolsRoot>
+    </>
   );
 };
 

@@ -582,7 +582,7 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
       });
     }
   }, [dispatch]);
-  // EFFECT
+  // EFFECT: Fetch pool info
   useEffect(() => {
     if (!tokenA || !tokenB) return;
     const { algodClient, indexerClient } = getAlgorandClients();
@@ -800,8 +800,8 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
 
       const staked = stakedR.returnValue;
       const buildN = [
-        builder.stakr200.Staker_withdraw(farm.poolId, staked),
         builder.stakr200.Staker_harvest(farm.poolId),
+        builder.stakr200.Staker_withdraw(farm.poolId, staked),
       ];
       // if wvoi withdraw staked
       if ([TOKEN_WVOI1].includes(farm.stakeToken)) {

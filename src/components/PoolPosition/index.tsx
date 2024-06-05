@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import React, { useEffect } from "react";
+import React, { FC, useEffect } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import { BalanceI, PoolI, PositionI } from "../../types";
@@ -84,57 +84,60 @@ const MessageText = styled.div`
   line-height: 120%; /* 18px */
 `;
 
-const PoolPosition = () => {
-  const { activeAccount } = useWallet();
+interface PoolPositionProps {
+  positions: PositionI[];
+  showing: number;
+  tokens: any[];
+}
+
+const PoolPosition: FC<PoolPositionProps> = ({
+  positions,
+  showing,
+  tokens,
+}) => {
+  //const { activeAccount } = useWallet();
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
-  const [balances, setBalances] = React.useState<BalanceI[]>();
-  useEffect(() => {
-    if (!activeAccount) return;
-    axios
-      .get(
-        `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/balances?accountId=${activeAccount.address}`
-      )
-      .then((res) => {
-        setBalances(res.data.balances);
-      });
-  }, [activeAccount]);
-
-  const [tokens, setTokens] = React.useState<any[]>();
-  useEffect(() => {
-    if (!activeAccount) return;
-    axios
-      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`)
-      .then((res) => {
-        setTokens(res.data.tokens);
-      });
-  }, [activeAccount]);
-
-  console.log({
-    balances,
-    tokens,
-  });
-  const [positions, setPositions] = React.useState<PositionI[]>([]);
-  React.useEffect(() => {
-    if (!activeAccount || !balances) return;
-    (async () => {
-      const positions = [];
-      for (const bal of balances) {
-        const balance = BigInt(bal.balance);
-        const pool = pools.find((p) => p.poolId === bal.contractId);
-        if (!pool || balance === BigInt(0)) continue;
-        positions.push({
-          ...pool,
-          balance: BigInt(bal.balance),
-        });
-      }
-      setPositions(positions);
-    })();
-  }, [activeAccount, pools, balances]);
-
+  //const [tokens, setTokens] = React.useState<any[]>();
+  // useEffect(() => {
+  //   if (!activeAccount) return;
+  //   axios
+  //     .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`)
+  //     .then((res) => {
+  //       setTokens(res.data.tokens);
+  //     });
+  // }, [activeAccount]);
+  // const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
+  // const [balances, setBalances] = React.useState<BalanceI[]>();
+  // useEffect(() => {
+  //   if (!activeAccount) return;
+  //   axios
+  //     .get(
+  //       `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/balances?accountId=${activeAccount.address}`
+  //     )
+  //     .then((res) => {
+  //       setBalances(res.data.balances);
+  //     });
+  // }, [activeAccount]);
+  // const [positions, setPositions] = React.useState<PositionI[]>([]);
+  // React.useEffect(() => {
+  //   if (!activeAccount || !balances) return;
+  //   (async () => {
+  //     const positions = [];
+  //     for (const bal of balances) {
+  //       const balance = BigInt(bal.balance);
+  //       const pool = pools.find((p) => p.poolId === bal.contractId);
+  //       if (!pool || balance === BigInt(0)) continue;
+  //       positions.push({
+  //         ...pool,
+  //         balance: BigInt(bal.balance),
+  //       });
+  //     }
+  //     setPositions(positions);
+  //   })();
+  // }, [activeAccount, pools, balances]);
   return (
     <YourLiquidityRoot className={isDarkTheme ? "dark" : "light"}>
       <HeadingRow className="heading-row">
@@ -148,8 +151,9 @@ const PoolPosition = () => {
               width: "100%",
             }}
           >
-            {positions.slice(0, 10).map((position) => (
+            {positions.slice(0, showing).map((position: PositionI) => (
               <PoolCard
+                key={`position-${position.poolId}`}
                 tokens={tokens || []}
                 pool={position}
                 balance={new BigNumber(position.balance.toString())

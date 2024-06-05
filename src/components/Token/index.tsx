@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import React from "react";
+import React, { useState } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
@@ -87,20 +87,26 @@ const ButtonLabel = styled(Button)`
 `;
 
 const Pool = () => {
-  const { activeAccount } = useWallet();
-  /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
+  const tokens = useSelector((state: RootState) => state.tokens.tokens);
+  const [showing, setShowing] = useState<number>(20);
   return (
     <TokenRoot className={isDarkTheme ? "dark" : "light"}>
-      <TokenList />
-      <ViewMoreButton>
-        <ButtonLabelContainer>
-          <DropdownIcon />
-          <ButtonLabel>View More</ButtonLabel>
-        </ButtonLabelContainer>
-      </ViewMoreButton>
+      <TokenList tokens={tokens} showing={showing} />
+      {tokens.length > showing ? (
+        <ViewMoreButton
+          onClick={() => {
+            setShowing(showing + 10);
+          }}
+        >
+          <ButtonLabelContainer>
+            <DropdownIcon />
+            <ButtonLabel>View More</ButtonLabel>
+          </ButtonLabelContainer>
+        </ViewMoreButton>
+      ) : null}
     </TokenRoot>
   );
 };

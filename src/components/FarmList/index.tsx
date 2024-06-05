@@ -216,9 +216,10 @@ const PoolIcon = () => {
 
 interface PoolListProps {
   farms: FarmI[];
+  showing: number;
 }
 
-const FarmList: FC<PoolListProps> = ({ farms }) => {
+const FarmList: FC<PoolListProps> = ({ farms, showing }) => {
   const { activeAccount } = useWallet();
   const navigate = useNavigate();
   /* Theme */
@@ -274,14 +275,16 @@ const FarmList: FC<PoolListProps> = ({ farms }) => {
         </Heading>
       </Columns>
       {farms.length > 0 ? (
-        farms.map((f: FarmI) => (
-          <FarmCard
-            key={f.poolId}
-            farm={f}
-            round={round}
-            timestamp={timestamp}
-          />
-        ))
+        farms
+          .slice(0, showing)
+          .map((f: FarmI) => (
+            <FarmCard
+              key={f.poolId}
+              farm={f}
+              round={round}
+              timestamp={timestamp}
+            />
+          ))
       ) : (
         <div>No farms</div>
       )}

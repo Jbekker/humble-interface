@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import { tokenSymbol } from "../../utils/dex";
 import { getToken, getTokens, updateToken } from "../../store/tokenSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
-import { Skeleton } from "@mui/material";
+import { Fade, Skeleton } from "@mui/material";
 import { CONTRACT, abi } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
 import { TOKEN_WVOI1 } from "../../constants/tokens";
@@ -633,78 +633,80 @@ const TokenCard: FC<TokenCardProps> = ({
   const symbol = tokenSymbol(token);
 
   return (
-    <PoolCardRoot className={isDarkTheme ? "dark" : "light"}>
-      <PoolCardRow>
-        <Col1>
-          <Col1Row1>
-            <CryptoIconPlaceholder
-              color={stringToColorCode(
-                algosdk.getApplicationAddress(token.tokenId)
-              )}
-            />
-            <PairInfoContainer>
-              <PairInfo>
-                <PairTokens>
-                  <PairTokenLabel>{symbol}</PairTokenLabel>
-                  {/*<PairTokenLabel>/ {symbolB}</PairTokenLabel>
+    <Fade in={true} timeout={1500}>
+      <PoolCardRoot className={isDarkTheme ? "dark" : "light"}>
+        <PoolCardRow>
+          <Col1>
+            <Col1Row1>
+              <CryptoIconPlaceholder
+                color={stringToColorCode(
+                  algosdk.getApplicationAddress(token.tokenId)
+                )}
+              />
+              <PairInfoContainer>
+                <PairInfo>
+                  <PairTokens>
+                    <PairTokenLabel>{symbol}</PairTokenLabel>
+                    {/*<PairTokenLabel>/ {symbolB}</PairTokenLabel>
                   // <CryptoIconPlaceholder />*/}
-                </PairTokens>
-              </PairInfo>
-              <PairIds>
-                <Field>
-                  <FieldLabel>ID:</FieldLabel>
-                  <FieldValue>{token.tokenId}</FieldValue>
-                </Field>
-                {/*<Field>
+                  </PairTokens>
+                </PairInfo>
+                <PairIds>
+                  <Field>
+                    <FieldLabel>ID:</FieldLabel>
+                    <FieldValue>{token.tokenId}</FieldValue>
+                  </Field>
+                  {/*<Field>
                   <FieldLabel>ID:</FieldLabel>
                   <FieldValue>{pool.tokB}</FieldValue>
                 </Field>*/}
-              </PairIds>
-            </PairInfoContainer>
-          </Col1Row1>
-        </Col1>
-        <Col3>
-          <TVLLabel>{price}</TVLLabel>
-        </Col3>
-        <Col3>
-          <VolumeLabel>{tvl} VOI</VolumeLabel>
-        </Col3>
-        <Col4>
-          <APRLabelContainer>
-            <APRLabel>{tokenPools.length}</APRLabel>
-          </APRLabelContainer>
-        </Col4>
-        <Col5>
-          <StyledLink
-            to={``}
-            style={{
-              width: "100%",
-            }}
-          >
-            <AddButton
-              onClick={() => {
-                toast.info("Not yet implemented");
+                </PairIds>
+              </PairInfoContainer>
+            </Col1Row1>
+          </Col1>
+          <Col3>
+            <TVLLabel>{price}</TVLLabel>
+          </Col3>
+          <Col3>
+            <VolumeLabel>{tvl} VOI</VolumeLabel>
+          </Col3>
+          <Col4>
+            <APRLabelContainer>
+              <APRLabel>{tokenPools.length}</APRLabel>
+            </APRLabelContainer>
+          </Col4>
+          <Col5>
+            <StyledLink
+              to={``}
+              style={{
+                width: "100%",
               }}
             >
-              <ButtonLabelContainer>
-                <AddButtonLabel>Pools</AddButtonLabel>
-              </ButtonLabelContainer>
-            </AddButton>
-          </StyledLink>
-          <StyledLink to={``}>
-            <SwapButton
-              onClick={() => {
-                toast.info("Not yet implemented");
-              }}
-            >
-              <ButtonLabelContainer>
-                <SwapButtonLabel>Swap</SwapButtonLabel>
-              </ButtonLabelContainer>
-            </SwapButton>
-          </StyledLink>
-        </Col5>
-      </PoolCardRow>
-    </PoolCardRoot>
+              <AddButton
+                onClick={() => {
+                  toast.info("Not yet implemented");
+                }}
+              >
+                <ButtonLabelContainer>
+                  <AddButtonLabel>Pools</AddButtonLabel>
+                </ButtonLabelContainer>
+              </AddButton>
+            </StyledLink>
+            <StyledLink to={``}>
+              <SwapButton
+                onClick={() => {
+                  toast.info("Not yet implemented");
+                }}
+              >
+                <ButtonLabelContainer>
+                  <SwapButtonLabel>Swap</SwapButtonLabel>
+                </ButtonLabelContainer>
+              </SwapButton>
+            </StyledLink>
+          </Col5>
+        </PoolCardRow>
+      </PoolCardRoot>
+    </Fade>
   );
 };
 

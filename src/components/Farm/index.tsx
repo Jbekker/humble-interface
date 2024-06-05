@@ -220,6 +220,8 @@ const Farm = () => {
     return farmList;
   }, [farms]);
 
+  const [showing, setShowing] = useState<number>(10);
+
   const isLoading = !pools || !tokens || !farms || !stake;
 
   return !isLoading ? (
@@ -228,8 +230,12 @@ const Farm = () => {
         <FarmLiquidity farms={farms} pools={pools} stake={userStake} />
       ) : null}
 
-      <FarmList farms={farmList} />
-      <ViewMoreButton>
+      <FarmList showing={showing} farms={farmList} />
+      <ViewMoreButton
+        onClick={() => {
+          setShowing(showing + 10);
+        }}
+      >
         <ButtonLabelContainer>
           <DropdownIcon />
           <ButtonLabel>View More</ButtonLabel>

@@ -5,7 +5,7 @@ import ActiveSwapIcon from "static/icon/icon-swap-active-light.svg";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
-import { CircularProgress, Stack } from "@mui/material";
+import { CircularProgress, Fade, Skeleton, Stack } from "@mui/material";
 import { CONTRACT, arc200, swap } from "ulujs";
 import { TOKEN_VIA, TOKEN_VOI, TOKEN_WVOI1 } from "../../constants/tokens";
 import { getAlgorandClients } from "../../wallets";
@@ -24,6 +24,7 @@ import { CTCINFO_DEFAULT_LP } from "../../constants/dex";
 import SwapSuccessfulModal from "../modals/SwapSuccessfulModal";
 import { hasBalance } from "ulujs/types/arc200";
 import { max } from "moment";
+import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
 
 const spec = {
   name: "pool",
@@ -609,8 +610,8 @@ const Swap = () => {
       });
   }, [eligiblePools, token, token2]);
 
-  const rate = useMemo(() => {
-    if (!info || !token || !token2) return;
+  const [lhs, rhs, rate, rateReady] = useMemo(() => {
+    if (!info || !token || !token2) return [1, 1, 1, false];
     console.log({ info, token, token2 });
     const A = { ...token, tokenId: tokenId(token) };
     const B = {
@@ -620,7 +621,7 @@ const Swap = () => {
     const res = swap.rate(info, A, B);
     const res2 = swap.rate(info, B, A);
     console.log({ res, res2 });
-    return res;
+    return res < 0.000001 ? [res2, 1, 1 / res2, true] : [1, 1 / res, res, true];
   }, [info, token, token2]);
 
   console.log("rate", rate);
@@ -920,6 +921,8 @@ const Swap = () => {
     return (Number(actualOutcome) * 0.995).toLocaleString();
   }, [actualOutcome]);
 
+  const formatter = new Intl.NumberFormat("en", { notation: "compact" });
+
   const poolBalance = useMemo(() => {
     if (!info || !token || !token2) return "-";
     const swapAForB =
@@ -927,7 +930,6 @@ const Swap = () => {
     const balA = swapAForB ? info.poolBals.A : info.poolBals.B;
     const balB = swapAForB ? info.poolBals.B : info.poolBals.A;
 
-    const formatter = new Intl.NumberFormat("en", { notation: "compact" });
     const balAF = formatter.format(
       new BigNumber(balA)
         .dividedBy(new BigNumber(10).pow(token.decimals))
@@ -988,6 +990,7 @@ const Swap = () => {
       );
       console.log(swapR);
       if (!swapR.success) throw new Error("Swap simulation failed");
+
       await toast.promise(
         signTransactions(
           swapR.txns.map(
@@ -1006,6 +1009,30 @@ const Swap = () => {
           theme: "dark",
         }
       );
+
+      // -----------------------------------------
+      // QUEST HERE hmbl_pool_swap
+      // -----------------------------------------
+      do {
+        const address = activeAccount.address;
+        const actions: string[] = [QUEST_ACTION.SWAP_TOKEN];
+        const {
+          data: { results },
+        } = await getActions(address);
+        for (const action of actions) {
+          const address = activeAccount.address;
+          const key = `${action}:${address}`;
+          const completedAction = results.find((el: any) => el.key === key);
+          if (!completedAction) {
+            await submitAction(action, address, {
+              poolId,
+            });
+          }
+          // TODO notify quest completion here
+        }
+      } while (0);
+      // -----------------------------------------
+
       // TODO add confirmation modal
     } catch (e: any) {
       console.log(e);
@@ -1678,12 +1705,21 @@ const Swap = () => {
             </RateLabel>
             <RateValue>
               <RateMain className={isDarkTheme ? "dark" : "light"}>
-                1 {tokenSymbol(token)} = {rate?.toFixed(token2?.decimals)}{" "}
+                {lhs === 1
+                  ? 1
+                  : lhs?.toFixed(Math.min(6, token?.decimals || 0))}{" "}
+                {tokenSymbol(token)} ={" "}
+                {lhs > 1
+                  ? 1
+                  : Math.round(rate)?.toFixed(
+                      Math.min(6, token2?.decimals || 0)
+                    )}
+                {` `}
                 {tokenSymbol(token2)}
               </RateMain>
               <RateSub>
-                {tokenSymbol(token2)} = {invRate?.toFixed(token?.decimals)}{" "}
-                {tokenSymbol(token)}
+                {lhs === 1 ? 1 : rhs} {tokenSymbol(token2)} ={" "}
+                {invRate?.toFixed(token?.decimals)} {tokenSymbol(token)}
               </RateSub>
             </RateValue>
           </RateContainer>

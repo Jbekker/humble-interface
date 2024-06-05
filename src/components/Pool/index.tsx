@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
@@ -7,8 +7,10 @@ import PoolPosition from "../PoolPosition";
 import PoolList from "../PoolList";
 import { getPools } from "../../store/poolSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
-import { PoolI } from "../../types";
+import { BalanceI, PoolI, PositionI } from "../../types";
 import { getTokens } from "../../store/tokenSlice";
+import axios from "axios";
+import BigNumber from "bignumber.js";
 
 const PoolRoot = styled.div`
   display: flex;
@@ -97,20 +99,110 @@ const Pool = () => {
     (state: RootState) => state.theme.isDarkTheme
   );
   const [showing, setShowing] = useState<number>(10);
+  const [showingPositions, setShowingPositions] = useState<number>(10);
+
+  const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
+
+  const [balances, setBalances] = React.useState<BalanceI[]>();
+  useEffect(() => {
+    if (!activeAccount) return;
+    axios
+      .get(
+        `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/balances?accountId=${activeAccount.address}`
+      )
+      .then((res) => {
+        setBalances(res.data.balances);
+      });
+  }, [activeAccount]);
+
+  const [tokens, setTokens] = React.useState<any[]>();
+  useEffect(() => {
+    if (!activeAccount) return;
+    axios
+      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`)
+      .then((res) => {
+        setTokens(res.data.tokens);
+      });
+  }, [activeAccount]);
+
+  const [positions, setPositions] = React.useState<PositionI[]>([]);
+  useEffect(() => {
+    if (!activeAccount || !balances) return;
+    (async () => {
+      const positions = [];
+      for (const bal of balances) {
+        const balance = BigInt(bal.balance);
+        const pool = pools.find((p) => p.poolId === bal.contractId);
+        if (!pool || balance === BigInt(0)) continue;
+        positions.push({
+          ...pool,
+          balance: BigInt(bal.balance),
+        });
+      }
+      setPositions(positions);
+    })();
+  }, [activeAccount, pools, balances]);
+
+  const filteredPools = useMemo(() => {
+    if (!tokens) return [];
+    const fPools = [...pools].sort((a, b) => a.round - b.round);
+    const uPools = new Map();
+    for (const pool of fPools) {
+      const key =
+        pool.tokA > pool.tokB
+          ? `${pool.tokB}-${pool.tokA}`
+          : `${pool.tokA}-${pool.tokB}`;
+      if (!uPools.has(key)) {
+        uPools.set(key, pool);
+      }
+    }
+    return Array.from(uPools.values());
+  }, [tokens, pools]);
+
   return (
     <PoolRoot className={isDarkTheme ? "dark" : "light"}>
-      {activeAccount ? <PoolPosition /> : null}
-      <PoolList showing={showing} />
-      <ViewMoreButton
-        onClick={() => {
-          setShowing(showing + 10);
-        }}
-      >
-        <ButtonLabelContainer>
-          <DropdownIcon />
-          <ButtonLabel>View More</ButtonLabel>
-        </ButtonLabelContainer>
-      </ViewMoreButton>
+      {activeAccount ? (
+        <>
+          <PoolPosition
+            positions={positions}
+            showing={showingPositions}
+            tokens={tokens || ([] as any[])}
+          />
+          {positions.length > showingPositions ? (
+            <ViewMoreButton
+              onClick={() => {
+                setShowingPositions(showingPositions + 10);
+                setShowing(10);
+              }}
+            >
+              <ButtonLabelContainer>
+                <DropdownIcon />
+                <ButtonLabel>View More</ButtonLabel>
+              </ButtonLabelContainer>
+            </ViewMoreButton>
+          ) : null}
+        </>
+      ) : null}
+      <>
+        <PoolList
+          pools={filteredPools}
+          tokens={tokens || ([] as any[])}
+          showing={showing}
+        />
+        {filteredPools.length > showing ? (
+          <ViewMoreButton
+            onClick={() => {
+              setShowingPositions(10);
+              setShowing(showing + 10);
+            }}
+          >
+            <ButtonLabelContainer>
+              <DropdownIcon />
+              <ButtonLabel>View More</ButtonLabel>
+            </ButtonLabelContainer>
+          </ViewMoreButton>
+        ) : null}
+      </>
     </PoolRoot>
   );
 };
