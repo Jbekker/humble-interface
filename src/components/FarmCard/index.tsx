@@ -24,6 +24,7 @@ import algosdk from "algosdk";
 import { Button, ButtonGroup, Stack } from "@mui/material";
 import { CTCINFO_STAKR_200 } from "../../constants/dex";
 import { TOKEN_WVOI1 } from "../../constants/tokens";
+import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
 
 const StyledLink = styled(Link)`
   text-decoration: none;
@@ -1139,6 +1140,29 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
             success: "Staked!",
           }
         );
+
+        // -----------------------------------------
+        // QUEST HERE hmbl_pool_creation
+        // -----------------------------------------
+        do {
+          const address = activeAccount.address;
+          const actions: string[] = [QUEST_ACTION.STAKE_TOKEN];
+          const {
+            data: { results },
+          } = await getActions(address);
+          for (const action of actions) {
+            const address = activeAccount.address;
+            const key = `${action}:${address}`;
+            const completedAction = results.find((el: any) => el.key === key);
+            if (!completedAction) {
+              await submitAction(action, address, {
+                contractId: CTCINFO_STAKR_200,
+              });
+            }
+            // TODO notify quest completion here
+          }
+        } while (0);
+        // -----------------------------------------
       } while (0);
     } catch (e: any) {
       toast.error(e.message);
