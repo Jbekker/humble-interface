@@ -28,6 +28,7 @@ import { tokenId, tokenSymbol } from "../../utils/dex";
 import BigNumber from "bignumber.js";
 import { CTCINFO_TRI } from "../../constants/dex";
 import { ZERO_ADDRESS } from "../../constants/avm";
+import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
 
 const spec = {
   name: "pool",
@@ -1063,7 +1064,30 @@ const Swap = () => {
           }
         );
       } while (0);
-      // -------------------------------------------
+
+      // -----------------------------------------
+      // QUEST HERE hmbl_pool_creation
+      // -----------------------------------------
+      do {
+        const address = activeAccount.address;
+        const actions: string[] = [QUEST_ACTION.CREATE_LIQUIDITY_POOL];
+        const {
+          data: { results },
+        } = await getActions(address);
+        for (const action of actions) {
+          const address = activeAccount.address;
+          const key = `${action}:${address}`;
+          const completedAction = results.find((el: any) => el.key === key);
+          if (!completedAction) {
+            await submitAction(action, address, {
+              poolId: ctcInfo
+            });
+          }
+          // TODO notify quest completion here
+        }
+      } while (0);
+      // -----------------------------------------
+
       navigate(`/pool/add?poolId=${ctcInfo}&newPool=true`);
     } catch (e: any) {
       toast.error(e.message);
