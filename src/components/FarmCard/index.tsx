@@ -825,6 +825,29 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
           success: "Harvested!",
         }
       );
+
+      // -----------------------------------------
+      // QUEST HERE hmbl_farm_claim
+      // -----------------------------------------
+      do {
+        const address = activeAccount.address;
+        const actions: string[] = [QUEST_ACTION.CLAIM_REWARD];
+        const {
+          data: { results },
+        } = await getActions(address);
+        for (const action of actions) {
+          const address = activeAccount.address;
+          const key = `${action}:${address}`;
+          const completedAction = results.find((el: any) => el.key === key);
+          if (!completedAction) {
+            await submitAction(action, address, {
+              contractId: CTCINFO_STAKR_200,
+            });
+          }
+          // TODO notify quest completion here
+        }
+      } while (0);
+      // -----------------------------------------
     } catch (e: any) {
       console.log(e);
       toast.error(e.message);
@@ -877,6 +900,29 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
           success: "Harvested!",
         }
       );
+
+      // -----------------------------------------
+      // QUEST HERE hmbl_farm_claim
+      // -----------------------------------------
+      do {
+        const address = activeAccount.address;
+        const actions: string[] = [QUEST_ACTION.CLAIM_REWARD];
+        const {
+          data: { results },
+        } = await getActions(address);
+        for (const action of actions) {
+          const address = activeAccount.address;
+          const key = `${action}:${address}`;
+          const completedAction = results.find((el: any) => el.key === key);
+          if (!completedAction) {
+            await submitAction(action, address, {
+              contractId: CTCINFO_STAKR_200,
+            });
+          }
+          // TODO notify quest completion here
+        }
+      } while (0);
+      // -----------------------------------------
     } catch (e: any) {
       console.log(e);
       toast.error(e.message);
