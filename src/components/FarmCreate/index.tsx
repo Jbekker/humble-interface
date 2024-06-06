@@ -19,6 +19,8 @@ import { tokenId, tokenSymbol } from "../../utils/dex";
 import BigNumber from "bignumber.js";
 import BasicDateCalendar from "../BasicDateCalendar";
 import moment from "moment";
+import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
+import { CTCINFO_STAKR_200 } from "../../constants/dex";
 
 const Note = styled.div`
   align-self: stretch;
@@ -517,6 +519,29 @@ const Swap = () => {
             success: "Successfully created farm",
           }
         );
+
+        // -----------------------------------------
+        // QUEST HERE hmbl_farm_claim
+        // -----------------------------------------
+        do {
+          const address = activeAccount.address;
+          const actions: string[] = [QUEST_ACTION.CREATE_FARM];
+          const {
+            data: { results },
+          } = await getActions(address);
+          for (const action of actions) {
+            const address = activeAccount.address;
+            const key = `${action}:${address}`;
+            const completedAction = results.find((el: any) => el.key === key);
+            if (!completedAction) {
+              await submitAction(action, address, {
+                contractId: CTCINFO_STAKR_200,
+              });
+            }
+            // TODO notify quest completion here
+          }
+        } while (0);
+        // -----------------------------------------
       } while (0);
     } catch (e: any) {
       toast.error(e.message);
