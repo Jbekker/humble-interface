@@ -121,7 +121,7 @@ const PoolPosition: FC<PoolPositionProps> = ({
         ) : null}
       </HeadingRow>
       <HeadingRow className="heading-row2" style={{ paddingBottom: "32px" }}>
-        {positions.length > 0 ? <Search onChange={onFilter} /> : null}
+        <Search onChange={onFilter} />
       </HeadingRow>
       <Body>
         {positions.length > 0 ? (

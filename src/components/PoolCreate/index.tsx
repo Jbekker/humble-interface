@@ -632,7 +632,7 @@ const Swap = () => {
   const [tokens2, setTokens] = React.useState<any[]>();
   useEffect(() => {
     axios
-      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`)
+      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=tokens`)
       .then((res) => {
         setTokens(res.data.tokens);
       });

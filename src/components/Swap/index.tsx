@@ -25,6 +25,7 @@ import SwapSuccessfulModal from "../modals/SwapSuccessfulModal";
 import { hasBalance } from "ulujs/types/arc200";
 import { max } from "moment";
 import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
+import axios from "axios";
 
 const spec = {
   name: "pool",
@@ -856,10 +857,26 @@ const Swap = () => {
     }
   }, [pool, token, pools]);
 
+  const [tokens2, setTokens] = React.useState<any[]>();
+  useEffect(() => {
+    axios
+      .get(
+        `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=tokens`
+      )
+      .then(({ data }) => {
+        setTokens(data.tokens);
+      });
+  }, []);
+
+  console.log({ tokens2 });
+
   // EFFECT: get token balance
   useEffect(() => {
-    if (!token || !activeAccount) return;
+    if (!token || !activeAccount || !tokens2) return;
     const { algodClient, indexerClient } = getAlgorandClients();
+    const wrappedTokenId = Number(
+      tokens2.find((t) => t.contractId === token.tokenId)?.tokenId
+    );
     if (token.tokenId === 0) {
       algodClient
         .accountInformation(activeAccount.address)
@@ -869,6 +886,22 @@ const Swap = () => {
           const minBalance = r["min-balance"];
           const available = amount - minBalance;
           setBalance((available / 10 ** token.decimals).toLocaleString());
+        });
+    } else if (wrappedTokenId !== 0 && !isNaN(wrappedTokenId)) {
+      algodClient
+        .accountAssetInformation(activeAccount.address, wrappedTokenId)
+        .do()
+        .then((accAssetInfo: any) => {
+          indexerClient
+            .lookupAssetByID(wrappedTokenId)
+            .do()
+            .then((assetInfo: any) => {
+              const decimals = assetInfo.asset.params.decimals;
+              const balance = new BigNumber(
+                accAssetInfo["asset-holding"].amount
+              ).dividedBy(new BigNumber(10).pow(decimals));
+              setBalance(balance.toFixed(Math.min(6, decimals)));
+            });
         });
     } else {
       const ci = new arc200(token.tokenId, algodClient, indexerClient);
@@ -885,12 +918,15 @@ const Swap = () => {
         }
       );
     }
-  }, [token, activeAccount]);
+  }, [token, activeAccount, tokens2]);
 
   // EFFECT: get token2 balance
   useEffect(() => {
-    if (!token2 || !activeAccount) return;
+    if (!token2 || !activeAccount || !tokens2) return;
     const { algodClient, indexerClient } = getAlgorandClients();
+    const wrappedTokenId = Number(
+      tokens2.find((t) => t.contractId === token2.tokenId)?.tokenId
+    );
     if (token2.tokenId === 0) {
       algodClient
         .accountInformation(activeAccount.address)
@@ -900,6 +936,22 @@ const Swap = () => {
           const minBalance = r["min-balance"];
           const available = amount - minBalance;
           setBalance2((available / 10 ** token2.decimals).toLocaleString());
+        });
+    } else if (wrappedTokenId !== 0 && !isNaN(wrappedTokenId)) {
+      algodClient
+        .accountAssetInformation(activeAccount.address, wrappedTokenId)
+        .do()
+        .then((accAssetInfo: any) => {
+          indexerClient
+            .lookupAssetByID(wrappedTokenId)
+            .do()
+            .then((assetInfo: any) => {
+              const decimals = assetInfo.asset.params.decimals;
+              const balance = new BigNumber(
+                accAssetInfo["asset-holding"].amount
+              ).dividedBy(new BigNumber(10).pow(decimals));
+              setBalance2(balance.toFixed(Math.min(6, decimals)));
+            });
         });
     } else {
       const ci = new arc200(token2.tokenId, algodClient, indexerClient);
@@ -961,7 +1013,7 @@ const Swap = () => {
   }, [pool, info, token, token2]);
 
   const handleSwap = async () => {
-    if (!isValid) return;
+    if (!isValid || !tokens2) return;
     if (!activeAccount) {
       toast.info("Please connect your wallet first");
       return;
@@ -990,9 +1042,42 @@ const Swap = () => {
 
       if (!pool || !pool2) throw new Error("No pool found");
 
+      const networkToken = {
+        contractId: TOKEN_WVOI1,
+        tokenId: "0",
+        decimals: 6,
+        symbol: "VOI",
+      };
+
+      const mA =
+        token.tokenId === 0
+          ? networkToken
+          : tokens2.find((t) => t.contractId === token.tokenId);
+
+      const mB =
+        token2.tokenId === 0
+          ? networkToken
+          : tokens2.find((t) => t.contractId === token2.tokenId);
+
+      const A = {
+        ...mA,
+        amount: fromAmount.replace(/,/g, ""),
+        tokenId: mA.tokenId ?? undefined,
+      };
+      const B = {
+        ...mB,
+        amount: toAmount.replace(/,/g, ""),
+        tokenId: mB.tokenId ?? undefined,
+      };
+
+      console.log({ A, B });
+
       const swapR = await ci.swap(
         acc.addr,
         pool2.poolId,
+        A,
+        B
+        /*
         {
           contractId: tokenId(token),
           tokenId: token.tokenId === 0 ? "0" : undefined,
@@ -1005,6 +1090,7 @@ const Swap = () => {
           symbol: token2.symbol,
           decimals: `${token2?.decimals || 0}`,
         }
+        */
       );
       console.log(swapR);
       if (!swapR.success) throw new Error("Swap simulation failed");
