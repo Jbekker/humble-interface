@@ -2,7 +2,7 @@ import styled from "@emotion/styled";
 import React, { FC, useEffect, useMemo, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
-import { ARC200TokenI, PoolI } from "../../types";
+import { ARC200TokenI, IndexerPoolI, PoolI } from "../../types";
 import { Link } from "react-router-dom";
 import { tokenSymbol } from "../../utils/dex";
 import { getToken, getTokens, updateToken } from "../../store/tokenSlice";
@@ -586,7 +586,7 @@ const SwapButtonLabel = styled.div`
 `;
 
 interface PoolCardProps {
-  pool: PoolI;
+  pool: IndexerPoolI;
   tokens?: any[];
   balance?: string;
   tvl?: string;
@@ -601,6 +601,7 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
   );
   const dispatch = useDispatch();
   // EFFECT: Fetch token A
+  /*
   useEffect(() => {
     if (!tokA?.tokenId) {
       getToken(pool.tokA).then((token) => {
@@ -609,7 +610,9 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
       });
     }
   }, [dispatch]);
+  */
   // EFFECT: Fetch token B
+  /*
   useEffect(() => {
     if (!tokB?.tokenId) {
       getToken(pool.tokB).then((token) => {
@@ -618,7 +621,9 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
       });
     }
   }, [dispatch]);
+  */
 
+  /*
   const pools = useSelector((state: RootState) => state.pools.pools);
 
   const poolBals = useSelector(
@@ -628,7 +633,9 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
   const volume = useSelector(
     (state: RootState) => state.volumes.volumes
   ).filter((v) => v.poolId === pool.poolId);
+  */
 
+  /*
   const [info, setInfo] = useState<any>();
   const [infoA, setInfoA] = useState<any>();
   const [infoB, setInfoB] = useState<any>();
@@ -641,7 +648,9 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
     });
     return ci.Info();
   };
+  */
 
+  /*
   // EFFECT get pool info
   useEffect(() => {
     // const { algodClient, indexerClient } = getAlgorandClients();
@@ -728,7 +737,9 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
       }
     }
   }, []);
+  */
 
+  /*
   const totalVolumeBn = useMemo(() => {
     if (!volume || !info || !tokA || !tokB) return new BigNumber(0);
     const totalA = volume
@@ -924,14 +935,18 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
     //   }
     // }
   }, [tokA, tokB, info, infoA, infoB, pools, tokens]);
+  */
 
+  /*
   const tvl = useMemo(() => {
     if (!tvlBn) return "";
     return new Intl.NumberFormat("en", { notation: "compact" }).format(
       tvlBn.toNumber()
     );
   }, [tvlBn]);
+  */
 
+  /*
   // apr
   // anualizedFee / tvl * 100
   const apr = useMemo(() => {
@@ -944,9 +959,10 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
     const aprBn = annualizedFee.multipliedBy(100).div(tvlBn);
     return aprBn.toFixed(2);
   }, [totalVolumeBn, tvlBn]);
+  */
 
+  /*
   const [value, setValue] = useState("0");
-
   useEffect(() => {
     if (!poolBals || poolBals.length === 0 || !balance) return;
     // get most recent pool balance
@@ -960,7 +976,9 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
     //   )
     // );
   }, [poolBals, balance]);
+  */
 
+  /*
   useEffect(() => {
     if (!info || !tokA || !tokB || !activeAccount || !balance || !tokens)
       return;
@@ -1061,18 +1079,18 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
     //                 )
     //               );
     //               */
-    //             }
-    //           }
-    //         );
-    //       }
-    //     });
-    //   } else if (info.tokB === TOKEN_WVOI1) {
-    //     // TODO in case tokB is wvoi
-    //   }
-    // } else {
-    //   // TODO in case neither is wvoi
-    // }
-  }, [info, tokA, tokB, activeAccount, tokens]);
+  //             }
+  //           }
+  //         );
+  //       }
+  //     });
+  //   } else if (info.tokB === TOKEN_WVOI1) {
+  //     // TODO in case tokB is wvoi
+  //   }
+  // } else {
+  //   // TODO in case neither is wvoi
+  // }
+  //}, [info, tokA, tokB, activeAccount, tokens]);
   // if (
   //   !info ||
   //   info.poolBals.reduce((acc: bigint, val: bigint) => acc + val, BigInt(0)) ===
@@ -1089,20 +1107,20 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
               <PairInfoContainer>
                 <PairInfo>
                   <PairTokens>
-                    <PairTokenLabel>{symbolA}</PairTokenLabel>
+                    <PairTokenLabel>{pool.symbolA}</PairTokenLabel>
                     <CryptoIconPlaceholder />
-                    <PairTokenLabel>/ {symbolB}</PairTokenLabel>
+                    <PairTokenLabel>/ {pool.symbolB}</PairTokenLabel>
                     <CryptoIconPlaceholder />
                   </PairTokens>
                 </PairInfo>
                 <PairIds>
                   <Field>
                     <FieldLabel>ID:</FieldLabel>
-                    <FieldValue>{pool.tokA}</FieldValue>
+                    <FieldValue>{pool.tokAId}</FieldValue>
                   </Field>
                   <Field>
                     <FieldLabel>ID:</FieldLabel>
-                    <FieldValue>{pool.tokB}</FieldValue>
+                    <FieldValue>{pool.tokBId}</FieldValue>
                   </Field>
                 </PairIds>
               </PairInfoContainer>
@@ -1125,13 +1143,13 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
                   >
                     {balance || ""}
                     <br />
-                    {value !== "0" ? `≈${value} VOI` : ""}
+                    {pool.value ? `≈${pool.formattedValue} VOI` : null}
                   </APRLabel>
                 </APRLabelContainer>
               </Col4>
               <Col5>
                 <StyledLink
-                  to={`/pool/add?poolId=${pool.poolId}`}
+                  to={`/pool/add?poolId=${pool.contractId}`}
                   style={{
                     width: "100%",
                   }}
@@ -1142,7 +1160,7 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
                     </ButtonLabelContainer>
                   </AddButton>
                 </StyledLink>
-                <StyledLink to={`/pool/remove?poolId=${pool.poolId}`}>
+                <StyledLink to={`/pool/remove?poolId=${pool.contractId}`}>
                   <SwapButton>
                     <ButtonLabelContainer>
                       <SwapButtonLabel>Remove</SwapButtonLabel>
@@ -1154,21 +1172,19 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
           ) : (
             <>
               <Col3>
-                <TVLLabel>{tvl} VOI</TVLLabel>
+                <TVLLabel>{pool.tvl} VOI</TVLLabel>
               </Col3>
               <Col3>
-                <VolumeLabel>
-                  {isNaN(Number(totalVolume)) ? "0 VOI" : `${totalVolume} VOI`}
-                </VolumeLabel>
+                <VolumeLabel>{pool?.vol || "0"} VOI</VolumeLabel>
               </Col3>
               <Col4>
                 <APRLabelContainer>
-                  <APRLabel>{apr}%</APRLabel>
+                  <APRLabel>{pool?.apr || "0.00"}%</APRLabel>
                 </APRLabelContainer>
               </Col4>
               <Col5>
                 <StyledLink
-                  to={`/pool/add?poolId=${pool.poolId}`}
+                  to={`/pool/add?poolId=${pool.contractId}`}
                   style={{
                     width: "100%",
                   }}
@@ -1179,7 +1195,7 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
                     </ButtonLabelContainer>
                   </AddButton>
                 </StyledLink>
-                <StyledLink to={`/swap?poolId=${pool.poolId}`}>
+                <StyledLink to={`/swap?poolId=${pool.contractId}`}>
                   <SwapButton>
                     <ButtonLabelContainer>
                       <SwapButtonLabel>Swap</SwapButtonLabel>

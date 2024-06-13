@@ -3,12 +3,13 @@ import React, { FC, useEffect, useMemo } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import PoolCard from "../PoolCard";
-import { PoolI } from "../../types";
+import { IndexerPoolI, PoolI } from "../../types";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet";
 import axios from "axios";
 import BigNumber from "bignumber.js";
-import { Fade } from "@mui/material";
+import { Box, Fade, Stack } from "@mui/material";
+import Search from "../Search";
 
 const PopularPoolsRoot = styled.div`
   width: 90%;
@@ -23,7 +24,7 @@ const PopularPoolsRoot = styled.div`
     & h2 {
       color: var(--Color-Neutral-Element-Primary, #fff);
     }
-    & .heading-row {
+    & .heading-row2 {
       border-bottom: 1px solid
         var(--Color-Neutral-Stroke-Primary, rgba(255, 255, 255, 0.2));
     }
@@ -36,7 +37,7 @@ const PopularPoolsRoot = styled.div`
     & h2 {
       color: var(--Color-Neutral-Element-Primary, #0c0c10);
     }
-    & .heading-row {
+    & .heading-row2 {
       border-bottom: 1px solid var(--Color-Neutral-Stroke-Primary, #d8d8e1);
     }
     & .message-text {
@@ -48,7 +49,9 @@ const PopularPoolsRoot = styled.div`
 const HeadingRow = styled.div`
   display: flex;
   width: 100%;
+  /*
   padding-bottom: var(--Spacing-700, 16px);
+  */
   justify-content: space-between;
   align-items: center;
 `;
@@ -217,11 +220,12 @@ const PoolIcon = () => {
 
 interface PoolListProps {
   showing: number;
-  pools: PoolI[];
+  pools: IndexerPoolI[];
   tokens: any[];
+  onFilter: (input: string) => void;
 }
 
-const PoolList: FC<PoolListProps> = ({ pools, showing, tokens }) => {
+const PoolList: FC<PoolListProps> = ({ pools, showing, tokens, onFilter }) => {
   const { activeAccount } = useWallet();
   const navigate = useNavigate();
   const isDarkTheme = useSelector(
@@ -261,6 +265,9 @@ const PoolList: FC<PoolListProps> = ({ pools, showing, tokens }) => {
             </CreateTokenButton>
           ) : null}
         </HeadingRow>
+        <HeadingRow className="heading-row2" style={{ paddingBottom: "32px" }}>
+          <Search onChange={onFilter} />
+        </HeadingRow>
         <Columns>
           <Heading>
             <ColumnPair>
@@ -281,9 +288,13 @@ const PoolList: FC<PoolListProps> = ({ pools, showing, tokens }) => {
           </Heading>
         </Columns>
         {pools.length > 0 ? (
-          pools.slice(0, showing).map((p: PoolI) => {
+          pools.slice(0, showing).map((p: IndexerPoolI) => {
             return (
-              <PoolCard tokens={tokens} key={p.poolId} pool={p}></PoolCard>
+              <PoolCard
+                tokens={tokens}
+                key={p.contractId}
+                pool={p}
+              ></PoolCard>
             );
           })
         ) : (

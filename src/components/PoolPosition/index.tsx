@@ -5,9 +5,12 @@ import { useSelector } from "react-redux";
 import { BalanceI, PoolI, PositionI } from "../../types";
 import PoolCard from "../PoolCard";
 import { useWallet } from "@txnlab/use-wallet";
-import { Stack } from "@mui/material";
+import { Fade, Stack } from "@mui/material";
 import axios from "axios";
 import BigNumber from "bignumber.js";
+import Search from "../Search";
+
+const formatter = new Intl.NumberFormat("en", { notation: "compact" });
 
 const YourLiquidityRoot = styled.div`
   width: 90%;
@@ -22,7 +25,7 @@ const YourLiquidityRoot = styled.div`
     & h2 {
       color: var(--Color-Neutral-Element-Primary, #fff);
     }
-    & .heading-row {
+    & .heading-row2 {
       border-bottom: 1px solid
         var(--Color-Neutral-Stroke-Primary, rgba(255, 255, 255, 0.2));
     }
@@ -35,7 +38,7 @@ const YourLiquidityRoot = styled.div`
     & h2 {
       color: var(--Color-Neutral-Element-Primary, #0c0c10);
     }
-    & .heading-row {
+    & .heading-row2 {
       border-bottom: 1px solid var(--Color-Neutral-Stroke-Primary, #d8d8e1);
     }
     & .message-text {
@@ -47,7 +50,9 @@ const YourLiquidityRoot = styled.div`
 const HeadingRow = styled.div`
   display: flex;
   width: 100%;
+  /*
   padding-bottom: var(--Spacing-700, 16px);
+  */
   justify-content: space-between;
   align-items: center;
 `;
@@ -86,62 +91,37 @@ const MessageText = styled.div`
 
 interface PoolPositionProps {
   positions: PositionI[];
+  value: number;
   showing: number;
   tokens: any[];
+  onFilter: (value: string) => void;
 }
 
 const PoolPosition: FC<PoolPositionProps> = ({
   positions,
   showing,
   tokens,
+  onFilter,
+  value,
 }) => {
-  //const { activeAccount } = useWallet();
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  //const [tokens, setTokens] = React.useState<any[]>();
-  // useEffect(() => {
-  //   if (!activeAccount) return;
-  //   axios
-  //     .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`)
-  //     .then((res) => {
-  //       setTokens(res.data.tokens);
-  //     });
-  // }, [activeAccount]);
-  // const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
-  // const [balances, setBalances] = React.useState<BalanceI[]>();
-  // useEffect(() => {
-  //   if (!activeAccount) return;
-  //   axios
-  //     .get(
-  //       `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/balances?accountId=${activeAccount.address}`
-  //     )
-  //     .then((res) => {
-  //       setBalances(res.data.balances);
-  //     });
-  // }, [activeAccount]);
-  // const [positions, setPositions] = React.useState<PositionI[]>([]);
-  // React.useEffect(() => {
-  //   if (!activeAccount || !balances) return;
-  //   (async () => {
-  //     const positions = [];
-  //     for (const bal of balances) {
-  //       const balance = BigInt(bal.balance);
-  //       const pool = pools.find((p) => p.poolId === bal.contractId);
-  //       if (!pool || balance === BigInt(0)) continue;
-  //       positions.push({
-  //         ...pool,
-  //         balance: BigInt(bal.balance),
-  //       });
-  //     }
-  //     setPositions(positions);
-  //   })();
-  // }, [activeAccount, pools, balances]);
   return (
     <YourLiquidityRoot className={isDarkTheme ? "dark" : "light"}>
       <HeadingRow className="heading-row">
         <SectionTitle>Your Liquidity</SectionTitle>
+        {positions.length > 0 ? (
+          <Fade in={!!value} timeout={3000}>
+            <SectionTitle style={{ fontWeight: 200, fontSize: "16px" }}>
+              {formatter.format(value)} VOI
+            </SectionTitle>
+          </Fade>
+        ) : null}
+      </HeadingRow>
+      <HeadingRow className="heading-row2" style={{ paddingBottom: "32px" }}>
+        {positions.length > 0 ? <Search onChange={onFilter} /> : null}
       </HeadingRow>
       <Body>
         {positions.length > 0 ? (
@@ -151,9 +131,9 @@ const PoolPosition: FC<PoolPositionProps> = ({
               width: "100%",
             }}
           >
-            {positions.slice(0, showing).map((position: PositionI) => (
+            {positions.slice(0, showing).map((position: any) => (
               <PoolCard
-                key={`position-${position.poolId}`}
+                key={`position-${position.contractId}`}
                 tokens={tokens || []}
                 pool={position}
                 balance={new BigNumber(position.balance.toString())

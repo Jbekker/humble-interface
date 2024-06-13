@@ -157,6 +157,28 @@ export interface PositionI extends PoolI {
   balance: BigInt;
 }
 
+export interface IndexerPoolI {
+  contractId: number;
+  poolBalA: string;
+  poolBalB: string;
+  poolId: string;
+  providerId: string;
+  symbolA: string;
+  symbolB: string;
+  tokAId: string;
+  tokBId: string;
+  tvl: number;
+  tvlA: string;
+  tvlB: string;
+  volA: string;
+  volB: string;
+  apr: string;
+  supply: string;
+  value: number;
+  formattedValue: string;
+  vol: number; // derived
+}
+
 /* Farm */
 
 export interface FarmI {

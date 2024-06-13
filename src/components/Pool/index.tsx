@@ -7,10 +7,12 @@ import PoolPosition from "../PoolPosition";
 import PoolList from "../PoolList";
 import { getPools } from "../../store/poolSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
-import { BalanceI, PoolI, PositionI } from "../../types";
+import { BalanceI, IndexerPoolI, PoolI, PositionI } from "../../types";
 import { getTokens } from "../../store/tokenSlice";
 import axios from "axios";
 import BigNumber from "bignumber.js";
+
+const formatter = new Intl.NumberFormat("en", { notation: "compact" });
 
 const PoolRoot = styled.div`
   display: flex;
@@ -92,16 +94,26 @@ const ButtonLabel = styled(Button)`
   line-height: 120%; /* 26.4px */
 `;
 
+const applyFilter = (p: any, f: string) =>
+  p.symbolA.indexOf(f.toUpperCase()) >= 0 ||
+  p.symbolB.indexOf(f.toUpperCase()) >= 0 ||
+  `${p.tokAId}` === f ||
+  `${p.tokBId}` === f ||
+  p.poolId === f.toUpperCase();
+
 const Pool = () => {
   const { activeAccount } = useWallet();
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const [showing, setShowing] = useState<number>(10);
-  const [showingPositions, setShowingPositions] = useState<number>(10);
+  const pageSize = 10;
+  const [showing, setShowing] = useState<number>(pageSize);
+  const [showingPositions, setShowingPositions] = useState<number>(pageSize);
+  const [filter, setFilter] = useState<string>("");
+  const [filter2, setFilter2] = useState<string>("");
 
-  const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
+  //const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
 
   const [balances, setBalances] = React.useState<BalanceI[]>();
   useEffect(() => {
@@ -117,62 +129,136 @@ const Pool = () => {
 
   const [tokens, setTokens] = React.useState<any[]>();
   useEffect(() => {
-    if (!activeAccount) return;
+    //if (!activeAccount) return;
     axios
-      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`)
+      .get(
+        `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=all`
+      )
       .then((res) => {
         setTokens(res.data.tokens);
       });
   }, [activeAccount]);
 
-  const [positions, setPositions] = React.useState<PositionI[]>([]);
+  // POOLs
+  const [pools, setPools] = React.useState<IndexerPoolI[]>([]);
   useEffect(() => {
-    if (!activeAccount || !balances) return;
+    axios
+      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/dex/pools`)
+      .then(({ data }) => {
+        setPools(
+          data.pools.map((p: IndexerPoolI) => ({
+            ...p,
+            tvl: formatter.format(Number(p.tvl)),
+            vol: formatter.format(Number(p.volA) + Number(p.volB)),
+          }))
+        );
+      });
+  }, []);
+  // const uniqPools = useMemo(() => {
+  //   if (!tokens || !pools) return [];
+  //   const fPools = [...pools].sort((a, b) => a.round - b.round);
+  //   const uPools = new Map();
+  //   for (const pool of fPools) {
+  //     const key =
+  // s       pool.tokA > pool.tokB
+  //         ? `${pool.tokB}-${pool.tokA}`
+  //         : `${pool.tokA}-${pool.tokB}`;
+  //     const tokenA = tokens.find((t) => t.contractId === pool.tokA);
+  //     const tokenB = tokens.find((t) => t.contractId === pool.tokB);
+  //     if (!uPools.has(key)) {
+  //       uPools.set(key, {
+  //         ...pool,
+  //         key,
+  //         tokenA,
+  //         tokenB,
+  //       });
+  //     }
+  //   }
+  //   return Array.from(uPools.values());
+  // }, [tokens, pools]);
+  const uniqPools = pools;
+  const filteredPools = useMemo(() => {
+    const badPools = [
+      24585187, // VOI/TACOS old
+      23223146, // VOI/VRC200 old
+      47613814, // VOI/VIA 2nd
+      48698951, // VOI/VIA 3rd
+      24584694, // VOI/VOICE old
+      24590736, // VOI/VIA old
+    ];
+    return uniqPools.filter(
+      (p) => !badPools.includes(p.contractId) && applyFilter(p, filter)
+    );
+  }, [uniqPools, filter]);
+
+  const [positions, setPositions] = React.useState<any[]>([]);
+  useEffect(() => {
+    if (!activeAccount || !balances || !tokens || !filteredPools) return;
     (async () => {
       const positions = [];
       for (const bal of balances) {
         const balance = BigInt(bal.balance);
-        const pool = pools.find((p) => p.poolId === bal.contractId);
+        const pool = filteredPools.find((p) => p.contractId === bal.contractId);
         if (!pool || balance === BigInt(0)) continue;
+        const tokenA = tokens.find(
+          (t) => `${t.contractId}` === `${pool.tokAId}`
+        );
+        const tokenB = tokens.find(
+          (t) => `${t.contractId}` === `${pool.tokBId}`
+        );
+        const value =
+          pool.supply && pool.supply !== "0"
+            ? new BigNumber(bal.balance)
+                .dividedBy(new BigNumber(10).pow(6))
+                .dividedBy(new BigNumber(pool.supply))
+                .multipliedBy(
+                  Number(pool.tvlA) > Number(pool.tvlB)
+                    ? new BigNumber(pool.tvlB).multipliedBy(2)
+                    : new BigNumber(pool.tvlA).multipliedBy(2)
+                )
+                .toNumber()
+            : 0;
         positions.push({
           ...pool,
           balance: BigInt(bal.balance),
+          value,
+          formattedValue: formatter.format(value),
+          tokenA,
+          tokenB,
         });
       }
+      positions.sort((a, b) => Number(b.value) - Number(a.value));
       setPositions(positions);
+      //setValue(positions.reduce((acc, val) => acc + val.value, 0));
     })();
-  }, [activeAccount, pools, balances]);
+  }, [activeAccount, filteredPools, balances, tokens]);
+  const filteredPositions = useMemo(() => {
+    return positions.filter((p) => applyFilter(p, filter2));
+  }, [positions, filter2]);
+  const value = useMemo(
+    () => filteredPositions.reduce((acc, val) => acc + val.value, 0),
+    [filteredPositions]
+  );
 
-  const filteredPools = useMemo(() => {
-    if (!tokens) return [];
-    const fPools = [...pools].sort((a, b) => a.round - b.round);
-    const uPools = new Map();
-    for (const pool of fPools) {
-      const key =
-        pool.tokA > pool.tokB
-          ? `${pool.tokB}-${pool.tokA}`
-          : `${pool.tokA}-${pool.tokB}`;
-      if (!uPools.has(key)) {
-        uPools.set(key, pool);
-      }
-    }
-    return Array.from(uPools.values());
-  }, [tokens, pools]);
+  const isLoading = !filteredPools || !filteredPositions;
 
+  if (isLoading) return null;
   return (
     <PoolRoot className={isDarkTheme ? "dark" : "light"}>
       {activeAccount ? (
         <>
           <PoolPosition
-            positions={positions}
+            positions={filteredPositions}
+            value={value}
             showing={showingPositions}
             tokens={tokens || ([] as any[])}
+            onFilter={setFilter2}
           />
-          {positions.length > showingPositions ? (
+          {filteredPositions.length > showingPositions ? (
             <ViewMoreButton
               onClick={() => {
-                setShowingPositions(showingPositions + 10);
-                setShowing(10);
+                setShowingPositions(showingPositions + pageSize);
+                setShowing(pageSize);
               }}
             >
               <ButtonLabelContainer>
@@ -188,12 +274,16 @@ const Pool = () => {
           pools={filteredPools}
           tokens={tokens || ([] as any[])}
           showing={showing}
+          onFilter={(v) => {
+            setFilter(v);
+            setShowing(pageSize);
+          }}
         />
         {filteredPools.length > showing ? (
           <ViewMoreButton
             onClick={() => {
-              setShowingPositions(10);
-              setShowing(showing + 10);
+              setShowingPositions(pageSize);
+              setShowing(showing + pageSize);
             }}
           >
             <ButtonLabelContainer>

@@ -709,6 +709,7 @@ const Swap = () => {
 
   // EFFECT: get eligible pools
   const eligiblePools = useMemo(() => {
+    if (!pool || !token || !token2) return [];
     return pools.filter((p: PoolI) => {
       return (
         [p.tokA, p.tokB].includes(tokenId(token)) &&
@@ -722,6 +723,7 @@ const Swap = () => {
 
   // EFFECT
   useEffect(() => {
+    if (!paramPoolId || !pools || !eligiblePools) return;
     if (paramPoolId) {
       const pool = pools.find((p: PoolI) => `${p.poolId}` === `${paramPoolId}`);
       if (pool) {
@@ -2044,7 +2046,7 @@ const Swap = () => {
           }
         })();
       } while (0);
-      
+
       // -----------------------------------------
     } catch (e: any) {
       toast.error(e.message);

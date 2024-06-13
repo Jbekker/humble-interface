@@ -1,22 +1,14 @@
 import styled from "@emotion/styled";
 import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import LightLogo from "static/logo-light.svg";
-import DarkLogo from "static/logo-dark.svg";
-import HPLogo from "static/hp-logo.svg";
 import SwapIcon from "static/icon/icon-swap.svg";
 import PoolIcon from "static/icon/icon-pool.svg";
 import FarmIcon from "static/icon/icon-farm.svg";
 import HomeIcon from "static/icon/icon-home.svg";
 import TokenIcon from "static/icon/icon-token.svg";
 
-import ArrowDownwardIcon from "static/icon/icon-arrow-downward.svg";
-import CogIcon from "static/icon/icon-cog.svg";
-import ArrowDownwardIcon2 from "static/icon/icon-arrow-downward-color.svg";
-import WalletIcon from "static/icon/icon-wallet.svg";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
-import ThemeSelector from "../ThemeSelector";
 
 import Box from "@mui/material/Box";
 import { useWallet } from "@txnlab/use-wallet";
