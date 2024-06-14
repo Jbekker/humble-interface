@@ -1062,15 +1062,15 @@ const Swap = () => {
       const A = {
         ...mA,
         amount: fromAmount.replace(/,/g, ""),
+        decimals: `${mA.decimals}`,
         tokenId: mA.tokenId ?? undefined,
       };
       const B = {
         ...mB,
         amount: toAmount.replace(/,/g, ""),
+        decimals: `${mB.decimals}`,
         tokenId: mB.tokenId ?? undefined,
       };
-
-      console.log({ A, B });
 
       const swapR = await ci.swap(
         acc.addr,
