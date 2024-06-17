@@ -3,9 +3,14 @@ import React, { FC, useEffect, useMemo, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { ARC200TokenI, PoolI } from "../../types";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { tokenSymbol } from "../../utils/dex";
-import { getToken, getTokens, updateToken } from "../../store/tokenSlice";
+import {
+  fetchToken,
+  getToken,
+  getTokens,
+  updateToken,
+} from "../../store/tokenSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
 import { Fade, Skeleton } from "@mui/material";
 import { CONTRACT, abi } from "ulujs";
@@ -16,6 +21,8 @@ import { useWallet } from "@txnlab/use-wallet";
 import { stringToColorCode } from "../../utils/string";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
+
+const formatter = new Intl.NumberFormat("en", { notation: "compact" });
 
 const spec = {
   name: "pool",
@@ -572,66 +579,15 @@ const SwapButtonLabel = styled.div`
 `;
 
 interface TokenCardProps {
-  token: ARC200TokenI;
-  // balance?: string;
-  // tvl?: string;
+  token: any;
 }
-const TokenCard: FC<TokenCardProps> = ({
-  token,
-  // balance
-}) => {
+const TokenCard: FC<TokenCardProps> = ({ token }) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const pools = useSelector((state: RootState) => state.pools.pools);
-  const poolBals = useSelector((state: RootState) => state.poolBals.poolBals);
-
-  const tokenPools = useMemo(() => {
-    if (!pools) return [];
-    return pools.filter((p: PoolI) => [p.tokA, p.tokB].includes(token.tokenId));
-  }, [pools]);
-
-  const price = useMemo(() => {
-    if ([TOKEN_WVOI1].includes(token.tokenId)) {
-      return "1.000000";
-    }
-    const pricePools = tokenPools.filter((p: any) =>
-      [p.tokA, p.tokB].includes(TOKEN_WVOI1)
-    );
-    const pricePool = pricePools.pop();
-    if (!pricePool) return "-";
-    const pBals = poolBals.filter((pb: any) => pb.poolId === pricePool.poolId);
-    pBals.sort((a, b) => a.ts - b.ts);
-    const pBal = pBals.pop();
-    if (!pBal) return "-";
-    return Number(pBal.rate).toFixed(6);
-  }, [token, tokenPools, poolBals]);
-
-  const tvl = useMemo(() => {
-    if (!tokenPools || !poolBals) return "0";
-    let sumAU = new BigNumber(0);
-    for (const tp of tokenPools) {
-      const { poolId, tokA, tokB } = tp;
-      // get latest pool bals
-      const tokenPoolBals = poolBals.filter((el: any) => el.poolId === poolId);
-      tokenPoolBals.sort((a, b) => a.ts - b.ts);
-      const tpb = tokenPoolBals.pop();
-      if (!tpb) continue;
-      if (tokA === token.tokenId) {
-        sumAU = sumAU.plus(new BigNumber(tpb.balA));
-      } else {
-        sumAU = sumAU.plus(new BigNumber(tpb.balB));
-      }
-      const sumSU = sumAU.div(new BigNumber(10).pow(token.decimals));
-      return new Intl.NumberFormat("en", { notation: "compact" }).format(
-        sumSU.toNumber()
-      );
-    }
-  }, [tokenPools, poolBals]);
-
-  const symbol = tokenSymbol(token);
-
   return (
     <Fade in={true} timeout={1500}>
       <PoolCardRoot className={isDarkTheme ? "dark" : "light"}>
@@ -640,21 +596,19 @@ const TokenCard: FC<TokenCardProps> = ({
             <Col1Row1>
               <CryptoIconPlaceholder
                 color={stringToColorCode(
-                  algosdk.getApplicationAddress(token.tokenId)
+                  algosdk.getApplicationAddress(token.contractId)
                 )}
               />
               <PairInfoContainer>
                 <PairInfo>
                   <PairTokens>
-                    <PairTokenLabel>{symbol}</PairTokenLabel>
-                    {/*<PairTokenLabel>/ {symbolB}</PairTokenLabel>
-                  // <CryptoIconPlaceholder />*/}
+                    <PairTokenLabel>{token.symbol}</PairTokenLabel>
                   </PairTokens>
                 </PairInfo>
                 <PairIds>
                   <Field>
                     <FieldLabel>ID:</FieldLabel>
-                    <FieldValue>{token.tokenId}</FieldValue>
+                    <FieldValue>{token.contractId}</FieldValue>
                   </Field>
                   {/*<Field>
                   <FieldLabel>ID:</FieldLabel>
@@ -665,45 +619,74 @@ const TokenCard: FC<TokenCardProps> = ({
             </Col1Row1>
           </Col1>
           <Col3>
-            <TVLLabel>{price}</TVLLabel>
+            <TVLLabel>
+              {!!token.price && token.pools.length > 0
+                ? Number(token.price).toFixed(6)
+                : ""}
+            </TVLLabel>
           </Col3>
           <Col3>
-            <VolumeLabel>{tvl} VOI</VolumeLabel>
+            <VolumeLabel>
+              {token.tvl > 0 ? `${formatter.format(token.tvl)} VOI` : ""}
+            </VolumeLabel>
           </Col3>
           <Col4>
             <APRLabelContainer>
-              <APRLabel>{tokenPools.length}</APRLabel>
+              <APRLabel>
+                {token.pools.length > 0 ? token.pools.length : ""}
+              </APRLabel>
             </APRLabelContainer>
           </Col4>
-          <Col5>
-            <StyledLink
-              to={``}
-              style={{
-                width: "100%",
-              }}
-            >
-              <AddButton
-                onClick={() => {
-                  toast.info("Not yet implemented");
+          {token.pools.length > 0 ? (
+            <Col5>
+              <StyledLink
+                to={`/pool?filter=${String(token.symbol).toUpperCase()}`}
+                style={{
+                  width: "100%",
                 }}
               >
-                <ButtonLabelContainer>
-                  <AddButtonLabel>Pools</AddButtonLabel>
-                </ButtonLabelContainer>
-              </AddButton>
-            </StyledLink>
-            <StyledLink to={``}>
-              <SwapButton
-                onClick={() => {
-                  toast.info("Not yet implemented");
+                <AddButton>
+                  <ButtonLabelContainer>
+                    <AddButtonLabel>Pools</AddButtonLabel>
+                  </ButtonLabelContainer>
+                </AddButton>
+              </StyledLink>
+              <StyledLink
+                to={`/swap?poolId=${token.pools[0].contractId}`}
+                style={{
+                  width: "100%",
                 }}
               >
-                <ButtonLabelContainer>
-                  <SwapButtonLabel>Swap</SwapButtonLabel>
-                </ButtonLabelContainer>
-              </SwapButton>
-            </StyledLink>
-          </Col5>
+                <SwapButton>
+                  <ButtonLabelContainer>
+                    <SwapButtonLabel>Swap</SwapButtonLabel>
+                  </ButtonLabelContainer>
+                </SwapButton>
+              </StyledLink>
+            </Col5>
+          ) : (
+            <Col5>
+              <StyledLink
+                to={""}
+                style={{
+                  width: "100%",
+                }}
+              >
+                <AddButton
+                  onClick={async () => {
+                    await getToken(token.contractId);
+                    navigate(
+                      `/pool/create?tokBId=0&tokAId=${token.contractId}`
+                    );
+                  }}
+                >
+                  <ButtonLabelContainer>
+                    <AddButtonLabel>Create Pool</AddButtonLabel>
+                  </ButtonLabelContainer>
+                </AddButton>
+              </StyledLink>
+            </Col5>
+          )}
         </PoolCardRow>
       </PoolCardRoot>
     </Fade>

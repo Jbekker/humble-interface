@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import React, { FC, useEffect, useMemo } from "react";
+import React, { FC, useEffect, useMemo, useRef } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import PoolCard from "../PoolCard";
@@ -222,34 +222,38 @@ interface PoolListProps {
   showing: number;
   pools: IndexerPoolI[];
   tokens: any[];
+  filter: string;
   onFilter: (input: string) => void;
 }
 
-const PoolList: FC<PoolListProps> = ({ pools, showing, tokens, onFilter }) => {
+const PoolList: FC<PoolListProps> = ({
+  pools,
+  showing,
+  tokens,
+  filter,
+  onFilter,
+}) => {
+  const poolsRef: any = useRef(null);
+  const handleScroll = () => {
+    poolsRef.current.scrollIntoView({ behavior: "smooth" });
+  };
+  useEffect(() => {
+    if (filter === "") return;
+    const timeout = setTimeout(handleScroll, 500);
+    return () => clearTimeout(timeout);
+  }, [pools, tokens]);
+
   const { activeAccount } = useWallet();
   const navigate = useNavigate();
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  // const filteredPools = useMemo(() => {
-  //   if (!tokens) return [];
-  //   const fPools = [];
-  //   for (const pool of pools) {
-  //     const priceA = new BigNumber(
-  //       tokens.find((t) => t.contractId === pool.tokA)?.price || "0"
-  //     );
-  //     const priceB = new BigNumber(
-  //       tokens.find((t) => t.contractId === pool.tokB)?.price || "0"
-  //     );
-  //     console.log({ priceA, priceB });
-  //     fPools.push({ ...pool, price: priceA.dividedBy(priceB).toNumber() });
-  //   }
-  //   fPools.sort((a, b) => b.price - a.price);
-  //   return fPools;
-  // }, []);
   return (
     <>
-      <PopularPoolsRoot className={isDarkTheme ? "dark" : "light"}>
+      <PopularPoolsRoot
+        ref={poolsRef}
+        className={isDarkTheme ? "dark" : "light"}
+      >
         <HeadingRow className="heading-row">
           <SectionTitle>Popular Pools</SectionTitle>
           {activeAccount ? (
@@ -290,11 +294,7 @@ const PoolList: FC<PoolListProps> = ({ pools, showing, tokens, onFilter }) => {
         {pools.length > 0 ? (
           pools.slice(0, showing).map((p: IndexerPoolI) => {
             return (
-              <PoolCard
-                tokens={tokens}
-                key={p.contractId}
-                pool={p}
-              ></PoolCard>
+              <PoolCard tokens={tokens} key={p.contractId} pool={p}></PoolCard>
             );
           })
         ) : (

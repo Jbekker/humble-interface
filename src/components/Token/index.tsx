@@ -1,10 +1,13 @@
 import styled from "@emotion/styled";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
 import PoolPosition from "../PoolPosition";
 import TokenList from "../TokenList";
+import axios from "axios";
+import { IndexerPoolI } from "../../types";
+import ProgressBar from "../ProgressBar";
 
 const TokenRoot = styled.div`
   display: flex;
@@ -86,16 +89,126 @@ const ButtonLabel = styled(Button)`
   line-height: 120%; /* 26.4px */
 `;
 
+const formatter = new Intl.NumberFormat("en", { notation: "compact" });
+
 const Pool = () => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const tokens = useSelector((state: RootState) => state.tokens.tokens);
+
+  const [pools, setPools] = React.useState<IndexerPoolI[]>();
+  useEffect(() => {
+    axios
+      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/dex/pools`)
+      .then(({ data }) => {
+        setPools(
+          data.pools.map((p: IndexerPoolI) => ({
+            ...p,
+            tvl: formatter.format(Number(p.tvl)),
+            vol: formatter.format(Number(p.volA) + Number(p.volB)),
+          }))
+        );
+      });
+  }, []);
+
+  const [tokens2, setTokens] = React.useState<any[]>();
+  useEffect(() => {
+    axios
+      .get(
+        `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=all`
+      )
+      .then(({ data: { tokens } }) => {
+        setTokens(tokens);
+      });
+  }, []);
+
+  const combinedTokens = useMemo(() => {
+    if (!pools || !tokens2) return [];
+    const fTokens = tokens2.filter(
+      (t) => !["ARC200LT", "LPT"].includes(t.symbol)
+    );
+    const pTokens = fTokens.map((t) => {
+      const tPools = pools.filter(
+        (p) =>
+          [p.tokAId, p.tokBId].includes(`${t.contractId}`) &&
+          p.providerId === "01"
+      );
+      const tTVL = tPools.reduce(
+        (acc, val) => acc + Math.min(Number(val.tvlA), Number(val.tvlB)),
+        0
+      );
+      const tVOL = tPools.reduce(
+        (acc, val) =>
+          acc +
+          (val.tokAId === `${t.contractId}`
+            ? Number(val.volA)
+            : Number(val.volB)),
+        0
+      );
+      return {
+        ...t,
+        pools: tPools,
+        tvl: tTVL,
+        vol: tVOL,
+      };
+    });
+    const wntTokens = pTokens?.filter((t) => t.tokenId === "0") || [];
+    const nt = {
+      name: "Voi",
+      symbol: "VOI",
+      decimals: 6,
+      price: "1.000000",
+      tvl: wntTokens.reduce((acc, val) => acc + val.tvl, 0),
+      contractId: wntTokens.reduce(
+        (acc, val) => Math.max(acc, val.contractId),
+        0
+      ),
+      pools: wntTokens.slice(1).flatMap((t) => t.pools),
+    };
+    const pts = pTokens.filter((t) => t.tokenId !== "0");
+    const tokens = pts.length > 0 ? [nt, ...pts] : [];
+    tokens.sort((a, b) => b.tvl - a.tvl);
+    return tokens;
+  }, [tokens2, pools]);
+
+  const [filter, setFilter] = useState("");
+
+  const filteredTokens = useMemo(() => {
+    return combinedTokens.filter(
+      (t: any) =>
+        filter === "" ||
+        String(t.symbol).toUpperCase().indexOf(filter.toUpperCase()) != -1
+    );
+  }, [combinedTokens, filter]);
+
   const [showing, setShowing] = useState<number>(20);
+
+  // progress bar
+
+  const message = useMemo(() => {
+    if (!tokens2) return "Loading tokens...";
+    return "Loading pools...";
+  }, [tokens2, pools]);
+
+  const progress = useMemo(() => {
+    let progress = 0;
+    if (!!tokens2) progress += 50;
+    if (!!pools) progress += 50;
+    return progress;
+  }, [tokens2, pools]);
+
+  const isActive = useMemo(() => {
+    return !tokens2 || !pools || progress < 100;
+  }, [tokens2, pools]);
+
   return (
     <TokenRoot className={isDarkTheme ? "dark" : "light"}>
-      <TokenList tokens={tokens} showing={showing} />
-      {tokens.length > showing ? (
+      <TokenList
+        onFilter={setFilter}
+        tokens={filteredTokens}
+        showing={showing}
+      />
+      {filteredTokens.length > showing ? (
         <ViewMoreButton
           onClick={() => {
             setShowing(showing + 10);
@@ -107,6 +220,12 @@ const Pool = () => {
           </ButtonLabelContainer>
         </ViewMoreButton>
       ) : null}
+      <ProgressBar
+        message={message}
+        isActive={isActive}
+        totalSteps={100}
+        currentStep={progress}
+      />
     </TokenRoot>
   );
 };

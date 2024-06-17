@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import React, { FC, useEffect, useState } from "react";
+import React, { FC, useEffect, useMemo, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import PoolCard from "../PoolCard";
@@ -10,6 +10,7 @@ import AddTokenModal from "../modals/AddTokenModal";
 import { Stack } from "@mui/system";
 import { useWallet } from "@txnlab/use-wallet";
 import { Fade } from "@mui/material";
+import Search from "../Search";
 
 const TokenListRoot = styled.div`
   width: 90%;
@@ -24,9 +25,10 @@ const TokenListRoot = styled.div`
     & h2 {
       color: var(--Color-Neutral-Element-Primary, #fff);
     }
-    & .heading-row {
+    & .heading-row2 {
       border-bottom: 1px solid
         var(--Color-Neutral-Stroke-Primary, rgba(255, 255, 255, 0.2));
+      padding-bottom: var(--Spacing-700, 32px);
     }
     & .message-text {
       color: var(--Color-Neutral-Element-Secondary, #f6f6f8);
@@ -37,8 +39,9 @@ const TokenListRoot = styled.div`
     & h2 {
       color: var(--Color-Neutral-Element-Primary, #0c0c10);
     }
-    & .heading-row {
+    & .heading-row2 {
       border-bottom: 1px solid var(--Color-Neutral-Stroke-Primary, #d8d8e1);
+      padding-bottom: var(--Spacing-700, 16px);
     }
     & .message-text {
       color: var(--Color-Neutral-Element-Secondary, #56566e);
@@ -49,7 +52,6 @@ const TokenListRoot = styled.div`
 const HeadingRow = styled.div`
   display: flex;
   width: 100%;
-  padding-bottom: var(--Spacing-700, 16px);
   justify-content: space-between;
   align-items: center;
 `;
@@ -555,12 +557,33 @@ const PoolIcon = () => {
   );
 };
 
+const MessageText = styled.div`
+  leading-trim: both;
+  text-edge: cap;
+  font-feature-settings: "clig" off, "liga" off;
+  font-family: "IBM Plex Sans Condensed";
+  font-size: 15px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 120%; /* 18px */
+`;
+
+const Body = styled.div`
+  display: flex;
+  padding: 1px 0px;
+  justify-content: center;
+  align-items: baseline;
+  gap: 10px;
+  align-self: stretch;
+`;
+
 interface TokenListProps {
-  tokens: ARC200TokenI[];
+  tokens: any[];
   showing: number;
+  onFilter: any;
 }
 
-const TokenList: FC<TokenListProps> = ({ tokens, showing }) => {
+const TokenList: FC<TokenListProps> = ({ tokens, showing, onFilter }) => {
   const { activeAccount } = useWallet();
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
@@ -597,36 +620,43 @@ const TokenList: FC<TokenListProps> = ({ tokens, showing }) => {
             </Stack>
           ) : null}
         </HeadingRow>
-        <Columns>
-          <Heading>
-            <ColumnPair>
-              <ColumnLabel>Token</ColumnLabel>
-            </ColumnPair>
-
-            <ColumnTVL>
-              <ColumnLabel>Price</ColumnLabel>
-              <InfoCircleIcon />
-            </ColumnTVL>
-            <ColumnTVL>
-              <ColumnLabel>TVL</ColumnLabel>
-              <InfoCircleIcon />
-            </ColumnTVL>
-            <ColumnVolume>
-              <ColumnLabel>Pools</ColumnLabel>
-              <InfoCircleIcon />
-            </ColumnVolume>
-            <ColumnAPR>
-              <ColumnLabel>&nbsp;</ColumnLabel>
-              {/*<InfoCircleIcon />*/}
-            </ColumnAPR>
-          </Heading>
-        </Columns>
+        <HeadingRow className="heading-row2">
+          <Search onChange={onFilter} />
+        </HeadingRow>
         {tokens.length > 0 ? (
-          tokens.slice(0, showing).map((t: ARC200TokenI) => {
-            return <TokenCard key={t.tokenId} token={t} />;
-          })
+          <>
+            <Columns>
+              <Heading>
+                <ColumnPair>
+                  <ColumnLabel>Token</ColumnLabel>
+                </ColumnPair>
+
+                <ColumnTVL>
+                  <ColumnLabel>Price</ColumnLabel>
+                  <InfoCircleIcon />
+                </ColumnTVL>
+                <ColumnTVL>
+                  <ColumnLabel>TVL</ColumnLabel>
+                  <InfoCircleIcon />
+                </ColumnTVL>
+                <ColumnVolume>
+                  <ColumnLabel>Pools</ColumnLabel>
+                  <InfoCircleIcon />
+                </ColumnVolume>
+                <ColumnAPR>
+                  <ColumnLabel>&nbsp;</ColumnLabel>
+                  {/*<InfoCircleIcon />*/}
+                </ColumnAPR>
+              </Heading>
+            </Columns>
+            {tokens.slice(0, showing).map((t: any) => {
+              return <TokenCard key={t.contractId} token={t} />;
+            })}
+          </>
         ) : (
-          <div>No tokens</div>
+          <Body>
+            <MessageText className="message-text">No tokens found</MessageText>
+          </Body>
         )}
       </TokenListRoot>
       <CreateTokenModal

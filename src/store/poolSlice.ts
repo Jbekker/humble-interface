@@ -29,6 +29,30 @@ export const getPools = createAsyncThunk<
   { rejectValue: string; state: RootState }
 >("pools/getPools", async (_, { getState, rejectWithValue }) => {
   try {
+    const { data } = await axios.get(
+      `https://arc72-idx.nautilus.sh/nft-indexer/v1/dex/pools`
+    );
+
+    const appPools = data.pools
+      .filter((p: any) => {
+        return p.providerId === "01";
+      })
+      .map((p: any) => ({
+        txId: String(p.contractId),
+        poolId: p.contractId,
+        tokA: Number(p.tokAId),
+        tokB: Number(p.tokBId),
+        round: p.contractId,
+        ts: p.contractId,
+      }));
+
+    console.log({ appPools });
+
+    await db.table("pools").bulkPut(appPools);
+
+    return appPools;
+
+    /*
     const poolsTable = db.table("pools");
     const pools = await poolsTable.toArray();
     const minRound = 5486024;
@@ -110,6 +134,7 @@ export const getPools = createAsyncThunk<
         !BAD_POOLS.includes(pool.poolId)
     );
     return combinedPools;
+    */
   } catch (error: any) {
     return rejectWithValue(error.message);
   }

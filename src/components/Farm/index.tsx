@@ -20,6 +20,7 @@ import FarmLiquidity from "../FarmLiquidity";
 import { getFarms } from "../../store/farmSlice";
 import { getStake } from "../../store/stakeSlice";
 import { CTCINFO_STAKR_200 } from "../../constants/dex";
+import axios from "axios";
 
 const spec = {
   name: "",
@@ -219,6 +220,8 @@ const Farm = () => {
     farmList.sort((a, b) => b.poolId - a.poolId);
     return farmList;
   }, [farms]);
+
+  console.log({ farms, farmList });
 
   const [showing, setShowing] = useState<number>(10);
 

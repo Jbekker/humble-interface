@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
@@ -11,6 +11,8 @@ import { BalanceI, IndexerPoolI, PoolI, PositionI } from "../../types";
 import { getTokens } from "../../store/tokenSlice";
 import axios from "axios";
 import BigNumber from "bignumber.js";
+import { useLocation } from "react-router-dom";
+import ProgressBar from "../ProgressBar";
 
 const formatter = new Intl.NumberFormat("en", { notation: "compact" });
 
@@ -102,6 +104,12 @@ const applyFilter = (p: any, f: string) =>
   p.poolId === f.toUpperCase();
 
 const Pool = () => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+
+  // Example: Getting a specific query parameter
+  const paramFilter = searchParams.get("filter");
+
   const { activeAccount } = useWallet();
   /* Theme */
   const isDarkTheme = useSelector(
@@ -110,10 +118,8 @@ const Pool = () => {
   const pageSize = 10;
   const [showing, setShowing] = useState<number>(pageSize);
   const [showingPositions, setShowingPositions] = useState<number>(pageSize);
-  const [filter, setFilter] = useState<string>("");
+  const [filter, setFilter] = useState<string>(paramFilter || "");
   const [filter2, setFilter2] = useState<string>("");
-
-  //const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
 
   const [balances, setBalances] = React.useState<BalanceI[]>();
   useEffect(() => {
@@ -129,7 +135,6 @@ const Pool = () => {
 
   const [tokens, setTokens] = React.useState<any[]>();
   useEffect(() => {
-    //if (!activeAccount) return;
     axios
       .get(
         `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=all`
@@ -193,12 +198,12 @@ const Pool = () => {
 
   const [positions, setPositions] = React.useState<any[]>([]);
   useEffect(() => {
-    if (!activeAccount || !balances || !tokens || !filteredPools) return;
+    if (!activeAccount || !balances || !tokens || !uniqPools) return;
     (async () => {
       const positions = [];
       for (const bal of balances) {
         const balance = BigInt(bal.balance);
-        const pool = filteredPools.find((p) => p.contractId === bal.contractId);
+        const pool = uniqPools.find((p) => p.contractId === bal.contractId);
         if (!pool || balance === BigInt(0)) continue;
         const tokenA = tokens.find(
           (t) => `${t.contractId}` === `${pool.tokAId}`
@@ -229,9 +234,8 @@ const Pool = () => {
       }
       positions.sort((a, b) => Number(b.value) - Number(a.value));
       setPositions(positions);
-      //setValue(positions.reduce((acc, val) => acc + val.value, 0));
     })();
-  }, [activeAccount, filteredPools, balances, tokens]);
+  }, [activeAccount, uniqPools, balances, tokens]);
   const filteredPositions = useMemo(() => {
     return positions.filter((p) => applyFilter(p, filter2));
   }, [positions, filter2]);
@@ -243,6 +247,7 @@ const Pool = () => {
   const isLoading = !filteredPools || !filteredPositions;
 
   if (isLoading) return null;
+
   return (
     <PoolRoot className={isDarkTheme ? "dark" : "light"}>
       {activeAccount ? (
@@ -271,6 +276,7 @@ const Pool = () => {
       ) : null}
       <>
         <PoolList
+          filter={filter}
           pools={filteredPools}
           tokens={tokens || ([] as any[])}
           showing={showing}

@@ -3,6 +3,7 @@ import Dexie from "dexie";
 
 const dexDb = new Dexie("dexDatabase");
 
+// Define the initial schema
 dexDb.version(1).stores({
   tokens: "tokenId, name, symbol, decimals, totalSupply",
   pools: "txId, round, ts, poolId, tokA, tokB",
@@ -10,9 +11,40 @@ dexDb.version(1).stores({
     "txId, round, ts, poolId, who, stakeToken, rewardsToken, rewards, start, end",
   stake: "txId, round, ts, poolId, who, amount, staked, totalStaked",
 });
+
+// Define the updated schema
 dexDb.version(2).stores({
   poolBals: "pk, round, ts, poolId, balA, balB, rate",
-  volumes: "pk, round, ts, poolId, inA, inB"
+  volumes: "pk, round, ts, poolId, inA, inB",
 });
+
+// Define the new version with poolId as the primary key in pools table
+dexDb
+  .version(3)
+  .stores({
+    tokens: "tokenId, name, symbol, decimals, totalSupply, mintRound",
+    pools: "poolId, tokA, tokB", // poolId as primary key
+    farms:
+      "txId, round, ts, poolId, who, stakeToken, rewardsToken, rewards, start, end",
+    stake: "txId, round, ts, poolId, who, amount, staked, totalStaked",
+    poolBals: "pk, round, ts, poolId, balA, balB, rate",
+    volumes: "pk, round, ts, poolId, inA, inB",
+  })
+  .upgrade((tx) => {
+    // Upgrade logic for pools table: remove txId
+    tx.table("pools")
+      .toCollection()
+      .modify((pool) => {
+        delete pool.txId;
+        delete pool.round;
+        delete pool.ts;
+      });
+    // Upgrade logic for tokens table: add mintRound with default value
+    tx.table("tokens")
+      .toCollection()
+      .modify((token) => {
+        token.mintRound = 0; // default value for mintRound
+      });
+  });
 
 export default dexDb;

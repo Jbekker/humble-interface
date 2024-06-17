@@ -44,10 +44,12 @@ export interface Token extends TokenI {
 
 export interface ARC200TokenI {
   tokenId: number;
+  contractId?: number;
   name: string;
   symbol: string;
   decimals: number;
-  totalSupply: BigInt;
+  totalSupply: BigInt | string;
+  mintRound?: number;
 }
 
 export interface ARC200LPTokenI extends ARC200TokenI {}
@@ -144,8 +146,8 @@ export interface RankingI {
 
 export interface PoolI {
   txId: string;
-  round: number;
-  ts: number;
+  round?: number;
+  ts?: number;
   poolId: number;
   tokA: number;
   tokB: number;

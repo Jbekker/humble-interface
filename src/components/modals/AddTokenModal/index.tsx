@@ -463,10 +463,6 @@ const SwapSuccessfulModal: React.FC<SwapSuccessfulModalProps> = ({
   const { activeAccount, signTransactions, sendTransactions } = useWallet();
   const [tokenId, setTokenId] = useState("");
   const [token, setToken] = useState<ARC200TokenI>();
-  // const [name, setName] = useState("");
-  // const [symbol, setSymbol] = useState("");
-  // const [decimals, setDecimals] = useState("");
-  // const [totalSupply, setTotalSupply] = useState("");
   const isValid = useMemo(() => {
     if (!tokenId || isNaN(Number(tokenId))) return false;
     return true;

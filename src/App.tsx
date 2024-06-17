@@ -37,32 +37,37 @@ const AppContainer: React.FC<AppContainerProps> = ({ children }) => {
     (state: RootState) => state.theme.isDarkTheme
   );
   const dispatch = useDispatch();
-  const pools = useSelector((state: RootState) => state.pools.pools);
   const poolsStatus = useSelector((state: RootState) => state.pools.status);
+  const tokensStatus = useSelector((state: RootState) => state.tokens.status);
   useEffect(() => {
     dispatch(getPools() as unknown as UnknownAction);
   }, [dispatch]);
   useEffect(() => {
     dispatch(getTokens() as unknown as UnknownAction);
   }, [dispatch]);
+  // useEffect(() => {
+  //   dispatch(getPoolBals() as unknown as UnknownAction);
+  // }, [dispatch]);
+  // useEffect(() => {
+  //   dispatch(getVolume() as unknown as UnknownAction);
+  // }, [dispatch]);
+  const [ready, setReady] = React.useState(!false);
+  // useEffect(() => {
+  //   if (poolsStatus === "succeeded") {
+  //     (async () => {
+  //       await Promise.all([
+  //         ...pools.map((pool) => getToken(pool.tokA)),
+  //         ...pools.map((pool) => getToken(pool.tokB)),
+  //       ]);
+  //       setReady(true);
+  //     })();
+  //   }
+  // }, [poolsStatus]);
   useEffect(() => {
-    dispatch(getPoolBals() as unknown as UnknownAction);
-  }, [dispatch]);
-  useEffect(() => {
-    dispatch(getVolume() as unknown as UnknownAction);
-  }, [dispatch]);
-  const [ready, setReady] = React.useState(false);
-  useEffect(() => {
-    if (poolsStatus === "succeeded") {
-      (async () => {
-        await Promise.all([
-          ...pools.map((pool) => getToken(pool.tokA)),
-          ...pools.map((pool) => getToken(pool.tokB)),
-        ]);
-        setReady(true);
-      })();
+    if (poolsStatus === "succeeded" && tokensStatus === "succeeded") {
+      setReady(true);
     }
-  }, [poolsStatus]);
+  }, [poolsStatus, tokensStatus]);
   const isLoading = !ready;
   if (isLoading) return;
   return (

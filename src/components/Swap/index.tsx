@@ -5,9 +5,20 @@ import ActiveSwapIcon from "static/icon/icon-swap-active-light.svg";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
-import { CircularProgress, Fade, Skeleton, Stack } from "@mui/material";
+import {
+  CircularProgress,
+  Collapse,
+  Fade,
+  Skeleton,
+  Stack,
+} from "@mui/material";
 import { CONTRACT, arc200, swap } from "ulujs";
-import { TOKEN_VIA, TOKEN_VOI, TOKEN_WVOI1 } from "../../constants/tokens";
+import {
+  NETWORK_TOKEN,
+  TOKEN_VIA,
+  TOKEN_VOI,
+  TOKEN_WVOI1,
+} from "../../constants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import TokenInput from "../TokenInput";
 import { useSearchParams } from "react-router-dom";
@@ -26,6 +37,7 @@ import { hasBalance } from "ulujs/types/arc200";
 import { max } from "moment";
 import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
 import axios from "axios";
+import ProgressBar from "../ProgressBar";
 
 const spec = {
   name: "pool",
@@ -504,6 +516,8 @@ const Swap = () => {
     getAccountInfo,
   } = useWallet();
 
+  // confirmation modal
+
   const [txId, setTxId] = useState<string>(
     "YE6LE6TJY3IKZILM7YEOO3BWXU6CY7MD7HZV3N6YRQKZVAN5ABVQ"
   );
@@ -513,23 +527,9 @@ const Swap = () => {
   const [tokOut, setTokOut] = useState("TOKB");
   const [swapModalOpen, setSwapModalOpen] = useState<boolean>(false);
 
+  // don't remember what this is used for
+
   const [pool, setPool] = useState<PoolI>();
-  // EFFECT: get pool from param pool id
-  // useEffect(() => {
-  //   try {
-  //     const { algodClient, indexerClient } = getAlgorandClients();
-  //     new swap(Number(paramPoolId), algodClient, indexerClient)
-  //       .Info()
-  //       .then((infoR) => {
-  //         if (infoR.success) {
-  //           setPool(infoR.returnValue);
-  //         }
-  //       });
-  //   } catch (e) {
-  //     console.log(e);
-  //   }
-  // }, [tokens]);
-  // console.log({ pool });
 
   // EFFECT: set pool to match paramPoolId
   useEffect(() => {
@@ -538,30 +538,19 @@ const Swap = () => {
       const pool = pools.find((p: PoolI) => `${p.poolId}` === `${paramPoolId}`);
       if (pool) {
         const token = [TOKEN_WVOI1].includes(pool.tokA)
-          ? {
-              tokenId: 0,
-              name: "Voi",
-              symbol: "VOI",
-              decimals: 6,
-              totalSupply: BigInt(10_000_000_000 * 1e6),
-            }
+          ? NETWORK_TOKEN.VOI
           : tokens.find((t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokA}`);
         setToken(token);
         const token2 = [TOKEN_WVOI1].includes(pool.tokB)
-          ? {
-              tokenId: 0,
-              name: "Voi",
-              symbol: "VOI",
-              decimals: 6,
-              totalSupply: BigInt(10_000_000_000 * 1e6),
-            }
+          ? NETWORK_TOKEN.VOI
           : tokens.find((t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokB}`);
         setToken2(token2);
       }
     }
   }, [pool, pools, tokens]);
 
-  const [accInfo, setAccInfo] = React.useState<any>(null);
+  //const [accInfo, setAccInfo] = React.useState<any>(null);
+
   const [focus, setFocus] = useState<"from" | "to" | undefined>();
   const [fromAmount, setFromAmount] = React.useState<any>("");
   const [toAmount, setToAmount] = React.useState<any>("");
@@ -572,9 +561,11 @@ const Swap = () => {
   const [token2, setToken2] = useState<ARC200TokenI>();
   const [tokenOptions, setTokenOptions] = useState<ARC200TokenI[]>();
   const [tokenOptions2, setTokenOptions2] = useState<ARC200TokenI[]>();
+
   const [balance, setBalance] = React.useState<string>();
   const [balance2, setBalance2] = React.useState<string>();
 
+  // EFFECT: set token options
   useEffect(() => {
     if (!tokens || !pools || pools.length === 0) return;
     const newTokens = new Set<number>();
@@ -605,23 +596,26 @@ const Swap = () => {
         p.tokA !== p.tokB
       );
     });
-    const firstPool = filteredPools.reduce(
-      (acc, val) => (acc.round > val.round ? val : acc),
-      { round: Number.MAX_SAFE_INTEGER, poolId: 0 }
-    );
-    return !!firstPool ? [firstPool] : [];
+    filteredPools.sort((a, b) => b.poolId - a.poolId);
+    return filteredPools.slice(-1);
   }, [pools, token, token2]);
 
   console.log("eligiblePools", eligiblePools);
+
+  // EFFECT: reset token2 if not in eligible pools
+  useEffect(() => {
+    if (eligiblePools.length === 0) {
+      setToken2(undefined);
+      setBalance2("");
+    }
+  }, [token, token2, eligiblePools]);
 
   const [info, setInfo] = useState<any>();
   // EFFECT: set pool info
   useEffect(() => {
     if (!token || !token2 || !eligiblePools) return;
     const { algodClient, indexerClient } = getAlgorandClients();
-    const A = { ...token, tokenId: tokenId(token) };
-    const B = { ...token2, tokenId: tokenId(token2) };
-    new swap(eligiblePools[0].poolId, algodClient, indexerClient)
+    new swap(eligiblePools[0]?.poolId || 0, algodClient, indexerClient)
       .Info()
       .then((info: any) => {
         setInfo(info.returnValue);
@@ -630,7 +624,6 @@ const Swap = () => {
 
   const [lhs, rhs, rate, rateReady] = useMemo(() => {
     if (!info || !token || !token2) return [1, 1, 1, false];
-    console.log({ info, token, token2 });
     const A = { ...token, tokenId: tokenId(token) };
     const B = {
       ...token2,
@@ -638,7 +631,6 @@ const Swap = () => {
     };
     const res = swap.rate(info, A, B);
     const res2 = swap.rate(info, B, A);
-    console.log({ res, res2 });
     return res < 0.000001 ? [res2, 1, 1 / res2, true] : [1, 1 / res, res, true];
   }, [info, token, token2]);
 
@@ -698,7 +690,6 @@ const Swap = () => {
         fromAmountBN.multipliedBy(10 ** token.decimals).toFixed()
       );
       ci.Trader_swapAForB(1, fromAmountBI, 0).then((r: any) => {
-        console.log({ r });
         if (r.success) {
           const toAmountBN = new BigNumber(r.returnValue[1]);
           if (toAmountBN.isNaN()) return;
@@ -707,7 +698,6 @@ const Swap = () => {
             .toFixed(token2.decimals);
           setActualOutcome(toAmount);
           setToAmount(toAmount);
-          console.log({ toAmount });
         }
       });
     } else if (pool.tokB === tokenId(token)) {
@@ -717,14 +707,12 @@ const Swap = () => {
         fromAmountBN.multipliedBy(10 ** token.decimals).toFixed()
       );
       ci.Trader_swapBForA(1, fromAmountBI, 0).then((r: any) => {
-        console.log({ r });
         if (r.success) {
           const toAmountBN = new BigNumber(r.returnValue[0]);
           if (toAmountBN.isNaN()) return;
           const toAmount = toAmountBN
             .div(10 ** token2.decimals)
             .toFixed(token2.decimals);
-          console.log({ toAmount });
           setActualOutcome(toAmount);
           setToAmount(toAmount);
         }
@@ -751,10 +739,15 @@ const Swap = () => {
       addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
       sk: new Uint8Array(0),
     };
-    const ci = new CONTRACT(pool.poolId, algodClient, indexerClient, spec, acc);
+    const ci = new CONTRACT(
+      pool?.poolId,
+      algodClient,
+      indexerClient,
+      spec,
+      acc
+    );
     ci.setFee(4000);
     if (pool.tokA === tokenId(token2)) {
-      console.log("here2");
       const toAmountBN = new BigNumber(toAmount);
       if (toAmountBN.isNaN()) return;
       const toAmountBI = BigInt(
@@ -773,7 +766,6 @@ const Swap = () => {
         }
       });
     } else if (pool.tokA === tokenId(token)) {
-      console.log("here");
       const toAmountBN = new BigNumber(toAmount);
       if (toAmountBN.isNaN()) return;
       // convert to atomic unit
@@ -807,6 +799,8 @@ const Swap = () => {
     ).toFixed(2);
   }, [actualOutcome, expectedOutcome]);
 
+  console.log("slippage", slippage);
+
   const isValid = !!token && !!token2 && !!fromAmount && !!toAmount;
 
   // EFFECT: reset amounts on token change
@@ -814,24 +808,24 @@ const Swap = () => {
     setFocus(undefined);
   }, [token, token2]);
 
-  // EFFECT: update token options on token change
+  // EFFECT: set token options ii
   useEffect(() => {
     if (!token || !pools) return;
     const options = new Set<ARC200TokenI>();
     for (const p of pools) {
       if ([p.tokA, p.tokB].includes(tokenId(token))) {
         if (tokenId(token) === p.tokA) {
-          options.add(
-            tokens.find(
-              (t: ARC200TokenI) => `${tokenId(t)}` === `${p.tokB}`
-            ) as ARC200TokenI
-          );
+          const option = tokens.find(
+            (t: ARC200TokenI) => `${tokenId(t)}` === `${p.tokB}`
+          ) as ARC200TokenI;
+          if (!option) continue;
+          options.add(option);
         } else if (tokenId(token) === p.tokB) {
-          options.add(
-            tokens.find(
-              (t: ARC200TokenI) => `${tokenId(t)}` === `${p.tokA}`
-            ) as ARC200TokenI
-          );
+          const option = tokens.find(
+            (t: ARC200TokenI) => `${tokenId(t)}` === `${p.tokA}`
+          ) as ARC200TokenI;
+          if (!option) continue;
+          options.add(option);
         }
       }
     }
@@ -868,14 +862,12 @@ const Swap = () => {
       });
   }, []);
 
-  console.log({ tokens2 });
-
   // EFFECT: get token balance
   useEffect(() => {
-    if (!token || !activeAccount || !tokens2) return;
+    if (!token || !activeAccount || !tokens) return;
     const { algodClient, indexerClient } = getAlgorandClients();
     const wrappedTokenId = Number(
-      tokens2.find((t) => t.contractId === token.tokenId)?.tokenId
+      tokens.find((t) => t.contractId === token.tokenId)?.tokenId
     );
     if (token.tokenId === 0) {
       algodClient
@@ -971,19 +963,22 @@ const Swap = () => {
   }, [token2, activeAccount]);
 
   // EFFECT: get voi balance
+  /*
   useEffect(() => {
     if (activeAccount && providers && providers.length >= 3) {
       getAccountInfo().then(setAccInfo);
     }
   }, [activeAccount, providers]);
+  */
 
   const buttonLabel = useMemo(() => {
-    if (isValid) {
-      return "Swap";
-    } else {
-      return "Select token above";
-    }
-  }, [isValid]);
+    if (isValid) return "Swap";
+    if (info?.poolBals?.A === "0" || info?.poolBals?.B === "0")
+      return "Insufficient liquidity";
+    if (!token || !token2) return "Select token above";
+    if ([fromAmount, toAmount].includes("")) return "Enter token amount";
+    return "";
+  }, [info, token, token2, isValid]);
 
   const minRecieved = useMemo(() => {
     if (!actualOutcome) return "-";
@@ -1037,7 +1032,7 @@ const Swap = () => {
         eligiblePools,
         { ...token, tokenId: tokenId(token) },
         { ...token2, tokenId: tokenId(token2) },
-        "round"
+        "poolId"
       );
 
       if (!pool || !pool2) throw new Error("No pool found");
@@ -1092,9 +1087,8 @@ const Swap = () => {
         }
         */
       );
-      console.log(swapR);
+      console.log({ swapR });
       if (!swapR.success) throw new Error("Swap simulation failed");
-
       await toast.promise(
         signTransactions(
           swapR.txns.map(
@@ -1188,114 +1182,133 @@ const Swap = () => {
             onFocus={() => setFocus("to")}
           />
         </SwapContainer>
-        <SummaryContainer>
-          <RateContainer>
-            <RateLabel className={isDarkTheme ? "dark" : "light"}>
-              Rate
-            </RateLabel>
-            <RateValue>
-              <RateMain className={isDarkTheme ? "dark" : "light"}>
-                {lhs === 1
-                  ? 1
-                  : lhs?.toFixed(Math.min(6, token?.decimals || 0))}{" "}
-                {tokenSymbol(token)} ={" "}
-                {lhs > 1
-                  ? 1
-                  : Math.round(rate)?.toFixed(
-                      Math.min(6, token2?.decimals || 0)
-                    )}
-                {` `}
-                {tokenSymbol(token2)}
-              </RateMain>
-              <RateSub>
-                {lhs === 1 ? 1 : rhs} {tokenSymbol(token2)} ={" "}
-                {invRate?.toFixed(token?.decimals)} {tokenSymbol(token)}
-              </RateSub>
-            </RateValue>
-          </RateContainer>
-          <BreakdownContainer>
-            <BreakdownStack>
-              <BreakdownRow>
-                <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
-                  <span>Pool balance</span>
-                  <InfoCircleIcon />
-                </BreakdownLabel>
-                <BreakdownValueContiner>
-                  <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
-                    {poolBalance}
-                  </BreakdownValue>
-                </BreakdownValueContiner>
-              </BreakdownRow>
-              <BreakdownRow>
-                <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
-                  <span>Liquidity provider fee</span>
-                  <InfoCircleIcon />
-                </BreakdownLabel>
-                <BreakdownValueContiner>
-                  <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
-                    {fee} {token?.symbol}
-                  </BreakdownValue>
-                </BreakdownValueContiner>
-              </BreakdownRow>
-              <BreakdownRow>
-                <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
-                  <span>Price impact</span>
-                  <InfoCircleIcon />
-                </BreakdownLabel>
-                <BreakdownValueContiner>
-                  <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
-                    {slippage}%
-                  </BreakdownValue>
-                </BreakdownValueContiner>
-              </BreakdownRow>
-              <BreakdownRow>
-                <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
-                  <span>Allowed slippage</span>
-                  <InfoCircleIcon />
-                </BreakdownLabel>
-                <BreakdownValueContiner>
-                  <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
-                    0.50%
-                  </BreakdownValue>
-                </BreakdownValueContiner>
-              </BreakdownRow>
-              <BreakdownRow>
-                <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
-                  <span>Minimum received</span>
-                  <InfoCircleIcon />
-                </BreakdownLabel>
-                <BreakdownValueContiner>
-                  <BreakdownValue className={isDarkTheme ? "dark" : "light"}>
-                    {minRecieved} {token2?.symbol}
-                  </BreakdownValue>
-                </BreakdownValueContiner>
-              </BreakdownRow>
-            </BreakdownStack>
-          </BreakdownContainer>
-        </SummaryContainer>
-        <Button
-          className={isValid ? "active" : undefined}
-          onClick={() => {
-            if (!on) {
-              handleSwap();
-            }
-          }}
-        >
-          {!on ? (
-            buttonLabel
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                gap: "10px",
-                alignItems: "center",
-              }}
-            >
-              <CircularProgress color="inherit" size={20} />
-              Swap in progress
-            </div>
-          )}
-        </Button>
+        {!!token2 ? (
+          <>
+            <SummaryContainer>
+              {!!token2 &&
+              (info?.poolBals?.A !== "0" || info?.poolBals?.B !== "0") ? (
+                <RateContainer>
+                  <RateLabel className={isDarkTheme ? "dark" : "light"}>
+                    Rate
+                  </RateLabel>
+                  <RateValue>
+                    <RateMain className={isDarkTheme ? "dark" : "light"}>
+                      {lhs === 1
+                        ? 1
+                        : lhs?.toFixed(Math.min(6, token?.decimals || 0))}{" "}
+                      {tokenSymbol(token)} ={" "}
+                      {lhs > 1
+                        ? 1
+                        : Math.round(rate)?.toFixed(
+                            Math.min(6, token2?.decimals || 0)
+                          )}
+                      {` `}
+                      {tokenSymbol(token2)}
+                    </RateMain>
+                    <RateSub>
+                      {lhs === 1 ? 1 : rhs} {tokenSymbol(token2)} ={" "}
+                      {invRate?.toFixed(token?.decimals)} {tokenSymbol(token)}
+                    </RateSub>
+                  </RateValue>
+                </RateContainer>
+              ) : null}
+              <BreakdownContainer>
+                <BreakdownStack>
+                  <BreakdownRow>
+                    <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
+                      <span>Pool balance</span>
+                      <InfoCircleIcon />
+                    </BreakdownLabel>
+                    <BreakdownValueContiner>
+                      <BreakdownValue
+                        className={isDarkTheme ? "dark" : "light"}
+                      >
+                        {poolBalance}
+                      </BreakdownValue>
+                    </BreakdownValueContiner>
+                  </BreakdownRow>
+                  <BreakdownRow>
+                    <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
+                      <span>Liquidity provider fee</span>
+                      <InfoCircleIcon />
+                    </BreakdownLabel>
+                    <BreakdownValueContiner>
+                      <BreakdownValue
+                        className={isDarkTheme ? "dark" : "light"}
+                      >
+                        {fee} {token?.symbol}
+                      </BreakdownValue>
+                    </BreakdownValueContiner>
+                  </BreakdownRow>
+                  <BreakdownRow>
+                    <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
+                      <span>Price impact</span>
+                      <InfoCircleIcon />
+                    </BreakdownLabel>
+                    <BreakdownValueContiner>
+                      <BreakdownValue
+                        className={isDarkTheme ? "dark" : "light"}
+                      >
+                        {slippage}%
+                      </BreakdownValue>
+                    </BreakdownValueContiner>
+                  </BreakdownRow>
+                  <BreakdownRow>
+                    <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
+                      <span>Allowed slippage</span>
+                      <InfoCircleIcon />
+                    </BreakdownLabel>
+                    <BreakdownValueContiner>
+                      <BreakdownValue
+                        className={isDarkTheme ? "dark" : "light"}
+                      >
+                        0.50%
+                      </BreakdownValue>
+                    </BreakdownValueContiner>
+                  </BreakdownRow>
+                  <BreakdownRow>
+                    <BreakdownLabel className={isDarkTheme ? "dark" : "light"}>
+                      <span>Minimum received</span>
+                      <InfoCircleIcon />
+                    </BreakdownLabel>
+                    <BreakdownValueContiner>
+                      <BreakdownValue
+                        className={isDarkTheme ? "dark" : "light"}
+                      >
+                        {minRecieved} {token2?.symbol}
+                      </BreakdownValue>
+                    </BreakdownValueContiner>
+                  </BreakdownRow>
+                </BreakdownStack>
+              </BreakdownContainer>
+            </SummaryContainer>
+          </>
+        ) : null}
+        {buttonLabel !== "" ? (
+          <Button
+            className={isValid ? "active" : undefined}
+            onClick={() => {
+              if (!on) {
+                handleSwap();
+              }
+            }}
+          >
+            {!on ? (
+              buttonLabel
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "center",
+                }}
+              >
+                <CircularProgress color="inherit" size={20} />
+                Swap in progress
+              </div>
+            )}
+          </Button>
+        ) : null}
       </SwapRoot>
       <SwapSuccessfulModal
         open={swapModalOpen}

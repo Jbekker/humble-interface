@@ -3,6 +3,16 @@ export const TOKEN_VIA = 6779767;
 //export const TOKEN_WVOI1 = 24590664;
 export const TOKEN_WVOI1 = 34099056;
 
+export const NETWORK_TOKEN = {
+  VOI: {
+    tokenId: 0,
+    name: "Voi",
+    symbol: "VOI",
+    decimals: 6,
+    totalSupply: BigInt(10_000_000_000 * 1e6),
+  },
+};
+
 // TODO launchToken
 
 export const CONNECTOR_ALGO_ARC200 = {

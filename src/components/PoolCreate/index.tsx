@@ -16,7 +16,7 @@ import { getAlgorandClients } from "../../wallets";
 import TokenInput from "../TokenInput";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ARC200TokenI, PoolI } from "../../types";
-import { getTokens } from "../../store/tokenSlice";
+import { fetchToken, getToken, getTokens } from "../../store/tokenSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
 import { getPools } from "../../store/poolSlice";
 import algosdk, { decodeAddress } from "algosdk";
@@ -632,7 +632,9 @@ const Swap = () => {
   const [tokens2, setTokens] = React.useState<any[]>();
   useEffect(() => {
     axios
-      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=tokens`)
+      .get(
+        `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=tokens`
+      )
       .then((res) => {
         setTokens(res.data.tokens);
       });
@@ -650,7 +652,8 @@ const Swap = () => {
   /* Params */
   const [sp] = useSearchParams();
   const paramPoolId = sp.get("poolId");
-  //const paramTokenId = sp.get("tokenId");
+  const paramTokAId = sp.get("tokAId");
+  const paramTokBId = sp.get("tokBId");
 
   /* Wallet */
   const {
@@ -709,6 +712,39 @@ const Swap = () => {
       }
     }
   }, [pools, tokens]);
+
+  useEffect(() => {
+    if (paramTokAId && !isNaN(Number(paramTokAId))) {
+      if (paramTokAId === "0") {
+        setToken({
+          tokenId: 0,
+          name: "Voi",
+          symbol: "VOI",
+          decimals: 6,
+          totalSupply: BigInt(10_000_000_000 * 1e6),
+        });
+      } else {
+        const tokenId = Number(paramTokAId);
+        getToken(tokenId).then(setToken);
+      }
+    }
+  }, []);
+  useEffect(() => {
+    if (paramTokBId && !isNaN(Number(paramTokBId))) {
+      if (paramTokBId === "0") {
+        setToken2({
+          tokenId: 0,
+          name: "Voi",
+          symbol: "VOI",
+          decimals: 6,
+          totalSupply: BigInt(10_000_000_000 * 1e6),
+        });
+      } else {
+        const tokenId = Number(paramTokBId);
+        getToken(tokenId).then(setToken2);
+      }
+    }
+  }, []);
 
   // EFFECT
   useEffect(() => {
@@ -1080,7 +1116,7 @@ const Swap = () => {
           const completedAction = results.find((el: any) => el.key === key);
           if (!completedAction) {
             await submitAction(action, address, {
-              poolId: ctcInfo
+              poolId: ctcInfo,
             });
           }
           // TODO notify quest completion here

@@ -44,3 +44,87 @@ input {
 input:focus-visible {
   outline: none;
 }
+
+/* Define the bounce animation */
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+      transform: translateY(0);
+  }
+  40% {
+      transform: translateY(-150px);
+  }
+  60% {
+      transform: translateY(-75px);
+  }
+}
+
+/* Apply the bounce animation to the element */
+.bounce {
+  display: inline-block;
+  padding: 10px 20px;
+  font-size: 24px;
+  color: white;
+  background-color: transparent;
+  border-radius: 5px;
+  animation: bounce 3s infinite;
+}
+
+/* Define the spiral animation */
+@keyframes spiral {
+  0% {
+      transform: rotate(0deg) translate(0, 0);
+  }
+  25% {
+      transform: rotate(90deg) translate(30px, 30px);
+  }
+  50% {
+      transform: rotate(180deg) translate(60px, 60px);
+  }
+  75% {
+      transform: rotate(270deg) translate(90px, 90px);
+  }
+  100% {
+      transform: rotate(360deg) translate(120px, 120px);
+  }
+}
+
+/* Apply the spiral animation to the element */
+.spiral {
+  display: inline-block;
+  padding: 10px 20px;
+  font-size: 24px;
+  color: white;
+  background-color: #007BFF;
+  border-radius: 5px;
+  animation: spiral 4s infinite linear;
+}
+
+/* Define the wave animation */
+@keyframes wave {
+  0% {
+      transform: translateY(0);
+  }
+  25% {
+      transform: translateY(-20px);
+  }
+  50% {
+      transform: translateY(0);
+  }
+  75% {
+      transform: translateY(20px);
+  }
+  100% {
+      transform: translateY(0);
+  }
+}
+
+/* Apply the wave animation to the element */
+.wave {
+  display: inline-block;
+  padding: 10px 20px;
+  font-size: 24px;
+  color: white;
+  background-color: #007BFF;
+  border-radius: 5px;
+  animation: wave 2s infinite ease-in-out;
+}
