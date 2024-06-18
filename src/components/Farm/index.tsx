@@ -21,6 +21,7 @@ import { getFarms } from "../../store/farmSlice";
 import { getStake } from "../../store/stakeSlice";
 import { CTCINFO_STAKR_200 } from "../../constants/dex";
 import axios from "axios";
+import ProgressBar from "../ProgressBar";
 
 const spec = {
   name: "",
@@ -176,16 +177,16 @@ const Farm = () => {
     dispatch(getPools() as unknown as UnknownAction);
   }, [dispatch]);
 
-  /* Farms */
-  const farms: FarmI[] = useSelector((state: RootState) => state.farms.farms);
-  useEffect(() => {
-    dispatch(getFarms() as unknown as UnknownAction);
-  }, [dispatch]);
-
   /* Tokens */
   const tokens = useSelector((state: RootState) => state.tokens.tokens);
   useEffect(() => {
     dispatch(getTokens() as unknown as UnknownAction);
+  }, [dispatch]);
+
+  /* Farms */
+  const farms: FarmI[] = useSelector((state: RootState) => state.farms.farms);
+  useEffect(() => {
+    dispatch(getFarms() as unknown as UnknownAction);
   }, [dispatch]);
 
   /* Stake */
@@ -227,6 +228,26 @@ const Farm = () => {
 
   const isLoading = !pools || !tokens || !farms || !stake;
 
+  // loading indicator
+
+  const message = useMemo(() => {
+    if (!tokens || tokens.length === 0) return "Loading tokens...";
+    if (!pools || pools.length === 0) return "Loading pools...";
+    return "Loading farms...";
+  }, [tokens, pools, farms]);
+
+  const progress = useMemo(() => {
+    let progress = 0;
+    if (!!tokens && tokens.length > 0) progress += 25;
+    if (!!pools && pools.length > 0) progress += 25;
+    if (!!farms && farms.length > 0) progress += 50;
+    return progress;
+  }, [tokens, pools, farms]);
+
+  const isActive = useMemo(() => {
+    return progress < 100;
+  }, [progress]);
+
   return !isLoading ? (
     <PoolRoot className={isDarkTheme ? "dark" : "light"}>
       {activeAccount && userStake && userStake.length > 0 ? (
@@ -244,6 +265,12 @@ const Farm = () => {
           <ButtonLabel>View More</ButtonLabel>
         </ButtonLabelContainer>
       </ViewMoreButton>
+      <ProgressBar
+        message={message}
+        isActive={isActive}
+        totalSteps={100}
+        currentStep={progress}
+      />
     </PoolRoot>
   ) : null;
 };
