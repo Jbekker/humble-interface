@@ -10,11 +10,11 @@ import axios from "axios";
 
 interface Pool {
   txId: string;
-  round: number;
-  ts: number;
   poolId: number;
   tokA: number;
   tokB: number;
+  round: number;
+  ts: number;
 }
 
 export interface PoolState {
@@ -29,6 +29,9 @@ export const getPools = createAsyncThunk<
   { rejectValue: string; state: RootState }
 >("pools/getPools", async (_, { getState, rejectWithValue }) => {
   try {
+    const poolsTable = db.table("pools");
+    const pools = await poolsTable.toArray();
+
     const { data } = await axios.get(
       `https://arc72-idx.nautilus.sh/nft-indexer/v1/dex/pools`
     );
@@ -46,11 +49,9 @@ export const getPools = createAsyncThunk<
         ts: p.contractId,
       }));
 
-    console.log({ appPools });
-
     await db.table("pools").bulkPut(appPools);
 
-    return appPools;
+    return await poolsTable.toArray();
 
     /*
     const poolsTable = db.table("pools");

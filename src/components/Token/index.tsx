@@ -1,12 +1,12 @@
 import styled from "@emotion/styled";
 import React, { useEffect, useMemo, useState } from "react";
 import { RootState } from "../../store/store";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet";
 import PoolPosition from "../PoolPosition";
 import TokenList from "../TokenList";
 import axios from "axios";
-import { IndexerPoolI } from "../../types";
+import { IndexerPoolI, PoolI } from "../../types";
 import ProgressBar from "../ProgressBar";
 
 const TokenRoot = styled.div`
@@ -92,9 +92,16 @@ const ButtonLabel = styled(Button)`
 const formatter = new Intl.NumberFormat("en", { notation: "compact" });
 
 const Pool = () => {
+  const dispatch = useDispatch();
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
+
+  const storedPools: PoolI[] = useSelector(
+    (state: RootState) => state.pools.pools
+  );
+
+  console.log({ storedPools });
 
   const [pools, setPools] = React.useState<IndexerPoolI[]>();
   useEffect(() => {
