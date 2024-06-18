@@ -582,12 +582,21 @@ interface TokenCardProps {
   token: any;
 }
 const TokenCard: FC<TokenCardProps> = ({ token }) => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const pools = useSelector((state: RootState) => state.pools.pools);
+  console.log({ pools, token });
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
+  const tokenPools = useMemo(() => {
+    if (!pools) return [];
+    return token.pools.length > 0
+      ? token.pools
+      : pools.filter((p) => {
+          return !!p && [p.tokA, p.tokB].includes(token.contractId);
+        });
+  }, [pools]);
   return (
     <Fade in={true} timeout={1500}>
       <PoolCardRoot className={isDarkTheme ? "dark" : "light"}>
@@ -633,11 +642,11 @@ const TokenCard: FC<TokenCardProps> = ({ token }) => {
           <Col4>
             <APRLabelContainer>
               <APRLabel>
-                {token.pools.length > 0 ? token.pools.length : ""}
+                {tokenPools.length > 0 ? tokenPools.length : ""}
               </APRLabel>
             </APRLabelContainer>
           </Col4>
-          {token.pools.length > 0 ? (
+          {tokenPools.length > 0 ? (
             <Col5>
               <StyledLink
                 to={`/pool?filter=${String(token.symbol).toUpperCase()}`}
@@ -652,7 +661,9 @@ const TokenCard: FC<TokenCardProps> = ({ token }) => {
                 </AddButton>
               </StyledLink>
               <StyledLink
-                to={`/swap?poolId=${token.pools[0].contractId}`}
+                to={`/swap?poolId=${
+                  tokenPools[0]?.contractId || tokenPools[0]?.poolId || 0
+                }`}
                 style={{
                   width: "100%",
                 }}
@@ -676,7 +687,7 @@ const TokenCard: FC<TokenCardProps> = ({ token }) => {
                   onClick={async () => {
                     await getToken(token.contractId);
                     navigate(
-                      `/pool/create?tokBId=0&tokAId=${token.contractId}`
+                      `/pool/create?tokBId=0&tokAId=${token?.contractId}`
                     );
                   }}
                 >

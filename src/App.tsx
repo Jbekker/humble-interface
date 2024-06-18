@@ -51,7 +51,7 @@ const AppContainer: React.FC<AppContainerProps> = ({ children }) => {
   // useEffect(() => {
   //   dispatch(getVolume() as unknown as UnknownAction);
   // }, [dispatch]);
-  const [ready, setReady] = React.useState(!false);
+  const [ready, setReady] = React.useState(false);
   // useEffect(() => {
   //   if (poolsStatus === "succeeded") {
   //     (async () => {

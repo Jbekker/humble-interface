@@ -625,6 +625,7 @@ const PoolCard: FC<PoolCardProps> = ({ pool, balance, tokens }) => {
 
   /*
   const pools = useSelector((state: RootState) => state.pools.pools);
+  console.log({ pools });
 
   const poolBals = useSelector(
     (state: RootState) => state.poolBals.poolBals

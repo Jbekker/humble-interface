@@ -31,41 +31,30 @@ export const getPools = createAsyncThunk<
   try {
     const poolsTable = db.table("pools");
     const pools = await poolsTable.toArray();
-
-    const { data } = await axios.get(
-      `https://arc72-idx.nautilus.sh/nft-indexer/v1/dex/pools`
-    );
-
-    const appPools = data.pools
-      .filter((p: any) => {
-        return p.providerId === "01";
-      })
-      .map((p: any) => ({
-        txId: String(p.contractId),
-        poolId: p.contractId,
-        tokA: Number(p.tokAId),
-        tokB: Number(p.tokBId),
-        round: p.contractId,
-        ts: p.contractId,
-      }));
-
-    await db.table("pools").bulkPut(appPools);
-
-    return await poolsTable.toArray();
-
-    /*
-    const poolsTable = db.table("pools");
-    const pools = await poolsTable.toArray();
-    const minRound = 5486024;
-    const storedPools = [];
+    const lastRound = pools.reduce((acc, val) => Math.max(acc, val.round), 0);
     if (pools.length === 0) {
-      const { data } = await axios.get("/api/pools.json");
-      storedPools.push(...data.filter((pool: Pool) => pool.round >= minRound));
+      const { data } = await axios.get(
+        `https://arc72-idx.nautilus.sh/nft-indexer/v1/dex/pools`,
+        {
+          params: {
+            ["mint-min-round"]: lastRound,
+          },
+        }
+      );
+      const appPools = data.pools
+        .filter((p: any) => {
+          return p.providerId === "01";
+        })
+        .map((p: any) => ({
+          poolId: p.contractId,
+          tokA: Number(p.tokAId),
+          tokB: Number(p.tokBId),
+          round: p.mintRound,
+        }));
+      await db.table("pools").bulkPut(appPools);
+      return appPools;
     }
-    const lastRound =
-      pools.length > 0
-        ? Math.max(...[...pools, ...storedPools].map((pool) => pool.round))
-        : 0;
+    const minRound = 5486024;
     const { algodClient, indexerClient } = getAlgorandClients();
     const ci = new CONTRACT(
       CTCINFO_TRI,
@@ -100,26 +89,26 @@ export const getPools = createAsyncThunk<
       .filter((event: any) => event[1] > lastRound)
       .map((event: any) => {
         return {
-          txId: event[0],
+          //txId: event[0],
           round: event[1],
-          ts: event[2],
+          //ts: event[2],
           poolId: Number(event[3][0]),
           tokA: Number(event[3][1]),
           tokB: Number(event[3][2]),
         };
       });
-    if (storedPools.length > 0) {
-      newPools.push(...storedPools);
+    if (pools.length > 0) {
+      newPools.push(...pools);
     }
     for (const pool of newPools.filter(
-      (pool: PoolI) => pool.round >= minRound
+      (pool: PoolI) => pool?.round || 0 >= minRound
     )) {
       await db.table("pools").bulkPut(
         newPools.map((pool: Pool) => {
           return {
-            txId: pool.txId,
+            //txId: pool.txId,
             round: pool.round,
-            ts: pool.ts,
+            //ts: pool.ts,
             poolId: pool.poolId,
             tokA: pool.tokA,
             tokB: pool.tokB,
@@ -135,7 +124,6 @@ export const getPools = createAsyncThunk<
         !BAD_POOLS.includes(pool.poolId)
     );
     return combinedPools;
-    */
   } catch (error: any) {
     return rejectWithValue(error.message);
   }

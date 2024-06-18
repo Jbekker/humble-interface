@@ -576,7 +576,7 @@ const SwapSuccessfulModal: React.FC<SwapSuccessfulModalProps> = ({
           success: "Token creation complete!",
         }
       );
-      getToken(ctcInfo);
+      await getToken(ctcInfo);
       // -----------------------------------------
       // QUEST HERE hmbl_token_create
       // -----------------------------------------
@@ -601,7 +601,6 @@ const SwapSuccessfulModal: React.FC<SwapSuccessfulModalProps> = ({
         })();
       } while (0);
       // -----------------------------------------
-      //handleClose();
       navigate(`/pool/create?tokAId=${ctcInfo}`);
     } catch (e: any) {
       toast.error(e.message);

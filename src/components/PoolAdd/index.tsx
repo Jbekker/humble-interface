@@ -17,13 +17,13 @@ import { UnknownAction } from "@reduxjs/toolkit";
 import { getPools } from "../../store/poolSlice";
 import algosdk, { decodeAddress } from "algosdk";
 import { toast } from "react-toastify";
-import { Toast } from "react-toastify/dist/components";
 import axios from "axios";
 import { hasAllowance } from "ulujs/types/arc200";
 import { tokenId, tokenSymbol } from "../../utils/dex";
 import BigNumber from "bignumber.js";
 import { Asset } from "ulujs/types/swap";
 import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
+import ProgressBar from "../ProgressBar";
 
 const spec = {
   name: "pool",
@@ -660,10 +660,10 @@ const Swap = () => {
         const token = [TOKEN_WVOI1].includes(pool.tokA)
           ? NETWORK_TOKEN.VOI
           : tokens.find((t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokA}`);
-        setToken(token);
         const token2 = [TOKEN_WVOI1].includes(pool.tokB)
           ? NETWORK_TOKEN.VOI
           : tokens.find((t: ARC200TokenI) => `${t.tokenId}` === `${pool.tokB}`);
+        setToken(token);
         setToken2(token2);
       } else {
         const { algodClient, indexerClient } = getAlgorandClients();
@@ -688,7 +688,7 @@ const Swap = () => {
           });
       }
     }
-  }, [pools, tokens, pools, paramPoolId]);
+  }, [pools, tokens, pools, paramPoolId, paramNewPool]);
 
   // EFFECT
   useEffect(() => {
@@ -758,7 +758,6 @@ const Swap = () => {
       }
     }
   }, [pools, paramPoolId, eligiblePools]);
-
 
   const [info, setInfo] = useState<any>();
   // EFFECT: set pool info
@@ -927,7 +926,8 @@ const Swap = () => {
       !focus ||
       !token ||
       !token2 ||
-      !info
+      !info ||
+      paramNewPool === "true"
     )
       return;
     if (info.poolBals.A === BigInt(0) || info.poolBals.B === BigInt(0)) return;
@@ -947,11 +947,19 @@ const Swap = () => {
           .toFormat()
       );
     }
-  }, [rate, fromAmount, toAmount, focus, token, token2, info]);
+  }, [rate, fromAmount, toAmount, focus, token, token2, info, paramNewPool]);
 
   // EFFECT
   useEffect(() => {
-    if (!pool || !token || !token2 || !toAmount || focus !== "to" || !info)
+    if (
+      !pool ||
+      !token ||
+      !token2 ||
+      !toAmount ||
+      focus !== "to" ||
+      !info ||
+      paramNewPool === "true"
+    )
       return;
     if (info.poolBals.A === BigInt(0) || info.poolBals.B === BigInt(0)) return;
     const { algodClient, indexerClient } = getAlgorandClients();
@@ -990,7 +998,7 @@ const Swap = () => {
         }
       });
     }
-  }, [pool, token, token2, toAmount, focus]);
+  }, [pool, token, token2, toAmount, focus, paramNewPool]);
 
   // // EFFECT
   // useEffect(() => {
@@ -1112,7 +1120,7 @@ const Swap = () => {
       });
   }, []);
 
-  // EFFECT: set balance 
+  // EFFECT: set balance
   useEffect(() => {
     if (!token || !activeAccount || !tokens2) return;
     const { algodClient, indexerClient } = getAlgorandClients();
@@ -1259,13 +1267,17 @@ const Swap = () => {
   }, [isValid, fromAmount, toAmount, balance, balance2, token, token2]);
 
   const handleProviderDeposit = async () => {
-    if (!isValid || !token || !token2 || !pool || !tokens2) return;
+    if (!isValid || !token || !token2 || !pool || !tokens2 || !tokens) return;
     if (!activeAccount) {
       toast.info("Please connect your wallet first");
       return;
     }
     try {
       setOn(true);
+
+      setProgress(25);
+      setmessage("Building transactions");
+
       const { algodClient, indexerClient } = getAlgorandClients();
       await new Promise((res) => setTimeout(res, 1000));
 
@@ -1295,37 +1307,63 @@ const Swap = () => {
       const A = {
         ...mA,
         amount: fromAmount.replace(/,/g, ""),
-        decimals: String(mA.decimals),
       };
       const B = {
         ...mB,
         amount: toAmount.replace(/,/g, ""),
-        decimals: String(mB.decimals),
       };
 
       const swapR = await ci.deposit(acc.addr, pool.poolId, A, B);
+
       if (!swapR.success) {
         return new Error("Add liquidity group simulation failed");
       }
-      await toast.promise(
+
+      setProgress(50);
+      setmessage("Signing transaction");
+
+      // await toast.promise(
+      //   signTransactions(
+      //     swapR.txns.map(
+      //       (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+      //     )
+      //   ).then(sendTransactions),
+      //   {
+      //     pending: `Add liquidity ${fromAmount} ${tokenSymbol(
+      //       token
+      //     )} -> ${toAmount} ${tokenSymbol(token2)}`,
+      //     success: `Add liquidity successful!`,
+      //   },
+      //   {
+      //     type: "default",
+      //     position: "top-center",
+      //     theme: "dark",
+      //   }
+      // );
+      const stxns = await toast.promise(
         signTransactions(
           swapR.txns.map(
             (t: string) => new Uint8Array(Buffer.from(t, "base64"))
           )
-        ).then(sendTransactions),
+        ),
         {
           pending: `Add liquidity ${fromAmount} ${tokenSymbol(
             token
           )} -> ${toAmount} ${tokenSymbol(token2)}`,
-          success: `Add liquidity successful!`,
+          success:
+            paramNewPool !== "true" ? `Add liquidity successful!` : undefined,
         },
         {
           type: "default",
-          position: "top-center",
+          position: "top-right",
           theme: "dark",
         }
       );
-      setFromAmount("0");
+
+      setProgress(75);
+      setmessage("Confirming transactions");
+
+      const res = await sendTransactions(stxns);
 
       // -----------------------------------------
       // QUEST HERE hmbl_pool_add
@@ -1350,17 +1388,43 @@ const Swap = () => {
           }
         })();
       } while (0);
-
+      if (paramNewPool === "true") {
+        do {
+          const { data } = await axios.get(
+            `https://arc72-idx.nautilus.sh/nft-indexer/v1/dex/pools?contractId=${pool.poolId}`
+          );
+          if (data.pools.length > 0) break;
+          await new Promise((res) => setTimeout(res, 4000));
+        } while (1);
+      }
+      if (paramNewPool === "true") {
+        navigate(`/pool?filter=${token.symbol}`);
+      } else {
+        setFromAmount("0");
+      }
       // -----------------------------------------
     } catch (e: any) {
       toast.error(e.message);
       console.error(e);
     } finally {
       setOn(false);
+      setProgress(0);
+      setmessage("");
     }
   };
 
   const isLoading = !pools || !tokens;
+
+  const [message, setmessage] = useState<string>("");
+  const [progress, setProgress] = useState<number>(0);
+
+  useEffect(() => {
+    if (progress === 0 || progress >= 100) return;
+    const timeout = setTimeout(() => {
+      setProgress(progress + 1);
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, [progress]);
 
   return !isLoading ? (
     <SwapRoot className={isDarkTheme ? "dark" : "light"}>
@@ -1440,9 +1504,10 @@ const Swap = () => {
           }
         }}
       >
-        {!on ? (
+        {
+          /*!on ? (*/
           buttonLabel
-        ) : (
+          /*) : (
           <div
             style={{
               display: "flex",
@@ -1453,8 +1518,15 @@ const Swap = () => {
             <CircularProgress color="inherit" size={20} />
             Add liquidity in progress
           </div>
-        )}
+          )*/
+        }
       </Button>
+      <ProgressBar
+        message={message}
+        isActive={![0, 100].includes(progress)}
+        currentStep={progress}
+        totalSteps={100}
+      />
     </SwapRoot>
   ) : null;
 };

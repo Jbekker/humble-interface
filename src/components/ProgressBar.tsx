@@ -3,7 +3,7 @@ import SIZE from "../constants/screenSizes";
 import * as React from "react";
 
 const Overlay = styled.div`
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   height: 100vh;
   left: 0;
   overflow: hidden;
@@ -45,7 +45,7 @@ const ProgressBarContainer = styled.div`
 
 const ProgressBarFill = styled.div<{ percent?: number }>`
   border-radius: 8px;
-  background: #FFBE1D;
+  background: #ffbe1d;
   width: ${({ percent }) => `${percent || 0}%`};
   height: 100%;
   transition: width 1s ease-in-out;
