@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import React, { FC } from "react";
+import React, { FC, useEffect, useState } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import { FarmI, PoolI, PositionI, StakeI } from "../../types";
@@ -9,6 +9,7 @@ import { useWallet } from "@txnlab/use-wallet";
 import { useNavigate } from "react-router-dom";
 import { Stack } from "@mui/material";
 import FarmCard from "../FarmCard";
+import moment from "moment";
 
 const Columns = styled.div`
   display: flex;
@@ -241,9 +242,18 @@ const FarmLiquidity: FC<FarmLiquidityProps> = ({ pools, stake, farms }) => {
       setPositions(positions);
     })();
   }, [pools]);
-
-  console.log("positions", positions);
-
+  // EFFECT get current round
+  const [round, setRound] = useState<number>(0);
+  useEffect(() => {
+    const { algodClient } = getAlgorandClients();
+    algodClient
+      .status()
+      .do()
+      .then((r: any) => {
+        setRound(r["last-round"]);
+      });
+  }, []);
+  const [timestamp, setTimestamp] = useState<number>(moment().unix());
   return (
     <>
       <YourLiquidityRoot className={isDarkTheme ? "dark" : "light"}>
@@ -277,7 +287,7 @@ const FarmLiquidity: FC<FarmLiquidityProps> = ({ pools, stake, farms }) => {
                   key={position.poolId}
                   farm={farms.find((farm) => farm.poolId === position.poolId)}
                   round={0}
-                  timestamp={0}
+                  timestamp={timestamp}
                 />
               ))}
             </Stack>

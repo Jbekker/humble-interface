@@ -2,7 +2,7 @@ import styled from "@emotion/styled";
 import React, { FC, useEffect, useMemo, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
-import { useWallet } from "@txnlab/use-wallet";
+import { custom, useWallet } from "@txnlab/use-wallet";
 import { CircularProgress, Stack } from "@mui/material";
 import { CONTRACT, abi, arc200 } from "ulujs";
 import { TOKEN_WVOI1 } from "../../constants/tokens";
@@ -21,6 +21,8 @@ import BasicDateCalendar from "../BasicDateCalendar";
 import moment from "moment";
 import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
 import { CTCINFO_STAKR_200 } from "../../constants/dex";
+
+import * as Sentry from "@sentry/react";
 
 const Note = styled.div`
   align-self: stretch;
@@ -225,8 +227,6 @@ const Swap = () => {
     setFromAmount("0");
   }, [token, tokenOptions]);
 
-  console.log({ tokenOptions2 });
-
   useEffect(() => {
     if (!token2) return;
     setToAmount("");
@@ -343,20 +343,11 @@ const Swap = () => {
   const handlePoolCreate = async () => {
     if (!activeAccount || !token || !token2) return;
     try {
-      // create app -> app id
-      // approve spend tok A to app id
-      // approve spend tok B to app id
-      // call provider deposit
-      // -------------------------------------------
-      // create app -> app id
-      // -------------------------------------------
       const { algodClient, indexerClient } = getAlgorandClients();
-
-      // -------------------------------------------
-      // reach_p0
-      // -------------------------------------------
       do {
-        const ctcInfo = 36898212;
+        const ctcInfo = CTCINFO_STAKR_200;
+        const manager =
+          "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ";
         const spec = {
           name: "",
           desc: "",
@@ -428,11 +419,24 @@ const Swap = () => {
           .toFixed(0);
 
         const builder = {
-          arc200: new CONTRACT(
-            rewardToken,
+          stakeToken: new CONTRACT(
+            stakeToken,
             algodClient,
             indexerClient,
             abi.arc200,
+            {
+              addr: activeAccount.address,
+              sk: new Uint8Array(0),
+            },
+            true,
+            false,
+            true
+          ),
+          rewardToken: new CONTRACT(
+            rewardToken,
+            algodClient,
+            indexerClient,
+            abi.nt200,
             {
               addr: activeAccount.address,
               sk: new Uint8Array(0),
@@ -457,57 +461,96 @@ const Swap = () => {
         };
 
         let customR;
-        for (const p1 of [0, 28100]) {
-          const txns = [];
-          const txnO = (
-            await builder.arc200.arc200_approve(
-              algosdk.getApplicationAddress(ctcInfo),
-              newAllowance
-            )
-          ).obj;
-          txns.push({
-            ...txnO,
-            payment: p1,
-            note: new TextEncoder().encode(
-              `${token2.symbol} arc200_approve ${
-                activeAccount.address
-              } ${algosdk.getApplicationAddress(
-                ctcInfo
-              )} ${newAllowanceSU} (${allowanceSU} -> ${newAllowanceSU}) +${rewardSU}`
-            ),
-          });
-          const txn1 = (
-            await builder.stakr200.Funder_deployPool([
-              [rewardToken],
-              stakeToken,
-              [rewardAmount],
-              start / 1000,
-              end / 1000,
-            ])
-          ).obj;
-          txns.push({
-            ...txn1,
-            payment: 102100,
-            note: new TextEncoder().encode(
-              `deploy farm ${token.symbol} -> ${
-                token2.symbol
-              } ${rewardSU} starting: ${moment(start).format(
-                "LL"
-              )} ending: ${moment(end).format("LL")}
+        for (const p1 of /*arc200_approve x*/ [0, 28100]) {
+          const buildN = [];
+          // ensure stake token balance
+          do {
+            const obj = (
+              await builder.stakeToken.arc200_transfer(
+                algosdk.getApplicationAddress(ctcInfo),
+                0
+              )
+            ).obj;
+            const txnO = {
+              ...obj,
+              payment: 28500,
+              note: new TextEncoder().encode(
+                `${token2.symbol} arc200_transfer from ${
+                  activeAccount.address
+                } to ${algosdk.getApplicationAddress(ctcInfo)} amount 0`
+              ),
+            };
+            buildN.push(txnO);
+          } while (0);
+          // ensure reward token balance of manager
+          do {
+            const obj = (await builder.rewardToken.arc200_transfer(manager, 0))
+              .obj;
+            const txnO = {
+              ...obj,
+              payment: 28500,
+              note: new TextEncoder().encode(
+                `${token2.symbol} arc200_transfer from ${activeAccount.address} to ${manager} amount 0`
+              ),
+            };
+            buildN.push(txnO);
+          } while (0);
+          // approve spending reward token by staking pool
+          do {
+            const obj = (
+              await builder.rewardToken.arc200_approve(
+                algosdk.getApplicationAddress(ctcInfo),
+                newAllowance
+              )
+            ).obj;
+            const txnO = {
+              ...obj,
+              payment: p1,
+              note: new TextEncoder().encode(
+                `${token2.symbol} arc200_approve ${
+                  activeAccount.address
+                } ${algosdk.getApplicationAddress(
+                  ctcInfo
+                )} ${newAllowanceSU} (${allowanceSU} -> ${newAllowanceSU}) +${rewardSU}`
+              ),
+            };
+            buildN.push(txnO);
+          } while (0);
+          // deploy staking pool
+          do {
+            const obj = (
+              await builder.stakr200.Funder_deployPool([
+                [rewardToken],
+                stakeToken,
+                [rewardAmount],
+                start / 1000,
+                end / 1000,
+              ])
+            ).obj;
+            const txnO = {
+              ...obj,
+              payment: 102100,
+              note: new TextEncoder().encode(
+                `deploy farm ${token.symbol} -> ${
+                  token2.symbol
+                } ${rewardSU} starting: ${moment(start).format(
+                  "LL"
+                )} ending: ${moment(end).format("LL")}
               `
-            ),
-          });
-          console.log(txns);
+              ),
+            };
+            buildN.push(txnO);
+          } while (0);
           ci.setFee(2000);
-          ci.setExtraTxns(txns);
+          ci.setExtraTxns(buildN);
           ci.setAccounts([algosdk.getApplicationAddress(ctcInfo)]);
           ci.setEnableGroupResourceSharing(true);
           customR = await ci.custom();
-          console.log({ customR });
-          if (customR.success) {
-            break;
-          }
+          if (customR.success) break;
         }
+
+        if (!customR.success) throw new Error(customR.error);
+
         await toast.promise(
           signTransactions(
             customR.txns.map(
@@ -544,6 +587,8 @@ const Swap = () => {
         // -----------------------------------------
       } while (0);
     } catch (e: any) {
+      console.error(e);
+      Sentry.captureException(e);
       toast.error(e.message);
     }
   };

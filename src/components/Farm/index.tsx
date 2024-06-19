@@ -222,8 +222,6 @@ const Farm = () => {
     return farmList;
   }, [farms]);
 
-  console.log({ farms, farmList });
-
   const [showing, setShowing] = useState<number>(10);
 
   const isLoading = !pools || !tokens || !farms || !stake;
