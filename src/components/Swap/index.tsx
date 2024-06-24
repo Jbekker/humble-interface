@@ -12,7 +12,7 @@ import {
   Skeleton,
   Stack,
 } from "@mui/material";
-import { CONTRACT, arc200, swap } from "ulujs";
+import { CONTRACT, arc200, swap, abi } from "ulujs";
 import {
   NETWORK_TOKEN,
   TOKEN_VIA,
@@ -1019,9 +1019,11 @@ const Swap = () => {
     };
     try {
       setOn(true);
-      const { algodClient, indexerClient } = getAlgorandClients();
-      await new Promise((res) => setTimeout(res, 1000));
+      setProgress(0);
+      setMessage("Building transaction...");
+      setProgress(25);
 
+      const { algodClient, indexerClient } = getAlgorandClients();
       // pick a pool with best rate
 
       const pool = eligiblePools.slice(-1)[0]; // last pools
@@ -1067,47 +1069,41 @@ const Swap = () => {
         tokenId: mB.tokenId ?? undefined,
       };
 
-      const swapR = await ci.swap(
-        acc.addr,
-        pool2.poolId,
-        A,
-        B
-        /*
-        {
-          contractId: tokenId(token),
-          tokenId: token.tokenId === 0 ? "0" : undefined,
-          symbol: token.symbol,
-          amount: fromAmount,
-        },
-        {
-          contractId: tokenId(token2),
-          tokenId: token2.tokenId === 0 ? "0" : undefined,
-          symbol: token2.symbol,
-          decimals: `${token2?.decimals || 0}`,
-        }
-        */
-      );
-      console.log({ swapR });
+      const swapR = await ci.swap(acc.addr, pool2.poolId, A, B);
+
       if (!swapR.success) throw new Error("Swap simulation failed");
-      await toast.promise(
+
+      setMessage("Signing transaction...");
+      setProgress(50);
+
+      const stxns = await toast.promise(
         signTransactions(
           swapR.txns.map(
             (t: string) => new Uint8Array(Buffer.from(t, "base64"))
           )
-        ).then(sendTransactions),
+        ),
         {
           pending: `Swap ${fromAmount} ${tokenSymbol(
             token
           )} -> ${toAmount} ${tokenSymbol(token2)}`,
-          success: `Swap successful`,
         },
         {
           type: "default",
-          position: "top-center",
+          position: "top-right",
           theme: "dark",
         }
       );
 
+      const res = await sendTransactions(stxns);
+
+      console.log({ res });
+
+      setProgress(75);
+      setMessage("Confirming transaction...");
+      await algosdk.waitForConfirmation(algodClient, res.txId, 1000);
+      setProgress(85);
+
+      setMessage("Updating quests...");
       // -----------------------------------------
       // QUEST HERE hmbl_pool_swap
       // -----------------------------------------
@@ -1130,6 +1126,11 @@ const Swap = () => {
         }
       } while (0);
       // -----------------------------------------
+      setProgress(95);
+      await new Promise((res) => setTimeout(res, 1000));
+
+      const swapEvents = await ci.SwapEvents({ txid: res.txId });
+      console.log(swapEvents);
 
       // TODO add confirmation modal
     } catch (e: any) {
@@ -1137,10 +1138,23 @@ const Swap = () => {
       toast.error(e.message);
     } finally {
       setOn(false);
+      setMessage("");
+      setProgress(0);
     }
   };
 
   const isLoading = !pools || !tokens;
+
+  const [message, setMessage] = useState<string>("");
+  const [progress, setProgress] = useState<number>(0);
+
+  useEffect(() => {
+    if (progress === 0 || progress >= 100) return;
+    const timeout = setTimeout(() => {
+      setProgress(progress + 1);
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, [progress]);
 
   return !isLoading ? (
     <>
@@ -1293,20 +1307,7 @@ const Swap = () => {
               }
             }}
           >
-            {!on ? (
-              buttonLabel
-            ) : (
-              <div
-                style={{
-                  display: "flex",
-                  gap: "10px",
-                  alignItems: "center",
-                }}
-              >
-                <CircularProgress color="inherit" size={20} />
-                Swap in progress
-              </div>
-            )}
+            {buttonLabel}
           </Button>
         ) : null}
       </SwapRoot>
@@ -1319,6 +1320,12 @@ const Swap = () => {
         swapIn={swapIn}
         swapOut={swapOut}
         txId={txId}
+      />
+      <ProgressBar
+        message={message}
+        isActive={![0, 100].includes(progress)}
+        currentStep={progress}
+        totalSteps={100}
       />
     </>
   ) : null;

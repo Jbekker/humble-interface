@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import React, { FC, useEffect, useState } from "react";
+import React, { FC, useEffect, useMemo, useState } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import { FarmI, PoolI, PositionI, StakeI } from "../../types";
@@ -7,9 +7,13 @@ import { arc200 } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
 import { useWallet } from "@txnlab/use-wallet";
 import { useNavigate } from "react-router-dom";
-import { Stack } from "@mui/material";
+import { Fade, Stack, Tooltip } from "@mui/material";
 import FarmCard from "../FarmCard";
 import moment from "moment";
+import Search from "../Search";
+import ArrowRightAltIcon from "@mui/icons-material/ArrowRightAlt";
+
+const formatter = new Intl.NumberFormat("en", { notation: "compact" });
 
 const Columns = styled.div`
   display: flex;
@@ -136,6 +140,33 @@ const MessageText = styled.div`
   line-height: 120%; /* 18px */
 `;
 
+const ArrowRightIcon = () => {
+  return (
+    <svg
+      width="32"
+      height="32"
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M30 16L2 16"
+        stroke="#141010"
+        stroke-width="3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M18 28L30 16L18 4"
+        stroke="#141010"
+        stroke-width="3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  );
+};
+
 const InfoCircleIcon = () => {
   return (
     <svg
@@ -200,103 +231,93 @@ const PoolIcon = () => {
 };
 
 interface FarmLiquidityProps {
-  farms: FarmI[];
-  pools: PoolI[];
-  stake: StakeI[];
+  positions: any[];
+  value: number;
+  value2: number;
+  onFilter: (input: string) => void;
 }
 
-const FarmLiquidity: FC<FarmLiquidityProps> = ({ pools, stake, farms }) => {
-  const navigate = useNavigate();
-  const { activeAccount } = useWallet();
+const FarmLiquidity: FC<FarmLiquidityProps> = ({
+  positions: farms,
+  onFilter,
+  value,
+  value2,
+}) => {
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const [positions, setPositions] = React.useState<PositionI[]>([]);
-  React.useEffect(() => {
-    if (!activeAccount) return;
-    const { algodClient, indexerClient } = getAlgorandClients();
-    (async () => {
-      const positions = [];
-      for (const pool of pools) {
-        const ci = new arc200(pool.poolId, algodClient, indexerClient, {
-          acc: {
-            addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
-            sk: new Uint8Array(0),
-          },
-        });
-        const arc200_balanceOfR = await ci.arc200_balanceOf(
-          activeAccount.address
-        );
-        if (!arc200_balanceOfR.success) {
-          console.error(arc200_balanceOfR.error);
-          continue;
-        }
-        const arc200_balanceOf = arc200_balanceOfR.returnValue;
-        if (arc200_balanceOf === BigInt(0)) continue;
-        positions.push({
-          ...pool,
-          balance: arc200_balanceOf,
-        });
-      }
-      setPositions(positions);
-    })();
-  }, [pools]);
-  // EFFECT get current round
-  const [round, setRound] = useState<number>(0);
-  useEffect(() => {
-    const { algodClient } = getAlgorandClients();
-    algodClient
-      .status()
-      .do()
-      .then((r: any) => {
-        setRound(r["last-round"]);
-      });
-  }, []);
-  const [timestamp, setTimestamp] = useState<number>(moment().unix());
+  const timestamp = useMemo(() => moment().unix(), []);
   return (
-    <>
-      <YourLiquidityRoot className={isDarkTheme ? "dark" : "light"}>
-        <HeadingRow className="heading-row">
-          <SectionTitle>Farm Liquidity</SectionTitle>
-        </HeadingRow>
-        <Columns>
-          <Heading>
-            <ColumnPair>
-              <ColumnLabel>&nbsp;</ColumnLabel>
-            </ColumnPair>
-            <ColumnTVL>
-              <ColumnLabel>Rewards</ColumnLabel>
-              <InfoCircleIcon />
-            </ColumnTVL>
-            <ColumnVolume>
-              <ColumnLabel>APR</ColumnLabel>
-              <InfoCircleIcon />
-            </ColumnVolume>
-            <ColumnAPR>
-              <ColumnLabel>TVL</ColumnLabel>
-              <InfoCircleIcon />
-            </ColumnAPR>
-          </Heading>
-        </Columns>
-        <Body>
-          {stake.length > 0 ? (
-            <Stack spacing={2} sx={{ width: "100%" }}>
-              {stake.map((position) => (
-                <FarmCard
-                  key={position.poolId}
-                  farm={farms.find((farm) => farm.poolId === position.poolId)}
-                  round={0}
-                  timestamp={timestamp}
-                />
-              ))}
-            </Stack>
-          ) : (
-            <MessageText className="message-text">No farms found</MessageText>
-          )}
-        </Body>
-      </YourLiquidityRoot>
-    </>
+    <YourLiquidityRoot className={isDarkTheme ? "dark" : "light"}>
+      <HeadingRow className="heading-row">
+        <SectionTitle>Farm Liquidity</SectionTitle>
+        {farms.length > 0 ? (
+          <Fade in={!!value} timeout={3000}>
+            <SectionTitle
+              style={{
+                display: "flex",
+                fontWeight: 200,
+                fontSize: "16px",
+                alignItems: "center",
+              }}
+            >
+              <Tooltip title="Your total stake in farms">
+                <Stack spacing={0.5} direction="row" alignItems="center">
+                  <span>{formatter.format(value)} VOI</span>
+                  <InfoCircleIcon />
+                </Stack>
+              </Tooltip>
+              <ArrowRightAltIcon />
+              <Tooltip title="The total rewards remaining in farm positions">
+                <Stack spacing={0.5} direction="row" alignItems="center">
+                  <span>{formatter.format(value2)} VOI</span>
+                  <InfoCircleIcon />
+                </Stack>
+              </Tooltip>
+            </SectionTitle>
+          </Fade>
+        ) : null}
+      </HeadingRow>
+      <HeadingRow className="heading-row2" style={{ paddingBottom: "32px" }}>
+        <Search onChange={onFilter} />
+      </HeadingRow>
+      <Columns>
+        <Heading>
+          <ColumnPair>
+            <ColumnLabel>&nbsp;</ColumnLabel>
+          </ColumnPair>
+          <ColumnTVL>
+            <ColumnLabel>Rewards</ColumnLabel>
+            <InfoCircleIcon />
+          </ColumnTVL>
+          <ColumnVolume>
+            <ColumnLabel>APR</ColumnLabel>
+            <InfoCircleIcon />
+          </ColumnVolume>
+          <ColumnAPR>
+            <ColumnLabel>TVL</ColumnLabel>
+            <InfoCircleIcon />
+          </ColumnAPR>
+        </Heading>
+      </Columns>
+      <Body>
+        {farms.length > 0 ? (
+          <Stack spacing={2} sx={{ width: "100%" }}>
+            {farms.map((position) => (
+              <FarmCard
+                key={position.poolId}
+                farm={farms.find((farm) => farm.poolId === position.poolId)}
+                round={0}
+                timestamp={timestamp}
+              />
+            ))}
+          </Stack>
+        ) : (
+          <MessageText className="message-text">No farms found</MessageText>
+        )}
+      </Body>
+    </YourLiquidityRoot>
   );
 };
 

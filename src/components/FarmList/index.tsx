@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import React, { FC, useEffect, useState } from "react";
+import React, { FC, useEffect, useRef, useState } from "react";
 import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import { FarmI } from "../../types";
@@ -8,6 +8,7 @@ import { getAlgorandClients } from "../../wallets";
 import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet";
+import Search from "../Search";
 
 const Button = styled.div`
   cursor: pointer;
@@ -217,9 +218,18 @@ const PoolIcon = () => {
 interface PoolListProps {
   farms: FarmI[];
   showing: number;
+  onFilter: (input: string) => void;
+  label?: string;
+  showCreateFarmButton?: boolean;
 }
 
-const FarmList: FC<PoolListProps> = ({ farms, showing }) => {
+const FarmList: FC<PoolListProps> = ({
+  label = "Popular Farms",
+  showCreateFarmButton = true,
+  farms,
+  showing,
+  onFilter,
+}) => {
   const { activeAccount } = useWallet();
   const navigate = useNavigate();
   /* Theme */
@@ -239,10 +249,13 @@ const FarmList: FC<PoolListProps> = ({ farms, showing }) => {
   }, []);
   const [timestamp, setTimestamp] = useState<number>(moment().unix());
   return (
-    <PopularPoolsRoot className={isDarkTheme ? "dark" : "light"}>
+    <PopularPoolsRoot
+      id="popular-farms-root"
+      className={isDarkTheme ? "dark" : "light"}
+    >
       <HeadingRow className="heading-row">
-        <SectionTitle>Popular Farms</SectionTitle>
-        {activeAccount ? (
+        <SectionTitle>{label}</SectionTitle>
+        {showCreateFarmButton && activeAccount ? (
           <CreateTokenButton
             onClick={() => {
               navigate(`/farm/create`);
@@ -254,6 +267,9 @@ const FarmList: FC<PoolListProps> = ({ farms, showing }) => {
             </CreateButtonInner>
           </CreateTokenButton>
         ) : null}
+      </HeadingRow>
+      <HeadingRow className="heading-row2" style={{ paddingBottom: "32px" }}>
+        <Search onChange={onFilter} />
       </HeadingRow>
       <Columns>
         <Heading>

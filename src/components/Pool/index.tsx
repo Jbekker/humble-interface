@@ -13,6 +13,8 @@ import axios from "axios";
 import BigNumber from "bignumber.js";
 import { useLocation } from "react-router-dom";
 import ProgressBar from "../ProgressBar";
+import { ButtonGroup, Button as MUIButton } from "@mui/material";
+import GoToTop from "../GoToTop";
 
 const formatter = new Intl.NumberFormat("en", { notation: "compact" });
 
@@ -97,8 +99,8 @@ const ButtonLabel = styled(Button)`
 `;
 
 const applyFilter = (p: any, f: string) =>
-  p.symbolA.indexOf(f.toUpperCase()) >= 0 ||
-  p.symbolB.indexOf(f.toUpperCase()) >= 0 ||
+  String(p.symbolA).toUpperCase().indexOf(f.toUpperCase()) >= 0 ||
+  String(p.symbolB).toUpperCase().indexOf(f.toUpperCase()) >= 0 ||
   `${p.tokAId}` === f ||
   `${p.tokBId}` === f ||
   p.poolId === f.toUpperCase();
@@ -115,9 +117,12 @@ const Pool = () => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const pageSize = 10;
+  const pageSize = 25;
+  const [page, setPage] = useState<number>(1);
+  const [page2, setPage2] = useState<number>(1);
   const [showing, setShowing] = useState<number>(pageSize);
   const [showingPositions, setShowingPositions] = useState<number>(pageSize);
+
   const [filter, setFilter] = useState<string>(paramFilter || "");
   const [filter2, setFilter2] = useState<string>("");
 
@@ -145,8 +150,7 @@ const Pool = () => {
   }, [activeAccount]);
 
   // POOLs
-  const [pools, setPools] = React.useState<IndexerPoolI[]>([]);
-  useEffect(() => {
+  const fetchPools = () =>
     axios
       .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/dex/pools`)
       .then(({ data }) => {
@@ -158,6 +162,9 @@ const Pool = () => {
           }))
         );
       });
+  const [pools, setPools] = React.useState<IndexerPoolI[]>([]);
+  useEffect(() => {
+    fetchPools();
   }, []);
   // const uniqPools = useMemo(() => {
   //   if (!tokens || !pools) return [];
@@ -183,13 +190,14 @@ const Pool = () => {
   // }, [tokens, pools]);
   const uniqPools = pools;
   const filteredPools = useMemo(() => {
-    const badPools = [
+    const badPools: number[] = [
       24585187, // VOI/TACOS old
       23223146, // VOI/VRC200 old
       47613814, // VOI/VIA 2nd
       48698951, // VOI/VIA 3rd
       24584694, // VOI/VOICE old
       24590736, // VOI/VIA old
+      36051940, // VOI/TACOS 2nd 
     ];
     return uniqPools.filter(
       (p) => !badPools.includes(p.contractId) && applyFilter(p, filter)
@@ -248,58 +256,123 @@ const Pool = () => {
 
   if (isLoading) return null;
 
+  // active tab
+
+  const [active, setActive] = useState<number>(1);
+
+  useEffect(() => {
+    setActive(1);
+  }, [activeAccount]);
+
   return (
-    <PoolRoot className={isDarkTheme ? "dark" : "light"}>
-      {activeAccount ? (
-        <>
-          <PoolPosition
-            positions={filteredPositions}
-            value={value}
-            showing={showingPositions}
-            tokens={tokens || ([] as any[])}
-            onFilter={setFilter2}
-          />
-          {filteredPositions.length > showingPositions ? (
-            <ViewMoreButton
-              onClick={() => {
-                setShowingPositions(showingPositions + pageSize);
-                setShowing(pageSize);
+    <div>
+      {activeAccount && filteredPositions.length > 0 ? (
+        <ButtonGroup sx={{ mb: 5 }} fullWidth>
+          {filteredPositions.length > 0 ? (
+            <MUIButton
+              variant={active === 2 ? "contained" : "text"}
+              style={{
+                color: active === 2 ? "#fff" : isDarkTheme ? "#fff" : "#2958ff",
+                borderRadius: "24px",
+                backgroundColor:
+                  active === 2
+                    ? "var(--Color-Accent-CTA-Background-Default, #2958ff)"
+                    : undefined,
               }}
+              onClick={() => setActive(2)}
             >
-              <ButtonLabelContainer>
-                <DropdownIcon />
-                <ButtonLabel>View More</ButtonLabel>
-              </ButtonLabelContainer>
-            </ViewMoreButton>
+              Your Liquidity
+            </MUIButton>
           ) : null}
-        </>
-      ) : null}
-      <>
-        <PoolList
-          filter={filter}
-          pools={filteredPools}
-          tokens={tokens || ([] as any[])}
-          showing={showing}
-          onFilter={(v) => {
-            setFilter(v);
-            setShowing(pageSize);
-          }}
-        />
-        {filteredPools.length > showing ? (
-          <ViewMoreButton
-            onClick={() => {
-              setShowingPositions(pageSize);
-              setShowing(showing + pageSize);
+          <MUIButton
+            variant={active === 1 ? "contained" : "text"}
+            style={{
+              color: active === 1 ? "#fff" : isDarkTheme ? "#fff" : "#2958ff",
+              borderRadius: "24px",
+              backgroundColor:
+                active === 1
+                  ? "var(--Color-Accent-CTA-Background-Default, #2958ff)"
+                  : undefined,
             }}
+            onClick={() => setActive(1)}
           >
-            <ButtonLabelContainer>
-              <DropdownIcon />
-              <ButtonLabel>View More</ButtonLabel>
-            </ButtonLabelContainer>
-          </ViewMoreButton>
+            Popular Pools
+          </MUIButton>
+        </ButtonGroup>
+      ) : null}
+      <PoolRoot className={isDarkTheme ? "dark" : "light"}>
+        {active === 2 && activeAccount ? (
+          <>
+            <PoolPosition
+              positions={filteredPositions}
+              value={value}
+              showing={page2 * pageSize}
+              tokens={tokens || ([] as any[])}
+              onFilter={(v) => {
+                setFilter2(v);
+                setPage2(1);
+              }}
+            />
+            {filteredPositions.length > showingPositions ? (
+              <ViewMoreButton
+                onClick={() => {
+                  //setShowingPositions(showingPositions + pageSize);
+                  //setShowing(pageSize);
+                  setPage2(page2 + 1);
+                  setPage(1);
+                }}
+              >
+                <ButtonLabelContainer>
+                  <DropdownIcon />
+                  <ButtonLabel>View More</ButtonLabel>
+                </ButtonLabelContainer>
+              </ViewMoreButton>
+            ) : page > 1 ? (
+              <GoToTop
+                onClick={() => {
+                  fetchPools().then(() => setShowingPositions(pageSize));
+                }}
+              />
+            ) : null}
+          </>
         ) : null}
-      </>
-    </PoolRoot>
+        {active === 1 ? (
+          <>
+            <PoolList
+              filter={filter}
+              pools={filteredPools}
+              tokens={tokens || ([] as any[])}
+              showing={pageSize * page}
+              onFilter={(v) => {
+                setFilter(v);
+                setShowing(pageSize);
+                setPage(1);
+              }}
+            />
+            {filteredPools.length > showing ? (
+              <ViewMoreButton
+                onClick={() => {
+                  setShowingPositions(pageSize);
+                  setPage(page + 1);
+                  //setShowing(showing + pageSize);
+                }}
+              >
+                <ButtonLabelContainer>
+                  <DropdownIcon />
+                  <ButtonLabel>View More</ButtonLabel>
+                </ButtonLabelContainer>
+              </ViewMoreButton>
+            ) : page > 1 ? (
+              <GoToTop
+                onClick={() => {
+                  fetchPools().then(() => setShowing(pageSize));
+                }}
+              />
+            ) : null}
+          </>
+        ) : null}
+      </PoolRoot>
+    </div>
   );
 };
 

@@ -296,6 +296,7 @@ const Navbar = () => {
   return (
     <>
       <NavRoot
+        id="navbar-root"
         style={{
           backgroundColor: isDarkTheme ? "#20093E" : "#41137E",
           //borderBottom: isDarkTheme ? "none" : undefined,

@@ -83,7 +83,8 @@ const AppContainer: React.FC<AppContainerProps> = ({ children }) => {
           background: isDarkTheme ? "#41137E" : "#FFFFFF",
         }}
       ></BackgroundLayer>
-      <BackgroundLayer className="background-layer">
+
+      {/*<BackgroundLayer className="background-layer">
         {isDarkTheme ? (
           <div
             style={{
@@ -223,7 +224,7 @@ const AppContainer: React.FC<AppContainerProps> = ({ children }) => {
             />
           </div>
         ) : null}
-      </BackgroundLayer>
+            </BackgroundLayer>*/}
       <BackgroundLayer2 className="background-layer"></BackgroundLayer2>
       <div className="content-layer" style={{ width: "100%", height: "100%" }}>
         {children}

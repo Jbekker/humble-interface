@@ -2,7 +2,6 @@ import React from "react";
 import ReactDOM from "react-dom";
 import App from "./App";
 import "./style.css";
-
 import * as Sentry from "@sentry/react";
 
 Sentry.init({

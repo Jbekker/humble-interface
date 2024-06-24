@@ -597,7 +597,7 @@ const TokenList: FC<TokenListProps> = ({ tokens, showing, onFilter }) => {
           <SectionTitle>Popular Tokens</SectionTitle>
           {activeAccount ? (
             <Stack direction="row" gap={2}>
-              <AddTokenButton
+              {/*<AddTokenButton
                 onClick={() => {
                   setShowAddModal(true);
                 }}
@@ -606,7 +606,7 @@ const TokenList: FC<TokenListProps> = ({ tokens, showing, onFilter }) => {
                   <CreateButtonLabel>Add token</CreateButtonLabel>
                   <PoolIcon />
                 </CreateButtonInner>
-              </AddTokenButton>
+              </AddTokenButton>*/}
               <CreateTokenButton
                 onClick={() => {
                   setShowCreateModal(true);

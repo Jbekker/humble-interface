@@ -515,27 +515,32 @@ const spec = {
 };
 
 interface FarmCardProps {
-  farm?: FarmI;
+  farm?: any;
   round: number;
   timestamp: number;
 }
 const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
   if (!farm) return null;
+
+  console.log({ farm });
+
   const { activeAccount, signTransactions, sendTransactions } = useWallet();
   const [tokenA, setTokenA] = useState<ARC200TokenI>(); // rewards token
   const [tokenB, setTokenB] = useState<ARC200TokenI>(); // stake token
   const [balance, setBalance] = useState<string>();
   const [staked, setStaked] = useState<string>();
   const [rewards, setRewards] = useState<string>();
-  const [totalStaked, setTotalStaked] = useState<string>();
-  const [poolRewards, setPoolRewards] = useState<string>();
-  const [apr, setApr] = useState<string>();
+  // const [totalStaked, setTotalStaked] = useState<string>();
+  // const [poolRewards, setPoolRewards] = useState<string>();
+  // const [apr, setApr] = useState<string>();
   /* Theme */
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
   const dispatch = useDispatch();
+
   // EFFECT: Fetch stake token balance
+  /*
   useEffect(() => {
     if (!tokenB || !activeAccount) return;
     const { algodClient, indexerClient } = getAlgorandClients();
@@ -564,101 +569,130 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
       });
     }
   }, [tokenB, activeAccount]);
+  */
+
   // EFFECT: Fetch token A if not available
   useEffect(() => {
-    if (farm.rewardsToken) {
-      farm.rewardsToken.map((token) => {
-        getToken(token).then((token) => {
-          console.log({ token });
+    if (farm.rewardTokenIds) {
+      farm.rewardTokenIds.split(",").map((token: string) => {
+        getToken(Number(token)).then((token) => {
           setTokenA(token);
           dispatch(updateToken(token) as unknown as UnknownAction);
         });
       });
     }
   }, [dispatch]);
+  console.log({ tokenA });
+
   // EFFECT: Fetch token B if not available
   useEffect(() => {
-    if (farm.stakeToken) {
-      getToken(farm.stakeToken).then((token) => {
+    if (farm.stakeTokenId) {
+      getToken(farm.stakeTokenId).then((token) => {
         setTokenB(token);
         dispatch(updateToken(token) as unknown as UnknownAction);
       });
     }
   }, [dispatch]);
-
-  console.log({ tokenA, tokenB });
+  console.log({ tokenB });
 
   // EFFECT: Fetch pool info
-  useEffect(() => {
-    if (!tokenA || !tokenB) return;
-    const { algodClient, indexerClient } = getAlgorandClients();
-    const ci = new CONTRACT(
-      CTCINFO_STAKR_200,
-      algodClient,
-      indexerClient,
-      spec,
-      {
-        addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
-        sk: new Uint8Array(0),
-      }
-    );
-    ci.Info(farm.poolId).then((res: any) => {
-      if (!res.success) return;
-      const [
-        poolId,
-        opts,
-        rewarder,
-        totalStaked,
-        remainingRewards,
-        lastRewardsRefreshed,
-        lastRewardsPerShare_,
-        rewardsPerBlock_,
-      ] = res.returnValue;
-      console.log({
-        poolId,
-        opts,
-        rewarder,
-        totalStaked,
-        remainingRewards,
-        lastRewardsRefreshed,
-        lastRewardsPerShare_,
-        rewardsPerBlock_,
-      });
-      setTotalStaked(
-        new BigNumber(totalStaked)
-          .dividedBy(10 ** tokenB?.decimals || 0)
-          //.toFixed(tokenB?.decimals || 0)
-          .toFixed(0)
-          .toString()
-      );
-      setPoolRewards(
-        new BigNumber(remainingRewards)
-          .dividedBy(10 ** tokenA?.decimals || 0)
-          //.toFixed(tokenA?.decimals || 0)
-          .toFixed(0)
-          .toString()
-      );
-      // calculate APR Rewards/TVL
-      const rewardsPerBlock = new BigNumber(remainingRewards);
-      const tvl = new BigNumber(totalStaked);
-      const aprBn = rewardsPerBlock.dividedBy(tvl).times(100);
-      const apr =
-        totalStaked > BigInt(0)
-          ? aprBn.isGreaterThan(new BigNumber(1000))
-            ? ">1000%"
-            : `${aprBn.toFixed(2)}%`
-          : "-";
-      setApr(apr);
-    });
-  }, [farm.poolId, tokenB, tokenA]);
+  // useEffect(() => {
+  //   if (!tokenA || !tokenB) return;
+  //   const { algodClient, indexerClient } = getAlgorandClients();
+  //   const ci = new CONTRACT(
+  //     CTCINFO_STAKR_200,
+  //     algodClient,
+  //     indexerClient,
+  //     spec,
+  //     {
+  //       addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+  //       sk: new Uint8Array(0),
+  //     }
+  //   );
+  //   ci.Info(farm.poolId).then((res: any) => {
+  //     if (!res.success) return;
+  //     const [
+  //       poolId,
+  //       opts,
+  //       rewarder,
+  //       totalStaked,
+  //       remainingRewards,
+  //       lastRewardsRefreshed,
+  //       lastRewardsPerShare_,
+  //       rewardsPerBlock_,
+  //     ] = res.returnValue;
+  //     console.log({
+  //       poolId,
+  //       opts,
+  //       rewarder,
+  //       totalStaked,
+  //       remainingRewards,
+  //       lastRewardsRefreshed,
+  //       lastRewardsPerShare_,
+  //       rewardsPerBlock_,
+  //     });
+  //     setTotalStaked(
+  //       new BigNumber(totalStaked)
+  //         .dividedBy(10 ** tokenB?.decimals || 0)
+  //         //.toFixed(tokenB?.decimals || 0)
+  //         .toFixed(0)
+  //         .toString()
+  //     );
+  //     setPoolRewards(
+  //       new BigNumber(remainingRewards)
+  //         .dividedBy(10 ** tokenA?.decimals || 0)
+  //         //.toFixed(tokenA?.decimals || 0)
+  //         .toFixed(0)
+  //         .toString()
+  //     );
+  //     // calculate APR Rewards/TVL
+  //     const rewardsPerBlock = new BigNumber(remainingRewards);
+  //     const tvl = new BigNumber(totalStaked);
+  //     const aprBn = rewardsPerBlock.dividedBy(tvl).times(100);
+  //     const apr =
+  //       totalStaked > BigInt(0)
+  //         ? aprBn.isGreaterThan(new BigNumber(1000))
+  //           ? ">1000%"
+  //           : `${aprBn.toFixed(2)}%`
+  //         : "-";
+  //     setApr(apr);
+  //   });
+  // }, [farm.poolId, tokenB, tokenA]);
 
   const handleAccordionChange = (
     event: React.SyntheticEvent,
     expanded: boolean
   ) => {
-    if (!tokenA || !tokenB) return;
+    if (!tokenA || !tokenB || !activeAccount) return;
     if (expanded) {
       const { algodClient, indexerClient } = getAlgorandClients();
+      console.log({ farm });
+      // fetch balance
+      // if wrapped voi use voi balance
+      if ([TOKEN_WVOI1].includes(tokenB.tokenId)) {
+        algodClient
+          .accountInformation(activeAccount.address)
+          .do()
+          .then((r: any) => {
+            const amount = r.amount;
+            const minBalance = r["min-balance"];
+            const available = amount - minBalance;
+            setBalance((available / 10 ** tokenB.decimals).toLocaleString());
+          });
+      } else {
+        // otherwise use arc200 balance
+        const ci = new arc200(tokenB.tokenId, algodClient, indexerClient);
+        ci.arc200_balanceOf(activeAccount.address).then((arc200_balanceOfR) => {
+          if (arc200_balanceOfR.success) {
+            const arc200_balanceOf: any = arc200_balanceOfR.returnValue;
+            const arc200_balanceOfBn = new BigNumber(arc200_balanceOf).div(
+              new BigNumber(10).pow(tokenB.decimals)
+            );
+            setBalance(arc200_balanceOfBn.toFixed(0));
+          }
+        });
+      }
+      // fetch staked and rewards
       const ci = new CONTRACT(
         CTCINFO_STAKR_200,
         algodClient,
@@ -701,6 +735,7 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
       });
     }
   };
+
   // const handleUnstake = async () => {
   //   if (!activeAccount) return;
   //   try {
@@ -758,6 +793,7 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
   //     toast.error(e.message);
   //   }
   // };
+
   const handleExit = async () => {
     if (!activeAccount || !staked) return;
     try {
@@ -995,7 +1031,7 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
       );
 
       const ciStakeToken = new CONTRACT(
-        farm.stakeToken,
+        farm.stakeTokenId,
         algodClient,
         indexerClient,
         spec,
@@ -1007,7 +1043,7 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
 
       const builder = {
         stakeToken: new CONTRACT(
-          farm.stakeToken,
+          farm.stakeTokenId,
           algodClient,
           indexerClient,
           abi.nt200,
@@ -1020,7 +1056,7 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
           true
         ),
         rewardToken: new CONTRACT(
-          farm.rewardsToken[0],
+          farm.rewardTokenId,
           algodClient,
           indexerClient,
           abi.nt200,
@@ -1127,7 +1163,7 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
             //   1 pmt x
             //   1 deposit x
             // -------------------------------------------
-            if ([TOKEN_WVOI1].includes(farm.stakeToken)) {
+            if ([TOKEN_WVOI1].includes(farm.stakeTokenId)) {
               if (p4 > 0) {
                 const obj0 = (
                   await builder.stakeToken.createBalanceBox(
@@ -1257,203 +1293,6 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
           // TODO notify quest completion here
         }
       } while (0);
-
-      /*
-      do {
-        // ensure wvoi box
-        if (![TOKEN_WVOI1].includes(farm.stakeToken)) {
-          break;
-        }
-        const ciwVOI = new CONTRACT(
-          farm.stakeToken,
-          algodClient,
-          indexerClient,
-          {
-            name: "",
-            desc: "",
-            methods: [
-              {
-                name: "createBalanceBox",
-                args: [
-                  {
-                    type: "address",
-                  },
-                ],
-                returns: {
-                  type: "byte",
-                },
-              },
-            ],
-            events: [],
-          },
-          {
-            addr: activeAccount.address,
-            sk: new Uint8Array(0),
-          }
-        );
-        const createBalanceBoxR = await ciwVOI.createBalanceBox(
-          activeAccount.address
-        );
-        if (!createBalanceBoxR.success) {
-          break;
-        }
-        await toast.promise(
-          signTransactions(
-            createBalanceBoxR.txns.map(
-              (txn: any) => new Uint8Array(Buffer.from(txn, "base64"))
-            )
-          ).then(sendTransactions),
-          {
-            pending: "Creating balance box...",
-            success: "Balance box created!",
-          }
-        );
-        return;
-      } while (0);
-
-      do {
-        // try to approve without box payment
-        const arc200_approveR = await ciArc200.arc200_approve(
-          algosdk.getApplicationAddress(CTCINFO_STAKR_200),
-          BigInt(amtAU.toFixed(0))
-        );
-        if (!arc200_approveR.success) {
-          // approve with box payment
-          ciArc200.setPaymentAmount(28100);
-          const arc200_approveR = await ciArc200.arc200_approve(
-            algosdk.getApplicationAddress(CTCINFO_STAKR_200),
-            BigInt(amtAU.toFixed(0))
-          );
-          if (!arc200_approveR.success) throw new Error(arc200_approveR.error);
-          await toast.promise(
-            signTransactions(
-              arc200_approveR.txns.map(
-                (txn: any) => new Uint8Array(Buffer.from(txn, "base64"))
-              )
-            ).then(sendTransactions),
-            {
-              pending: "Creating allowance box...",
-              success: "Allowance balance created!",
-            }
-          );
-          // followed by staking
-          const ci = new CONTRACT(
-            CTCINFO_STAKR_200,
-            algodClient,
-            indexerClient,
-            spec,
-            {
-              addr: activeAccount?.address || "",
-              sk: new Uint8Array(0),
-            }
-          );
-          ci.setPaymentAmount(50000);
-          ci.setFee(3000);
-          const Staker_stakeR = await ci.Staker_stake(farm.poolId, 1e6);
-          if (!Staker_stakeR.success) throw new Error(Staker_stakeR.error);
-          await toast.promise(
-            signTransactions(
-              Staker_stakeR.txns.map(
-                (txn: any) => new Uint8Array(Buffer.from(txn, "base64"))
-              )
-            ).then(sendTransactions),
-            {
-              pending: "Staking...",
-              success: "Staked!",
-            }
-          );
-          break;
-        }
-        // use builder
-        const builder = {
-          arc200: new CONTRACT(
-            farm.stakeToken,
-            algodClient,
-            indexerClient,
-            spec,
-            {
-              addr: activeAccount.address,
-              sk: new Uint8Array(0),
-            },
-            true,
-            false,
-            true
-          ),
-          stakr200: new CONTRACT(
-            CTCINFO_STAKR_200,
-            algodClient,
-            indexerClient,
-            spec,
-            {
-              addr: activeAccount.address,
-              sk: new Uint8Array(0),
-            },
-            true,
-            false,
-            true
-          ),
-        };
-        const buildN = [];
-        if ([TOKEN_WVOI1].includes(farm.stakeToken)) {
-          buildN.push(builder.arc200.deposit(BigInt(amtAU.toFixed(0))));
-        }
-        buildN.push(
-          builder.arc200.arc200_approve(
-            algosdk.getApplicationAddress(CTCINFO_STAKR_200),
-            arc200_allowance + BigInt(amtAU.toFixed(0))
-          )
-        );
-        // if pool balance is zero
-        buildN.push(
-          builder.arc200.arc200_transfer(
-            algosdk.getApplicationAddress(CTCINFO_STAKR_200),
-            0
-          )
-        );
-        buildN.push(
-          builder.stakr200.Staker_stake(farm.poolId, BigInt(amtAU.toFixed(0)))
-        );
-        const buildP = (await Promise.all(buildN)).map(({ obj }) => obj);
-
-        let customR;
-        if ([TOKEN_WVOI1].includes(farm.stakeToken)) {
-          const ci = new CONTRACT(
-            farm.stakeToken,
-            algodClient,
-            indexerClient,
-            spec,
-            {
-              addr: activeAccount?.address || "",
-              sk: new Uint8Array(0),
-            }
-          );
-          ci.setPaymentAmount(Number(amtAU.toFixed(0)));
-          ci.setFee(2000);
-          ci.setExtraTxns(buildP);
-          ci.setEnableGroupResourceSharing(true);
-          ci.setAccounts([algosdk.getApplicationAddress(CTCINFO_STAKR_200)]);
-          customR = await ci.custom();
-        } else {
-          const ci = new CONTRACT(
-            CTCINFO_STAKR_200,
-            algodClient,
-            indexerClient,
-            spec,
-            {
-              addr: activeAccount?.address || "",
-              sk: new Uint8Array(0),
-            }
-          );
-          ci.setPaymentAmount(1e6);
-          ci.setFee(2000);
-          ci.setExtraTxns(buildP);
-          ci.setEnableGroupResourceSharing(true);
-          ci.setAccounts([algosdk.getApplicationAddress(CTCINFO_STAKR_200)]);
-          customR = await ci.custom();
-        }
-        // -----------------------------------------
-      } while (0);
-      */
     } catch (e: any) {
       Sentry.captureException(e);
       console.error(e);
@@ -1502,20 +1341,22 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
         </Col1Row1>
       </Col1>
       <Col2>
-        <TVLLabel>{poolRewards}</TVLLabel>
+        <TVLLabel>{farm.rewardRemainingSU}</TVLLabel>
       </Col2>
       <Col3>
-        <VolumeLabel>{apr}</VolumeLabel>
+        <VolumeLabel>{farm.apr}</VolumeLabel>
       </Col3>
       <Col4>
         <APRLabelContainer>
-          <APRLabel>{totalStaked}</APRLabel>
+          <APRLabel>{farm.stakeAmountSU}</APRLabel>
         </APRLabelContainer>
       </Col4>
       <Col5>&nbsp;</Col5>
     </PoolCardRow>
   );
   const isLoading = !tokenA || !tokenB;
+
+  console.log({ balance });
 
   return (
     <PoolCardRoot className={isDarkTheme ? "dark" : "light"}>
