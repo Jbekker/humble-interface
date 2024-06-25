@@ -5,6 +5,7 @@ export const QUEST_API = "https://humble-quest.nautilus.sh";
 export enum QUEST_ACTION {
   CONNECT_WALLET = "connect_wallet",
   SWAP_TOKEN = "hmbl_pool_swap",
+  SWAP_TOKEN_DAILY = "hmbl_pool_swap_daily",
   ADD_LIQUIDITY = "hmbl_pool_add",
   CREATE_TOKEN = "hmbl_token_create",
   CREATE_LIQUIDITY_POOL = "hmbl_pool_create",

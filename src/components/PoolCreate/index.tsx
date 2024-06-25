@@ -29,6 +29,7 @@ import BigNumber from "bignumber.js";
 import { CTCINFO_TRI } from "../../constants/dex";
 import { ZERO_ADDRESS } from "../../constants/avm";
 import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
+import ProgressBar from "../ProgressBar";
 
 const spec = {
   name: "pool",
@@ -642,6 +643,21 @@ const Swap = () => {
 
   console.log({ tokens2 });
 
+  /* Stubs */
+
+  const [stubs, setStubs] = React.useState<any[]>();
+  useEffect(() => {
+    axios
+      .get(
+        `https://arc72-idx.nautilus.sh/nft-indexer/v1/dex/stubs/pool?active=0&hash=e80b280db0d1ae7ee02c5138235a7ceb9ca3817bcd1c254ccc3693e6646e7ab6`
+      )
+      .then((res) => {
+        setStubs(res.data.stubs);
+      });
+  }, []);
+
+  console.log({ stubs });
+
   /* Pools */
   const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
   const poolsStatus = useSelector((state: RootState) => state.pools.status);
@@ -673,8 +689,8 @@ const Swap = () => {
   const [toAmount, setToAmount] = React.useState<any>("");
   const [on, setOn] = useState(false);
 
-  const [token, setToken] = useState<ARC200TokenI>();
-  const [token2, setToken2] = useState<ARC200TokenI>();
+  const [token, setToken] = useState<any>();
+  const [token2, setToken2] = useState<any>();
 
   const [tokenOptions, setTokenOptions] = useState<ARC200TokenI[]>();
   const [tokenOptions2, setTokenOptions2] = useState<ARC200TokenI[]>();
@@ -717,7 +733,7 @@ const Swap = () => {
     if (paramTokAId && !isNaN(Number(paramTokAId))) {
       if (paramTokAId === "0") {
         setToken({
-          tokenId: 0,
+          tokenId: "0",
           name: "Voi",
           symbol: "VOI",
           decimals: 6,
@@ -733,7 +749,7 @@ const Swap = () => {
     if (paramTokBId && !isNaN(Number(paramTokBId))) {
       if (paramTokBId === "0") {
         setToken2({
-          tokenId: 0,
+          tokenId: "0",
           name: "Voi",
           symbol: "VOI",
           decimals: 6,
@@ -881,7 +897,7 @@ const Swap = () => {
         }
       );
     }
-  }, [token2, activeAccount]);
+  }, [tokens2, token2, activeAccount]);
 
   // EFFECT: get voi balance
   useEffect(() => {
@@ -985,17 +1001,20 @@ const Swap = () => {
   ]);
 
   const handlePoolCreate = async () => {
-    if (!activeAccount || !token || !token2 || !pools) return;
+    if (!activeAccount || !token || !token2 || !pools || !stubs) return;
     try {
       const { algodClient, indexerClient } = getAlgorandClients();
-      // -------------------------------------------
-      // create app -> app id
-      // approve spend tok A to app id
-      // approve spend tok B to app id
-      // call provider deposit
-      // -------------------------------------------
-      // create app -> app id
-      // -------------------------------------------
+
+      setProgress(10);
+      setMessage("Building transaction");
+
+      // select stub
+      let stub = stubs.find((s) => s.creator === activeAccount.address);
+      if (!stub) {
+        stub = stubs.find((s) => s.active === 0);
+      }
+
+      let ctcInfo: number;
       const {
         appApproval,
         appClear,
@@ -1016,90 +1035,92 @@ const Swap = () => {
         numGlobalByteSlices: GlobalNumByteSlice,
         numGlobalInts: GlobalNumUint,
         extraPages,
+        note: new Uint8Array(Buffer.from("ARC200 LP", "utf-8")),
       };
       const appCreateTxn = algosdk.makeApplicationCreateTxnFromObject(
         makeApplicationCreateTxnFromObjectObj
       );
-
-      const res: any = await toast.promise(
-        signTransactions([appCreateTxn.toByte()]).then(sendTransactions),
-        {
-          pending: "Pending transaction to deploy pool",
-          success: "Pool deployed",
-        }
-      );
-      const ctcInfo: number = res["application-index"];
-      // -------------------------------------------
-      // reach_p0
-      // -------------------------------------------
-      do {
-        const ci = new CONTRACT(
-          ctcInfo,
-          algodClient,
-          indexerClient,
+      if (!stub) {
+        const res: any = await toast.promise(
+          signTransactions([appCreateTxn.toByte()]).then(sendTransactions),
           {
-            name: "",
-            desc: "",
-            methods: [
-              // _reachp_0((uint64,((byte[32],byte[8]),(uint64,uint64,uint64),address)))void
-              {
-                name: "_reachp_0",
-                args: [
-                  {
-                    type: "(uint64,((byte[32],byte[8]),(uint64,uint64,uint64),address))",
-                  },
-                ],
-                returns: {
-                  type: "void",
-                },
-              },
-            ],
-            events: [],
-          },
-          {
-            addr: activeAccount.address,
-            sk: new Uint8Array(0),
+            pending: "Pending transaction to deploy pool",
+            success: "Pool deployed",
           }
         );
-        const name = `ARC200 LP - ${token.symbol}/${token2.symbol}`;
-        const symbol = "ARC200LT";
-        const _reachp_0_params = [
-          0,
-          [
-            [
-              [
-                ...new Uint8Array(Buffer.from(name)),
-                ...new Uint8Array(32 - name.length),
-              ],
-              [
-                ...new Uint8Array(Buffer.from(symbol)),
-                ...new Uint8Array(8 - symbol.length),
-              ],
-            ],
-            [
-              CTCINFO_TRI,
-              ((tok) => (tok === 0 ? TOKEN_WVOI1 : tok))(token.tokenId),
-              ((tok) => (tok === 0 ? TOKEN_WVOI1 : tok))(token2.tokenId),
-            ],
-            ZERO_ADDRESS,
-          ],
+        ctcInfo = res["application-index"];
+      } else {
+        ctcInfo = stub.contractId;
+      }
+
+      do {
+        const acc = {
+          addr: activeAccount?.address || "",
+          sk: new Uint8Array(0),
+        };
+        const ci = new swap(ctcInfo, algodClient, indexerClient, { acc });
+
+        const networkToken = {
+          contractId: TOKEN_WVOI1,
+          tokenId: "0",
+          decimals: "6",
+          symbol: "VOI",
+        };
+
+        console.log({ token, token2 });
+
+        const mA =
+          token.tokenId === 0
+            ? networkToken
+            : tokens2?.find((t) => t.contractId === tokenId(token));
+
+        const mB =
+          token2.tokenId === 0
+            ? networkToken
+            : tokens2?.find((t) => t.contractId === tokenId(token2));
+
+        const A = {
+          ...mA,
+          amount: fromAmount.replace(/,/g, ""),
+        };
+        const B = {
+          ...mB,
+          amount: toAmount.replace(/,/g, ""),
+        };
+
+        const extraTxns = [];
+        //if (![token.tokenId, token2.tokenId].includes(0)) {
+        extraTxns.push(makeApplicationCreateTxnFromObjectObj);
+        //}
+
+        const swapR: any = await ci.deposit(acc.addr, ctcInfo, A, B, extraTxns);
+
+        const unsignedTxns = [
+          ...swapR.txns.map(
+            (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+          ),
         ];
-        ci.setPaymentAmount(1e6);
-        ci.setFee(3000);
-        const _reachp_0R = await ci._reachp_0(_reachp_0_params);
+
+        setProgress(50);
+        setMessage("Signing transaction");
+
         await toast.promise(
-          signTransactions(
-            _reachp_0R.txns.map(
-              (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-            )
-          ).then(sendTransactions),
+          signTransactions(unsignedTxns).then(sendTransactions),
           {
-            pending: "Pending transaction to initialize pool",
-            success:
-              "Pool initialization complete. Page will reload momentarily",
+            pending: `Creating new pool with liquidity ${fromAmount} ${tokenSymbol(
+              token
+            )} + ${toAmount} ${tokenSymbol(token2)}`,
+          },
+          {
+            type: "default",
+            position: "top-right",
+            theme: "dark",
           }
         );
       } while (0);
+
+      setProgress(70);
+      setMessage("Updating quest");
 
       // -----------------------------------------
       // QUEST HERE hmbl_pool_creation
@@ -1123,14 +1144,34 @@ const Swap = () => {
         }
       } while (0);
       // -----------------------------------------
-
-      navigate(`/pool/add?poolId=${ctcInfo}&newPool=true`);
+      // confirm pool
+      // -----------------------------------------
+      await new Promise((res) => setTimeout(res, 8000));
+      // -----------------------------------------
+      setProgress(100);
+      // navigate
+      // -----------------------------------------
+      navigate(`/pool?filter=${token.symbol.toUpperCase()}`);
     } catch (e: any) {
       toast.error(e.message);
+    } finally {
+      setProgress(0);
+      setMessage("");
     }
   };
 
   const isLoading = !pools || !tokens;
+
+  const [message, setMessage] = useState<string>("");
+  const [progress, setProgress] = useState<number>(0);
+
+  useEffect(() => {
+    if (progress === 0 || progress >= 100) return;
+    const timeout = setTimeout(() => {
+      setProgress(progress + 1);
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, [progress]);
 
   return !isLoading ? (
     <SwapRoot className={isDarkTheme ? "dark" : "light"}>
@@ -1197,6 +1238,12 @@ const Swap = () => {
         proportional to your share of the pool Fees are added to the pool,
         accumulate in real time and can be claimed by removing your liquidity.
       </Note>
+      <ProgressBar
+        message={message}
+        isActive={![0, 100].includes(progress)}
+        currentStep={progress}
+        totalSteps={100}
+      />
     </SwapRoot>
   ) : null;
 };

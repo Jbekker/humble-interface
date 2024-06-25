@@ -1109,14 +1109,19 @@ const Swap = () => {
       // -----------------------------------------
       do {
         const address = activeAccount.address;
-        const actions: string[] = [QUEST_ACTION.SWAP_TOKEN];
+        const actions: string[] = [
+          QUEST_ACTION.SWAP_TOKEN,
+          QUEST_ACTION.SWAP_TOKEN_DAILY,
+        ];
         const {
           data: { results },
         } = await getActions(address);
         for (const action of actions) {
           const address = activeAccount.address;
           const key = `${action}:${address}`;
-          const completedAction = results.find((el: any) => el.key === key);
+          const completedAction = results.find(
+            (el: any) => el.key === key && !el.key.match(/daily/)
+          );
           if (!completedAction) {
             await submitAction(action, address, {
               poolId,
