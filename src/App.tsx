@@ -15,6 +15,7 @@ import { UnknownAction } from "@reduxjs/toolkit";
 import { getToken, getTokens } from "./store/tokenSlice";
 import { getPoolBals } from "./store/poolBalsSlice";
 import { getVolume } from "./store/volumeSlice";
+import { Button, Paper, Stack, Typography } from "@mui/material";
 
 const BackgroundLayer = styled.div`
   width: 100%;
@@ -36,22 +37,22 @@ const AppContainer: React.FC<AppContainerProps> = ({ children }) => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const dispatch = useDispatch();
-  const poolsStatus = useSelector((state: RootState) => state.pools.status);
-  const tokensStatus = useSelector((state: RootState) => state.tokens.status);
-  useEffect(() => {
-    dispatch(getPools() as unknown as UnknownAction);
-  }, [dispatch]);
-  useEffect(() => {
-    dispatch(getTokens() as unknown as UnknownAction);
-  }, [dispatch]);
+  // const dispatch = useDispatch();
+  // const poolsStatus = useSelector((state: RootState) => state.pools.status);
+  // const tokensStatus = useSelector((state: RootState) => state.tokens.status);
+  // useEffect(() => {
+  //   dispatch(getPools() as unknown as UnknownAction);
+  // }, [dispatch]);
+  // useEffect(() => {
+  //   dispatch(getTokens() as unknown as UnknownAction);
+  // }, [dispatch]);
   // useEffect(() => {
   //   dispatch(getPoolBals() as unknown as UnknownAction);
   // }, [dispatch]);
   // useEffect(() => {
   //   dispatch(getVolume() as unknown as UnknownAction);
   // }, [dispatch]);
-  const [ready, setReady] = React.useState(false);
+  //const [ready, setReady] = React.useState(false);
   // useEffect(() => {
   //   if (poolsStatus === "succeeded") {
   //     (async () => {
@@ -63,13 +64,13 @@ const AppContainer: React.FC<AppContainerProps> = ({ children }) => {
   //     })();
   //   }
   // }, [poolsStatus]);
-  useEffect(() => {
-    if (poolsStatus === "succeeded" && tokensStatus === "succeeded") {
-      setReady(true);
-    }
-  }, [poolsStatus, tokensStatus]);
-  const isLoading = !ready;
-  if (isLoading) return;
+  // useEffect(() => {
+  //   if (poolsStatus === "succeeded" && tokensStatus === "succeeded") {
+  //     setReady(true);
+  //   }
+  // }, [poolsStatus, tokensStatus]);
+  //const isLoading = !ready;
+  //if (isLoading) return;
   return (
     <div
       style={{
@@ -246,6 +247,27 @@ const App: React.FC = () => {
                   <Route path={el.path} Component={el.Component} />
                 ))}
               </Routes>
+              <Paper
+                elevation={1}
+                sx={{
+                  padding: 5,
+                  background: "rgba(255, 255, 255, 0.1)",
+                  backdropFilter: "blur(50px)",
+                }}
+              >
+                <Stack spacing={2} sx={{ p: 5 }}>
+                  <Typography variant="h2">Voi Mainnet is Coming</Typography>
+                  <Typography variant="body2">
+                    As we near the end of Incentivized Testnet Phase 2, you are
+                    welcome to remove liquidity from pools and claim your farm
+                    rewards on the testnet app before the snapshot.
+                    <br />
+                    <br />
+                    Thank you for your support and participation in Voi! We look
+                    forward to seeing you on the mainnet soon!
+                  </Typography>
+                </Stack>
+              </Paper>
             </Layout>
           </Router>
         </AppContainer>

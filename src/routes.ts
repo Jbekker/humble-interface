@@ -4,6 +4,7 @@ export const routes = [
     path: "/",
     Component: Page.Home,
   },
+  /*
   {
     path: "/swap",
     Component: Page.Swap,
@@ -36,4 +37,5 @@ export const routes = [
     path: "/token",
     Component: Page.Token,
   },
+  */
 ];

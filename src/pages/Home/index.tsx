@@ -2,5 +2,7 @@ import React from "react";
 import Swap from "../../components/Swap";
 
 export const Home: React.FC = () => {
-  return <Swap />;
+  return <div>
+    {/* asdf */}
+  </div>
 };
