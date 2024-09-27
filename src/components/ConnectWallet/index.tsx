@@ -2,12 +2,44 @@ import * as React from "react";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import styled from "styled-components";
-import { PROVIDER_ID, useWallet } from "@txnlab/use-wallet";
+import {
+  //PROVIDER_ID,
+  useWallet,
+} from "@txnlab/use-wallet-react";
 import ArrowDownwardIcon from "static/icon/icon-arrow-downward.svg";
 import OnIcon from "static/icon/icon-on.svg";
 import { compactAddress } from "../../utils/mp";
 import { Box, Divider } from "@mui/material";
 import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
+
+function WalletMenu() {
+  const { wallets, activeWallet, activeAccount } = useWallet();
+
+  return (
+    <div>
+      <h2>Wallets</h2>
+      <ul>
+        {wallets.map((wallet) => (
+          <li key={wallet.id}>
+            <button onClick={() => wallet.connect()}>
+              {wallet.metadata.name}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {activeWallet && (
+        <div>
+          <h2>Active Wallet</h2>
+          <p>{activeWallet.metadata.name}</p>
+          <h2>Active Account</h2>
+          <p>{activeAccount?.address}</p>
+          <button onClick={() => activeWallet.disconnect()}>Disconnect</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const AccountDropdown = styled.div`
   /* Layout */
@@ -266,7 +298,10 @@ const ConnectButton = () => {
 };
 
 function BasicMenu() {
-  const { activeAccount, providers, connectedAccounts } = useWallet();
+  const {
+    activeAccount,
+    //providers, connectedAccounts
+  } = useWallet();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -280,24 +315,24 @@ function BasicMenu() {
     // -----------------------------------------
     // QUEST HERE hmbl_pool_swap
     // -----------------------------------------
-    do {
-      const address = activeAccount.address;
-      const actions: string[] = [QUEST_ACTION.CONNECT_WALLET];
-      (async () => {
-        const {
-          data: { results },
-        } = await getActions(address);
-        for (const action of actions) {
-          const address = activeAccount.address;
-          const key = `${action}:${address}`;
-          const completedAction = results.find((el: any) => el.key === key);
-          if (!completedAction) {
-            await submitAction(action, address);
-          }
-          // TODO notify quest completion here
-        }
-      })();
-    } while (0);
+    // do {
+    //   const address = activeAccount.address;
+    //   const actions: string[] = [QUEST_ACTION.CONNECT_WALLET];
+    //   (async () => {
+    //     const {
+    //       data: { results },
+    //     } = await getActions(address);
+    //     for (const action of actions) {
+    //       const address = activeAccount.address;
+    //       const key = `${action}:${address}`;
+    //       const completedAction = results.find((el: any) => el.key === key);
+    //       if (!completedAction) {
+    //         await submitAction(action, address);
+    //       }
+    //       // TODO notify quest completion here
+    //     }
+    //   })();
+    // } while (0);
     // -----------------------------------------
   }, [activeAccount]);
   return (
@@ -381,7 +416,8 @@ function BasicMenu() {
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
         <WalletContainer>
-          {providers?.map((provider) => {
+          <WalletMenu />
+          {/*providers?.map((provider) => {
             return (
               <ProviderContainer>
                 <ProviderIconContainer>
@@ -422,7 +458,7 @@ function BasicMenu() {
                   )}
                 </ProviderIconContainer>
                 <ConnectedAccountContainer>
-                  {connectedAccounts
+                  {/*connectedAccounts
                     ?.filter((a) => a.providerId === provider.metadata.id)
                     .map((account) => {
                       return (
@@ -450,7 +486,7 @@ function BasicMenu() {
                 </ConnectedAccountContainer>
               </ProviderContainer>
             );
-          })}
+          })*/}
         </WalletContainer>
         {/*<MenuItem
           onClick={(e) => {

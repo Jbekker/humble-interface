@@ -34,7 +34,7 @@ export const getPools = createAsyncThunk<
     const lastRound = pools.reduce((acc, val) => Math.max(acc, val.round), 0);
     if (pools.length === 0) {
       const { data } = await axios.get(
-        `https://arc72-idx.nautilus.sh/nft-indexer/v1/dex/pools`,
+        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/dex/pools`,
         {
           params: {
             ["mint-min-round"]: lastRound,
@@ -54,7 +54,7 @@ export const getPools = createAsyncThunk<
       await db.table("pools").bulkPut(appPools);
       return appPools;
     }
-    const minRound = 5486024;
+    const minRound = 0;
     const { algodClient, indexerClient } = getAlgorandClients();
     const ci = new CONTRACT(
       CTCINFO_TRI,

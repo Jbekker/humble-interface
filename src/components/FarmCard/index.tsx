@@ -17,7 +17,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import BigNumber from "bignumber.js";
 import { getAlgorandClients } from "../../wallets";
 import { CONTRACT, abi, arc200 } from "ulujs";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import moment from "moment";
 import { toast } from "react-toastify";
 import algosdk from "algosdk";
@@ -524,7 +524,11 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
 
   console.log({ farm });
 
-  const { activeAccount, signTransactions, sendTransactions } = useWallet();
+  const {
+    activeAccount,
+    signTransactions,
+    //sendTransactions
+  } = useWallet();
   const [tokenA, setTokenA] = useState<ARC200TokenI>(); // rewards token
   const [tokenB, setTokenB] = useState<ARC200TokenI>(); // stake token
   const [balance, setBalance] = useState<string>();
@@ -862,7 +866,8 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
           customR.txns.map(
             (txn: any) => new Uint8Array(Buffer.from(txn, "base64"))
           )
-        ).then(sendTransactions),
+        ),
+        //.then(sendTransactions),
         {
           pending: "Harvesting...",
           success: "Harvested!",
@@ -937,7 +942,8 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
           customR.txns.map(
             (txn: any) => new Uint8Array(Buffer.from(txn, "base64"))
           )
-        ).then(sendTransactions),
+        ),
+        //.then(sendTransactions),
         {
           pending: "Harvesting...",
           success: "Harvested!",
@@ -991,7 +997,8 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
         arc200_approveR.txns.map(
           (txn) => new Uint8Array(Buffer.from(txn, "base64"))
         )
-      ).then(sendTransactions);
+      );
+      //.then(sendTransactions);
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -1265,7 +1272,8 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
           customR.txns.map(
             (txn: any) => new Uint8Array(Buffer.from(txn, "base64"))
           )
-        ).then(sendTransactions),
+        ),
+        //.then(sendTransactions),
         {
           pending: "Staking...",
           success: "Staked!",
@@ -1275,26 +1283,26 @@ const FarmCard: FC<FarmCardProps> = ({ farm, round, timestamp }) => {
       // -----------------------------------------
       // QUEST HERE hmbl_stake_token
       // -----------------------------------------
-      do {
-        const address = activeAccount.address;
-        const actions: string[] = [QUEST_ACTION.STAKE_TOKEN];
-        const {
-          data: { results },
-        } = await getActions(address);
-        for (const action of actions) {
-          const address = activeAccount.address;
-          const key = `${action}:${address}`;
-          const completedAction = results.find((el: any) => el.key === key);
-          if (!completedAction) {
-            await submitAction(action, address, {
-              contractId: CTCINFO_STAKR_200,
-            });
-          }
-          // TODO notify quest completion here
-        }
-      } while (0);
+      // do {
+      //   const address = activeAccount.address;
+      //   const actions: string[] = [QUEST_ACTION.STAKE_TOKEN];
+      //   const {
+      //     data: { results },
+      //   } = await getActions(address);
+      //   for (const action of actions) {
+      //     const address = activeAccount.address;
+      //     const key = `${action}:${address}`;
+      //     const completedAction = results.find((el: any) => el.key === key);
+      //     if (!completedAction) {
+      //       await submitAction(action, address, {
+      //         contractId: CTCINFO_STAKR_200,
+      //       });
+      //     }
+      //     // TODO notify quest completion here
+      //   }
+      // } while (0);
     } catch (e: any) {
-      Sentry.captureException(e);
+      //Sentry.captureException(e);
       console.error(e);
       toast.error(e.message);
     }

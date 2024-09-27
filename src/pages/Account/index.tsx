@@ -26,7 +26,8 @@ import styled from "styled-components";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { useCopyToClipboard } from "usehooks-ts";
 import { toast } from "react-toastify";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
+
 import SendIcon from "@mui/icons-material/Send";
 import { getAlgorandClients } from "../../wallets";
 import { arc72, CONTRACT, abi, arc200 } from "ulujs";
@@ -45,7 +46,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { getPrices } from "../../store/dexSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
-import { CTCINFO_LP_WVOI_VOI } from "../../constants/dex";
+import { CTCINFO_LP_WVOI_AUSD } from "../../constants/dex";
+//import { CTCINFO_LP_WVOI_VOI } from "../../constants/dex";
 
 const { algodClient, indexerClient } = getAlgorandClients();
 
@@ -92,7 +94,7 @@ export const Account: React.FC = () => {
   }, [dispatch]);
   const exchangeRate = useMemo(() => {
     if (!prices || dexStatus !== "succeeded") return 0;
-    const voiPrice = prices.find((p) => p.contractId === CTCINFO_LP_WVOI_VOI);
+    const voiPrice = prices.find((p) => p.contractId === CTCINFO_LP_WVOI_AUSD);
     if (!voiPrice) return 0;
     return voiPrice.rate;
   }, [prices, dexStatus]);
@@ -112,10 +114,10 @@ export const Account: React.FC = () => {
   /* Wallet */
   const {
     activeAccount,
-    providers,
-    connectedAccounts,
+    //providers,
+    //connectedAccounts,
     signTransactions,
-    sendTransactions,
+    //sendTransactions,
   } = useWallet();
 
   /* Copy to clipboard */
@@ -143,12 +145,15 @@ export const Account: React.FC = () => {
   React.useEffect(() => {
     try {
       const res = axios
-        .get("https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/mp/listings", {
-          params: {
-            active: true,
-            seller: idArr,
-          },
-        })
+        .get(
+          "https://mainnet-idx.nftnavigator.xyz/nft-indexer/v1/mp/listings",
+          {
+            params: {
+              active: true,
+              seller: idArr,
+            },
+          }
+        )
         .then(({ data }) => {
           setListings(data.listings);
         });
@@ -176,7 +181,7 @@ export const Account: React.FC = () => {
         const {
           data: { collections: res },
         } = await axios.get(
-          "https://arc72-idx.voirewards.com/nft-indexer/v1/collections"
+          "https://mainnet-idx.voirewards.com/nft-indexer/v1/collections"
         );
         const collections = [];
         for (const c of res) {
@@ -207,7 +212,7 @@ export const Account: React.FC = () => {
         const {
           data: { tokens: res },
         } = await axios.get(
-          `https://arc72-idx.voirewards.com/nft-indexer/v1/tokens`,
+          `https://mainnet-idx.voirewards.com/nft-indexer/v1/tokens`,
           {
             params: {
               owner: idArr,
@@ -590,7 +595,8 @@ export const Account: React.FC = () => {
           customR.txns.map(
             (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
           )
-        ).then(sendTransactions);
+        );
+        //.then(sendTransactions);
       }
       // VIA Sale
       else {
@@ -693,7 +699,8 @@ export const Account: React.FC = () => {
                 customR.txns.map(
                   (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
                 )
-              ).then(sendTransactions),
+              ),
+              //.then(sendTransactions),
               {
                 pending: `Transaction signature pending setup recipient account (${
                   i + 1
@@ -751,21 +758,26 @@ export const Account: React.FC = () => {
         if (!customR.success) {
           throw new Error("failed in simulate");
         }
-        await toast.promise(
-          signTransactions(
-            customR.txns.map(
-              (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
-            )
-          ).then(sendTransactions),
-          {
-            pending: `Transaction signature pending... ${((str) =>
-              str[0].toUpperCase() + str.slice(1))(
-              activeAccount.providerId
-            )} will prompt you to sign the transaction.`,
-            success: "List successful!",
-            error: "List failed",
-          }
-        );
+        // await toast.promise(
+        //   signTransactions(
+        //     customR.txns.map(
+        //       (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
+        //     )
+        //   )
+        //   // TODO send transactions
+        //   //.then(sendTransactions),
+        //   // TODO fix toast promise
+        //   /*
+        //   {
+        //     pending: `Transaction signature pending... ${((str) =>
+        //       str[0].toUpperCase() + str.slice(1))(
+        //       activeAccount.providerId
+        //     )} will prompt you to sign the transaction.`,
+        //     success: "List successful!",
+        //     error: "List failed",
+        //   }
+        //   */
+        // );
       }
     } catch (e: any) {
       console.log(e);
@@ -815,7 +827,8 @@ export const Account: React.FC = () => {
       const txns = a_sale_deleteListingR.txns;
       await signTransactions(
         txns.map((txn: string) => new Uint8Array(Buffer.from(txn, "base64")))
-      ).then(sendTransactions);
+      );
+      //.then(sendTransactions);
       toast.success("Unlist successful!");
     } catch (e: any) {
       console.log(e);
@@ -920,17 +933,20 @@ export const Account: React.FC = () => {
       const txns = customR.txns;
       const res = await signTransactions(
         txns.map((txn: string) => new Uint8Array(Buffer.from(txn, "base64")))
-      ).then(sendTransactions);
+      );
+      //.then(sendTransactions);
       toast.success(`NFT Transfer successful! Page will reload momentarily.`);
-      if (connectedAccounts.map((a) => a.address).includes(addr)) {
+      /*
+      if (connectedAccounts.map((a: any) => a.address).includes(addr)) {
         setNfts([
           ...nfts.slice(0, selected),
           { ...nft, owner: addr },
           ...nfts.slice(selected + 1),
         ]);
-      } else {
-        setNfts([...nfts.slice(0, selected), ...nfts.slice(selected + 1)]);
-      }
+        */
+      // } else {
+      //   setNfts([...nfts.slice(0, selected), ...nfts.slice(selected + 1)]);
+      // }
       setTimeout(() => {
         window.location.reload();
       }, 4000);

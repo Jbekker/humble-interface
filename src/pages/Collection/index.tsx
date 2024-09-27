@@ -24,7 +24,8 @@ import NFTListingTable from "../../components/NFTListingTable";
 import ViewListIcon from "@mui/icons-material/ViewList";
 import GridViewIcon from "@mui/icons-material/GridView";
 import { getPrices } from "../../store/dexSlice";
-import { CTCINFO_LP_WVOI_VOI } from "../../constants/dex";
+import { CTCINFO_LP_WVOI_AUSD } from "../../constants/dex";
+//import { CTCINFO_LP_WVOI_VOI } from "../../constants/dex";
 
 const StatContainer = styled(Stack)`
   display: flex;
@@ -99,7 +100,7 @@ export const Collection: React.FC = () => {
   }, [dispatch]);
   const exchangeRate = useMemo(() => {
     if (!prices || dexStatus !== "succeeded") return 0;
-    const voiPrice = prices.find((p) => p.contractId === CTCINFO_LP_WVOI_VOI);
+    const voiPrice = prices.find((p) => p.contractId === CTCINFO_LP_WVOI_AUSD);
     if (!voiPrice) return 0;
     return voiPrice.rate;
   }, [prices, dexStatus]);
@@ -134,12 +135,15 @@ export const Collection: React.FC = () => {
   React.useEffect(() => {
     try {
       const res = axios
-        .get("https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/mp/listings", {
-          params: {
-            active: true,
-            collectionId: id,
-          },
-        })
+        .get(
+          "https://mainnet-idx.nftnavigator.xyz/nft-indexer/v1/mp/listings",
+          {
+            params: {
+              active: true,
+              collectionId: id,
+            },
+          }
+        )
         .then(({ data }) => {
           setListings(data.listings);
         });
@@ -167,7 +171,7 @@ export const Collection: React.FC = () => {
         const {
           data: { tokens: res },
         } = await axios.get(
-          `https://arc72-idx.voirewards.com/nft-indexer/v1/tokens`,
+          `https://mainnet-idx.voirewards.com/nft-indexer/v1/tokens`,
           {
             params: {
               contractId: id,
@@ -239,21 +243,6 @@ export const Collection: React.FC = () => {
     );
     return listedCollections;
   }, [collections, listedNfts]);
-
-  /*
-  const [sales, setSales] = React.useState<any>(null);
-  React.useEffect(() => {
-    axios
-      .get("https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/mp/sales", {
-        params: {
-          collectionId: id,
-        },
-      })
-      .then(({ data }) => {
-        setSales(data.sales.reverse());
-      });
-  }, []);
-  */
 
   const collectionSales = useMemo(() => {
     return (

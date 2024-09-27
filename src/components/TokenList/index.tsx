@@ -8,7 +8,7 @@ import TokenCard from "../TokenCard";
 import CreateTokenModal from "../modals/CreateTokenModal";
 import AddTokenModal from "../modals/AddTokenModal";
 import { Stack } from "@mui/system";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import { Fade } from "@mui/material";
 import Search from "../Search";
 
@@ -607,7 +607,7 @@ const TokenList: FC<TokenListProps> = ({ tokens, showing, onFilter }) => {
                   <PoolIcon />
                 </CreateButtonInner>
               </AddTokenButton>*/}
-              <CreateTokenButton
+              {/*<CreateTokenButton
                 onClick={() => {
                   setShowCreateModal(true);
                 }}
@@ -616,7 +616,7 @@ const TokenList: FC<TokenListProps> = ({ tokens, showing, onFilter }) => {
                   <CreateButtonLabel>Create token</CreateButtonLabel>
                   <PoolIcon />
                 </CreateButtonInner>
-              </CreateTokenButton>
+              </CreateTokenButton>*/}
             </Stack>
           ) : null}
         </HeadingRow>

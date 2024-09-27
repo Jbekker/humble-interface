@@ -4,7 +4,7 @@ import SwapIcon from "static/icon/icon-swap-stable-light.svg";
 import ActiveSwapIcon from "static/icon/icon-swap-active-light.svg";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import {
   CircularProgress,
   Collapse,
@@ -502,18 +502,44 @@ const Swap = () => {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
+
+  const dispatch = useDispatch();
+
+  /* Tokens */
   const tokens = useSelector((state: RootState) => state.tokens.tokens);
+  const tokenStatus = useSelector((state: RootState) => state.tokens.status);
+  useEffect(() => {
+    dispatch(getTokens() as unknown as UnknownAction);
+  }, [dispatch]);
+
+  /* Pools */
+  const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
+  const poolsStatus = useSelector((state: RootState) => state.pools.status);
+  useEffect(() => {
+    dispatch(getPools() as unknown as UnknownAction);
+  }, [dispatch]);
+
+  const [pools2, setPools] = useState<PoolI[]>([]);
+  useEffect(() => {
+    axios
+      .get("https://mainnet-idx.nautilus.sh/nft-indexer/v1/dex/pools")
+      .then(({ data }) => {
+        setPools(data.pools);
+      });
+  }, []);
+  console.log({ pools, pools2, poolsStatus, tokenStatus });
 
   const [sp] = useSearchParams();
   const paramPoolId = sp.get("poolId") || CTCINFO_DEFAULT_LP;
 
+  console.log({ paramPoolId });
+
   const {
-    providers,
+    //providers,
     activeAccount,
     signTransactions,
-    sendTransactions,
-    getAccountInfo,
+    //sendTransactions,
+    //getAccountInfo,
   } = useWallet();
 
   // confirmation modal
@@ -855,7 +881,7 @@ const Swap = () => {
   useEffect(() => {
     axios
       .get(
-        `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=tokens`
+        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=tokens`
       )
       .then(({ data }) => {
         setTokens(data.tokens);
@@ -1069,6 +1095,8 @@ const Swap = () => {
         tokenId: mB.tokenId ?? undefined,
       };
 
+      console.log({ A, B, acc, pool2 });
+
       const swapR = await ci.swap(acc.addr, pool2.poolId, A, B);
 
       if (!swapR.success) throw new Error("Swap simulation failed");
@@ -1076,66 +1104,74 @@ const Swap = () => {
       setMessage("Signing transaction...");
       setProgress(50);
 
-      const stxns = await toast.promise(
-        signTransactions(
-          swapR.txns.map(
-            (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-          )
-        ),
-        {
-          pending: `Swap ${fromAmount} ${tokenSymbol(
-            token
-          )} -> ${toAmount} ${tokenSymbol(token2)}`,
-        },
-        {
-          type: "default",
-          position: "top-right",
-          theme: "dark",
-        }
+      const stxns = await signTransactions(
+        swapR.txns.map((t: string) => new Uint8Array(Buffer.from(t, "base64")))
       );
 
-      const res = await sendTransactions(stxns);
+      // const stxns = await toast.promise(
+      //   signTransactions(
+      //     swapR.txns.map(
+      //       (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+      //     )
+      //   ),
+      //   {
+      //     pending: `Swap ${fromAmount} ${tokenSymbol(
+      //       token
+      //     )} -> ${toAmount} ${tokenSymbol(token2)}`,
+      //   },
+      //   {
+      //     type: "default",
+      //     position: "top-right",
+      //     theme: "dark",
+      //   }
+      // );
+      //const res = await sendTransactions(stxns);
+      //console.log({ res });
+
+      const res = await algodClient
+        .sendRawTransaction(stxns as Uint8Array[])
+        .do();
 
       console.log({ res });
 
       setProgress(75);
       setMessage("Confirming transaction...");
-      await algosdk.waitForConfirmation(algodClient, res.txId, 1000);
+      //await algosdk.waitForConfirmation(algodClient, res.txId, 1000);
       setProgress(85);
 
-      setMessage("Updating quests...");
       // -----------------------------------------
       // QUEST HERE hmbl_pool_swap
       // -----------------------------------------
-      do {
-        const address = activeAccount.address;
-        const actions: string[] = [
-          QUEST_ACTION.SWAP_TOKEN,
-          QUEST_ACTION.SWAP_TOKEN_DAILY,
-        ];
-        const {
-          data: { results },
-        } = await getActions(address);
-        for (const action of actions) {
-          const address = activeAccount.address;
-          const key = `${action}:${address}`;
-          const completedAction = results.find(
-            (el: any) => el.key === key && !el.key.match(/daily/)
-          );
-          if (!completedAction) {
-            await submitAction(action, address, {
-              poolId,
-            });
-          }
-          // TODO notify quest completion here
-        }
-      } while (0);
+      // setMessage("Updating quests...");
+      // do {
+      //   const address = activeAccount.address;
+      //   const actions: string[] = [
+      //     QUEST_ACTION.SWAP_TOKEN,
+      //     QUEST_ACTION.SWAP_TOKEN_DAILY,
+      //   ];
+      //   const {
+      //     data: { results },
+      //   } = await getActions(address);
+      //   for (const action of actions) {
+      //     const address = activeAccount.address;
+      //     const key = `${action}:${address}`;
+      //     const completedAction = results.find(
+      //       (el: any) => el.key === key && !el.key.match(/daily/)
+      //     );
+      //     if (!completedAction) {
+      //       await submitAction(action, address, {
+      //         poolId,
+      //       });
+      //     }
+      //     // TODO notify quest completion here
+      //   }
+      // } while (0);
       // -----------------------------------------
       setProgress(95);
       await new Promise((res) => setTimeout(res, 1000));
 
-      const swapEvents = await ci.SwapEvents({ txid: res.txId });
-      console.log(swapEvents);
+      //const swapEvents = await ci.SwapEvents({ txid: res.txId });
+      //console.log(swapEvents);
 
       // TODO add confirmation modal
     } catch (e: any) {

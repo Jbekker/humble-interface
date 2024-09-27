@@ -2,7 +2,7 @@ import styled from "@emotion/styled";
 import React, { FC, useEffect, useMemo, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
-import { custom, useWallet } from "@txnlab/use-wallet";
+import { useWallet } from '@txnlab/use-wallet-react'
 import { CircularProgress, Stack } from "@mui/material";
 import { CONTRACT, abi, arc200 } from "ulujs";
 import { TOKEN_WVOI1 } from "../../constants/tokens";
@@ -19,7 +19,7 @@ import { tokenId, tokenSymbol } from "../../utils/dex";
 import BigNumber from "bignumber.js";
 import BasicDateCalendar from "../BasicDateCalendar";
 import moment from "moment";
-import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
+//import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
 import { CTCINFO_STAKR_200 } from "../../constants/dex";
 
 import * as Sentry from "@sentry/react";
@@ -139,11 +139,11 @@ const Swap = () => {
 
   /* Wallet */
   const {
-    providers,
+    //providers,
     activeAccount,
     signTransactions,
-    sendTransactions,
-    getAccountInfo,
+    //sendTransactions,
+    //getAccountInfo,
   } = useWallet();
 
   const [pool, setPool] = useState<PoolI>();
@@ -295,11 +295,11 @@ const Swap = () => {
   }, [token2, activeAccount]);
 
   // EFFECT: get voi balance
-  useEffect(() => {
-    if (activeAccount && providers && providers.length >= 3) {
-      getAccountInfo().then(setAccInfo);
-    }
-  }, [activeAccount, providers]);
+  // useEffect(() => {
+  //   if (activeAccount && providers && providers.length >= 3) {
+  //     getAccountInfo().then(setAccInfo);
+  //   }
+  // }, [activeAccount, providers]);
 
   const isValid = useMemo(() => {
     return (
@@ -556,7 +556,8 @@ const Swap = () => {
             customR.txns.map(
               (t: string) => new Uint8Array(Buffer.from(t, "base64"))
             )
-          ).then(sendTransactions),
+            // TODO send transactions
+          ), //.then(sendTransactions),
           {
             pending: "Pending transaction to create farm",
             success: "Successfully created farm",
@@ -566,29 +567,29 @@ const Swap = () => {
         // -----------------------------------------
         // QUEST HERE hmbl_farm_claim
         // -----------------------------------------
-        do {
-          const address = activeAccount.address;
-          const actions: string[] = [QUEST_ACTION.CREATE_FARM];
-          const {
-            data: { results },
-          } = await getActions(address);
-          for (const action of actions) {
-            const address = activeAccount.address;
-            const key = `${action}:${address}`;
-            const completedAction = results.find((el: any) => el.key === key);
-            if (!completedAction) {
-              await submitAction(action, address, {
-                contractId: CTCINFO_STAKR_200,
-              });
-            }
-            // TODO notify quest completion here
-          }
-        } while (0);
+        // do {
+        //   const address = activeAccount.address;
+        //   const actions: string[] = [QUEST_ACTION.CREATE_FARM];
+        //   const {
+        //     data: { results },
+        //   } = await getActions(address);
+        //   for (const action of actions) {
+        //     const address = activeAccount.address;
+        //     const key = `${action}:${address}`;
+        //     const completedAction = results.find((el: any) => el.key === key);
+        //     if (!completedAction) {
+        //       await submitAction(action, address, {
+        //         contractId: CTCINFO_STAKR_200,
+        //       });
+        //     }
+        //     // TODO notify quest completion here
+        //   }
+        // } while (0);
         // -----------------------------------------
       } while (0);
     } catch (e: any) {
       console.error(e);
-      Sentry.captureException(e);
+      //Sentry.captureException(e);
       toast.error(e.message);
     }
   };

@@ -17,7 +17,6 @@ import { CONTRACT, abi } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
 import { TOKEN_WVOI1 } from "../../constants/tokens";
 import BigNumber from "bignumber.js";
-import { useWallet } from "@txnlab/use-wallet";
 import { stringToColorCode } from "../../utils/string";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";

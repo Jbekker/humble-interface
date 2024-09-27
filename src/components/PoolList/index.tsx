@@ -5,7 +5,7 @@ import { useSelector } from "react-redux";
 import PoolCard from "../PoolCard";
 import { IndexerPoolI, PoolI } from "../../types";
 import { useNavigate } from "react-router-dom";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import axios from "axios";
 import BigNumber from "bignumber.js";
 import { Box, Fade, Stack } from "@mui/material";

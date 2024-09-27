@@ -3,7 +3,8 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { RootState } from "./store";
 import { swap200 } from "ulujs";
 import { getAlgorandClients } from "../wallets";
-import { CTCINFO_LP_WVOI_VOI } from "../constants/dex";
+import { CTCINFO_LP_WVOI_AUSD } from "../constants/dex";
+//import { CTCINFO_LP_WVOI_VOI } from "../constants/dex";
 
 export interface DexState {
   prices: any[];
@@ -17,7 +18,7 @@ export const getPrices = createAsyncThunk<
   { rejectValue: string; state: RootState }
 >("dex/getPrices", async (_, { getState, rejectWithValue }) => {
   try {
-    const ctcInfo = CTCINFO_LP_WVOI_VOI;
+    const ctcInfo = CTCINFO_LP_WVOI_AUSD;
     const { algodClient, indexerClient } = getAlgorandClients();
     const ci = new swap200(ctcInfo, algodClient, indexerClient);
     const InfoR = await ci.Info();

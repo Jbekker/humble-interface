@@ -105,7 +105,7 @@ export const getTokens = createAsyncThunk<
     const mintMintRound =
       storedTokens.length === 0 ? 0 : storedTokens.slice(-1)[0].mintRound;
     const { data } = await axios.get(
-      `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`,
+      `https://mainnet-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`,
       {
         params: {
           ["mint-min-round"]: mintMintRound,

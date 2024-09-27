@@ -2,7 +2,7 @@ import styled from "@emotion/styled";
 import React, { useEffect, useMemo, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import { CircularProgress } from "@mui/material";
 import { CONTRACT, abi, arc200, swap200, swap } from "ulujs";
 import { TOKEN_WVOI1 } from "../../constants/tokens";
@@ -286,14 +286,17 @@ const PoolRemove = () => {
 
   /* Wallet */
   const {
-    providers,
+    //providers,
     activeAccount,
     signTransactions,
-    sendTransactions,
-    getAccountInfo,
+    //sendTransactions,
+    //getAccountInfo,
   } = useWallet();
 
-  const [pool, setPool] = useState<PoolI>();
+  const [pool, setPool] = useState<PoolI>({
+    poolId: Number(paramPoolId),
+  } as PoolI);
+
   const [token, setToken] = useState<ARC200TokenI>();
   const [token2, setToken2] = useState<ARC200TokenI>();
   useEffect(() => {
@@ -418,6 +421,7 @@ const PoolRemove = () => {
     if (!activeAccount || !pool) return;
     const { algodClient, indexerClient } = getAlgorandClients();
     const ci = new arc200(pool?.poolId, algodClient, indexerClient);
+    console.log({ activeAccount });
     ci.arc200_balanceOf(activeAccount.address).then(
       (arc200_balanceOfR: any) => {
         if (arc200_balanceOfR.success) {
@@ -426,11 +430,13 @@ const PoolRemove = () => {
       }
     );
   }, [activeAccount, pool]);
+  console.log({ poolBalance });
 
   const [poolShare, setPoolShare] = useState<string>("0");
   useEffect(() => {
     if (!activeAccount || !pool || !info || !poolBalance) return;
-    const newShare = (100 * Number(poolBalance)) / Number(info.lptBals.lpMinted);
+    const newShare =
+      (100 * Number(poolBalance)) / Number(info.lptBals.lpMinted);
     setPoolShare(newShare.toFixed(2));
   }, [activeAccount, pool, info, poolBalance]);
 
@@ -449,7 +455,9 @@ const PoolRemove = () => {
       sk: new Uint8Array(0),
     });
     const share = (Number(poolShare) * Number(fromAmount)) / 100;
-    const withdrawAmount = Math.round((Number(info.lptBals.lpMinted) * share) / 100);
+    const withdrawAmount = Math.round(
+      (Number(info.lptBals.lpMinted) * share) / 100
+    );
     ci.setFee(4000);
     ci.Provider_withdraw(1, withdrawAmount, [0, 0]).then(
       (Provider_withdrawR: any) => {
@@ -677,11 +685,11 @@ const PoolRemove = () => {
   // }, [token2, activeAccount]);
 
   // EFFECT: get voi balance
-  useEffect(() => {
-    if (activeAccount && providers && providers.length >= 3) {
-      getAccountInfo().then(setAccInfo);
-    }
-  }, [activeAccount, providers]);
+  // useEffect(() => {
+  //   if (activeAccount && providers && providers.length >= 3) {
+  //     getAccountInfo().then(setAccInfo);
+  //   }
+  // }, [activeAccount, providers]);
 
   const buttonLabel = useMemo(() => {
     if (isValid) {
@@ -692,7 +700,7 @@ const PoolRemove = () => {
   }, [isValid]);
 
   const handleButtonClick = async () => {
-    if (!isValid || !token || !token2 || !pool) return;
+    //if (!isValid || !token || !token2 || !pool) return;
     if (!activeAccount) {
       toast.info("Please connect your wallet first");
       return;
@@ -792,8 +800,15 @@ const PoolRemove = () => {
 
       // pick a pool
       //const pool = eligiblePools.slice(-1)[0];
-      const { poolId, tokA, tokB } = pool;
+      const { poolId } = pool;
+      const tokA = info.tokAId;
+      const tokB = info.tokBId;
       const ci = makeCi(poolId);
+
+      // get token ids
+
+      console.log({ ci, poolId, tokA, tokB });
+
       ci.setFee(4000);
       // get reserves
       // const reserveR = await ci.reserve(activeAccount.address);
@@ -854,28 +869,37 @@ const PoolRemove = () => {
       console.log({ customR });
       if (!customR.success)
         return new Error("Add liquidity group simulation failed");
-      await toast.promise(
-        signTransactions(
-          customR.txns.map(
-            (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-          )
-        ).then(sendTransactions),
-        {
-          pending: `Remove liquidity ${(
-            Number(Provider_withdraw[0]) /
-            10 ** token.decimals
-          ).toFixed(token.decimals)} ${tokenSymbol(token, true)} + ${(
-            Number(Provider_withdraw[1]) /
-            10 ** token2.decimals
-          ).toFixed(token2.decimals)} ${tokenSymbol(token2, true)}`,
-          success: `Add liquidity successful!`,
-        },
-        {
-          type: "default",
-          position: "top-center",
-          theme: "dark",
-        }
+
+      const stxns = await signTransactions(
+        customR.txns.map(
+          (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+        )
       );
+
+      // await toast.promise(
+      //   signTransactions(
+      //     customR.txns.map(
+      //       (t: string) => new Uint8Array(Buffer.from(t, "base64"))
+      //     )
+      //   ),
+      //   // TODO send transactions
+      //   //.then(sendTransactions),
+      //   {
+      //     pending: `Remove liquidity ${Number(
+      //       Provider_withdraw[0]
+      //     )} ${tokenSymbol(token, true)} + ${Number(
+      //       Provider_withdraw[1]
+      //     )} ${tokenSymbol(token2, true)}`,
+      //     success: `Add liquidity successful!`,
+      //   },
+      //   {
+      //     type: "default",
+      //     position: "top-center",
+      //     theme: "dark",
+      //   }
+      // );
+
+      await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
     } catch (e: any) {
       toast.error(e.message);
       console.error(e);
@@ -969,7 +993,8 @@ const PoolRemove = () => {
           : "-"}
       </div>
       <Button
-        className={isValid ? "active" : undefined}
+        //className={isValid ? "active" : undefined}
+        className="active"
         onClick={() => {
           if (!on) {
             handleButtonClick();

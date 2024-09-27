@@ -62,7 +62,7 @@ const NFTTabs: React.FC<NFTTabsProps> = ({ nft, loading }) => {
   const [sales, setSales] = React.useState<any>(null);
   React.useEffect(() => {
     axios
-      .get("https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/mp/sales", {
+      .get("https://mainnet-idx.nftnavigator.xyz/nft-indexer/v1/mp/sales", {
         params: {
           collectionId: nft.contractId,
           tokenId: nft.tokenId,

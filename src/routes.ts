@@ -4,7 +4,6 @@ export const routes = [
     path: "/",
     Component: Page.Home,
   },
-  /*
   {
     path: "/swap",
     Component: Page.Swap,
@@ -25,6 +24,7 @@ export const routes = [
     path: "/pool/create",
     Component: Page.PoolCreate,
   },
+  /*
   {
     path: "/farm",
     Component: Page.Farm,
@@ -33,9 +33,9 @@ export const routes = [
     path: "/farm/create",
     Component: Page.FarmCreate,
   },
+  */
   {
     path: "/token",
     Component: Page.Token,
   },
-  */
 ];

@@ -7,7 +7,7 @@ import FarmCard from "../FarmCard";
 import { getAlgorandClients } from "../../wallets";
 import moment from "moment";
 import { useNavigate } from "react-router-dom";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import Search from "../Search";
 
 const Button = styled.div`

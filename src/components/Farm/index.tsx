@@ -4,7 +4,7 @@ import SwapIcon from "static/icon/icon-swap-stable-light.svg";
 import ActiveSwapIcon from "static/icon/icon-swap-active-light.svg";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import { ButtonGroup, Stack, Button as MUIButton, Fade } from "@mui/material";
 import { CONTRACT, abi, arc200 } from "ulujs";
 import { NETWORK_TOKEN, TOKEN_VIA } from "../../constants/tokens";
@@ -201,7 +201,7 @@ const Farm = () => {
   useEffect(() => {
     axios
       .get(
-        `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=all`
+        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=all`
       )
       .then(({ data }) => {
         setTokens(data.tokens);
@@ -212,7 +212,7 @@ const Farm = () => {
 
   const fetchFarms = () =>
     axios
-      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/stake/pools`)
+      .get(`https://mainnet-idx.nautilus.sh/nft-indexer/v1/stake/pools`)
       .then(({ data }) => {
         setFarms(data.pools);
       });
@@ -299,7 +299,7 @@ const Farm = () => {
     if (!activeAccount) return;
     axios
       .get(
-        `https://arc72-idx.nautilus.sh/nft-indexer/v1/stake/accounts?accountId=${activeAccount.address}`
+        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/stake/accounts?accountId=${activeAccount.address}`
       )
       .then(({ data }) => {
         setPositions(data.accounts);

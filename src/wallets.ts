@@ -1,4 +1,4 @@
-import { PROVIDER_ID } from "@txnlab/use-wallet";
+//import { PROVIDER_ID } from '@txnlab/use-wallet-react'
 import algosdk from "algosdk";
 
 // const getDynamicDeflyWalletConnect = async () => {
@@ -45,16 +45,16 @@ export const getProviderInit: any = () => {
           //   id: PROVIDER_ID.DEFLY,
           //   getDynamicClient: getDynamicDeflyWalletConnect,
           // },
-          {
-            id: PROVIDER_ID.LUTE,
-            getDynamicClient: getDynamicLuteConnect,
-            clientOptions: { siteName: "Nautilus" },
-          },
-          { id: PROVIDER_ID.KIBISIS },
+          // {
+          //   id: PROVIDER_ID.LUTE,
+          //   getDynamicClient: getDynamicLuteConnect,
+          //   clientOptions: { siteName: "HumbPact" },
+          // },
+          // { id: PROVIDER_ID.KIBISIS },
         ],
         nodeConfig: {
           network: "voi-testnet",
-          nodeServer: "https://testnet-api.voi.nodly.io",
+          nodeServer: "https://mainnet-api.voi.nodly.dev",
           nodeToken: "",
           nodePort: "443",
         },
@@ -82,6 +82,9 @@ export const getCurrentNodeEnv = () => {
   switch (node) {
     default:
     case "voi":
+      ALGO_SERVER = "https://mainnet-api.voi.nodely.dev";
+      ALGO_INDEXER_SERVER = "https://mainnet-idx.voi.nodely.dev";
+      break;
     case "voi-testnet":
       ALGO_SERVER = "https://testnet-api.voi.nodly.io";
       ALGO_INDEXER_SERVER = "https://testnet-idx.voi.nodly.io";

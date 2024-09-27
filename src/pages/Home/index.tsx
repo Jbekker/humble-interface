@@ -2,7 +2,9 @@ import React from "react";
 import Swap from "../../components/Swap";
 
 export const Home: React.FC = () => {
-  return <div>
-    {/* asdf */}
-  </div>
+  return (
+    <div>
+      <Swap />
+    </div>
+  );
 };

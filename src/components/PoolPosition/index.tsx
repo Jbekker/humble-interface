@@ -4,7 +4,7 @@ import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 import { BalanceI, PoolI, PositionI } from "../../types";
 import PoolCard from "../PoolCard";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import { Fade, Stack } from "@mui/material";
 import axios from "axios";
 import BigNumber from "bignumber.js";

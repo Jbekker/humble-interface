@@ -23,7 +23,7 @@ import { stringToColorCode } from "../../utils/string";
 import { useCopyToClipboard } from "usehooks-ts";
 import { toast } from "react-toastify";
 
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 
 import algosdk from "algosdk";
 //import { MarketplaceContext } from "../../store/MarketplaceContext";
@@ -266,7 +266,11 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
   exchangeRate,
 }) => {
   /* Wallet */
-  const { activeAccount, signTransactions, sendTransactions } = useWallet();
+  const {
+    activeAccount,
+    signTransactions,
+    //sendTransactions
+  } = useWallet();
   /* Modal */
   const [openBuyModal, setOpenBuyModal] = React.useState(false);
   const [isBuying, setIsBuying] = React.useState(false);
@@ -318,7 +322,8 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
       const txns = a_sale_deleteListingR.txns;
       await signTransactions(
         txns.map((txn: string) => new Uint8Array(Buffer.from(txn, "base64")))
-      ).then(sendTransactions);
+      );
+      //.then(sendTransactions);
       toast.success("Unlist successful!");
     } catch (e: any) {
       console.log(e);
@@ -602,7 +607,8 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
           customR.txns.map(
             (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
           )
-        ).then(sendTransactions);
+        );
+        //.then(sendTransactions);
       }
       // VIA Sale
       else {
@@ -705,7 +711,8 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
                 customR.txns.map(
                   (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
                 )
-              ).then(sendTransactions),
+              ),
+              //.then(sendTransactions),
               {
                 pending: `Transaction signature pending setup recipient account (${
                   i + 1
@@ -768,12 +775,13 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
             customR.txns.map(
               (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
             )
-          ).then(sendTransactions),
+          ),
+          //.then(sendTransactions),
           {
-            pending: `Transaction signature pending... ${((str) =>
-              str[0].toUpperCase() + str.slice(1))(
-              activeAccount.providerId
-            )} will prompt you to sign the transaction.`,
+            // pending: `Transaction signature pending... ${((str) =>
+            //   str[0].toUpperCase() + str.slice(1))(
+            //   activeAccount.providerId
+            // )} will prompt you to sign the transaction.`,
             success: "List successful!",
             error: "List failed",
           }
@@ -814,12 +822,13 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
           suggestedParams: await algodClient.getTransactionParams().do(),
         });
         await toast.promise(
-          signTransactions([paymentTxn.toByte()]).then(sendTransactions),
+          signTransactions([paymentTxn.toByte()]),
+          //.then(sendTransactions),
           {
-            pending: `Transaction signature pending... ${((str) =>
-              str[0].toUpperCase() + str.slice(1))(
-              activeAccount.providerId
-            )} will prompt you to sign the transaction.`,
+            // pending: `Transaction signature pending... ${((str) =>
+            //   str[0].toUpperCase() + str.slice(1))(
+            //   activeAccount.providerId
+            // )} will prompt you to sign the transaction.`,
             success: "Transaction successful!",
             error: "Transaction failed",
           }
@@ -904,12 +913,13 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
               customR.txns.map(
                 (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
               )
-            ).then(sendTransactions),
+            ),
+            //.then(sendTransactions),
             {
-              pending: `Transaction signature pending... ${((str) =>
-                str[0].toUpperCase() + str.slice(1))(
-                activeAccount.providerId
-              )} will prompt you to sign the transaction.`,
+              // pending: `Transaction signature pending... ${((str) =>
+              //   str[0].toUpperCase() + str.slice(1))(
+              //   activeAccount.providerId
+              // )} will prompt you to sign the transaction.`,
               success: "Transaction successful!",
               error: "Transaction failed",
             }
@@ -972,12 +982,13 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
                 arc200_approveR.txns.map(
                   (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
                 )
-              ).then(sendTransactions),
+              ),
+              //.then(sendTransactions),
               {
-                pending: `Transaction signature pending... ${((str) =>
-                  str[0].toUpperCase() + str.slice(1))(
-                  activeAccount.providerId
-                )} will prompt you to sign the transaction.`,
+                // pending: `Transaction signature pending... ${((str) =>
+                //   str[0].toUpperCase() + str.slice(1))(
+                //   activeAccount.providerId
+                // )} will prompt you to sign the transaction.`,
                 success: "Transaction successful!",
                 error: "Transaction failed",
               }
@@ -1104,12 +1115,13 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
               customR.txns.map(
                 (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
               )
-            ).then(sendTransactions),
+            ),
+            //.then(sendTransactions),
             {
-              pending: `Transaction signature pending... ${((str) =>
-                str[0].toUpperCase() + str.slice(1))(
-                activeAccount.providerId
-              )} will prompt you to sign the transaction.`,
+              // pending: `Transaction signature pending... ${((str) =>
+              //   str[0].toUpperCase() + str.slice(1))(
+              //   activeAccount.providerId
+              // )} will prompt you to sign the transaction.`,
               success: "Transaction successful!",
               error: "Transaction failed",
             }

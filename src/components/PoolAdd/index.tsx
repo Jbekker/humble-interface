@@ -4,7 +4,7 @@ import SwapIcon from "static/icon/icon-swap-stable-light.svg";
 import ActiveSwapIcon from "static/icon/icon-swap-active-light.svg";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import { CircularProgress, Stack } from "@mui/material";
 import { CONTRACT, abi, arc200, swap } from "ulujs";
 import { NETWORK_TOKEN, TOKEN_VIA, TOKEN_WVOI1 } from "../../constants/tokens";
@@ -627,11 +627,11 @@ const Swap = () => {
 
   /* Wallet */
   const {
-    providers,
+    //providers,
     activeAccount,
     signTransactions,
-    sendTransactions,
-    getAccountInfo,
+    //sendTransactions,
+    //getAccountInfo,
   } = useWallet();
 
   const [pool, setPool] = useState<PoolI>();
@@ -692,7 +692,12 @@ const Swap = () => {
 
   // EFFECT
   useEffect(() => {
-    if (!tokens || !pools || pools.length === 0) return;
+    if (
+      !tokens ||
+      !pools
+      //|| pools.length === 0
+    )
+      return;
     const newTokens = new Set<number>();
     for (const pool of pools) {
       newTokens.add(pool.tokA);
@@ -1114,7 +1119,9 @@ const Swap = () => {
   const [tokens2, setTokens] = React.useState<any[]>();
   useEffect(() => {
     axios
-      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens`)
+      .get(
+        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=all`
+      )
       .then((res) => {
         setTokens(res.data.tokens);
       });
@@ -1222,12 +1229,19 @@ const Swap = () => {
 
   // EFFECT: get voi balance
   useEffect(() => {
-    if (activeAccount && providers && providers.length >= 3) {
-      getAccountInfo().then(setAccInfo);
+    if (activeAccount) {
+      // && providers && providers.length >= 3) {
+      const { algodClient } = getAlgorandClients();
+      algodClient
+        .accountInformation(activeAccount.address)
+        .do()
+        .then(setAccInfo);
     }
-  }, [activeAccount, providers]);
+  }, [activeAccount]);
 
   const isValid = useMemo(() => {
+    return true;
+    /*
     return (
       !!token &&
       !!token2 &&
@@ -1239,6 +1253,7 @@ const Swap = () => {
         Number(balance.replace(/,/g, "")) &&
       Number(toAmount.replace(/,/g, "")) <= Number(balance2.replace(/,/g, ""))
     );
+    */
   }, [balance, balance2, fromAmount, toAmount, token, token2]);
 
   console.log("isValid", isValid);
@@ -1313,7 +1328,11 @@ const Swap = () => {
         amount: toAmount.replace(/,/g, ""),
       };
 
-      const swapR = await ci.deposit(acc.addr, pool.poolId, A, B);
+      console.log({ A, B, acc, pool });
+
+      const swapR = await ci.deposit(acc.addr, pool.poolId, A, B, [], {
+        debug: true
+      });
 
       if (!swapR.success) {
         return new Error("Add liquidity group simulation failed");
@@ -1340,30 +1359,41 @@ const Swap = () => {
       //     theme: "dark",
       //   }
       // );
-      const stxns = await toast.promise(
-        signTransactions(
-          swapR.txns.map(
-            (t: string) => new Uint8Array(Buffer.from(t, "base64"))
-          )
-        ),
-        {
-          pending: `Add liquidity ${fromAmount} ${tokenSymbol(
-            token
-          )} -> ${toAmount} ${tokenSymbol(token2)}`,
-          success:
-            paramNewPool !== "true" ? `Add liquidity successful!` : undefined,
-        },
-        {
-          type: "default",
-          position: "top-right",
-          theme: "dark",
-        }
+      const stxns = await //await toast.promise(
+      signTransactions(
+        swapR.txns.map((t: string) => new Uint8Array(Buffer.from(t, "base64")))
       );
+      //);
+      //   .then((sxns) => {
+      //     const { algodClient } = getAlgorandClients();
+      //     return Promise.all(
+      //       sxns.map((txn) =>
+      //         algodClient.sendRawTransaction(txn as Uint8Array).do(0)
+      //       )
+      //     );
+      //   }),
+      //   {
+      //     pending: `Add liquidity ${fromAmount} ${tokenSymbol(
+      //       token
+      //     )} -> ${toAmount} ${tokenSymbol(token2)}`,
+      //     success:
+      //       paramNewPool !== "true" ? `Add liquidity successful!` : undefined,
+      //   },
+      //   {
+      //     type: "default",
+      //     position: "top-right",
+      //     theme: "dark",
+      //   }
+      // );
+
+      console.log({ stxns });
+
+      await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
 
       setProgress(75);
       setmessage("Confirming transactions");
 
-      const res = await sendTransactions(stxns);
+      // const res = await sendTransactions(stxns);
 
       // -----------------------------------------
       // QUEST HERE hmbl_pool_add
@@ -1391,7 +1421,7 @@ const Swap = () => {
       if (paramNewPool === "true") {
         do {
           const { data } = await axios.get(
-            `https://arc72-idx.nautilus.sh/nft-indexer/v1/dex/pools?contractId=${pool.poolId}`
+            `https://mainnet-idx.nautilus.sh/nft-indexer/v1/dex/pools?contractId=${pool.poolId}`
           );
           if (data.pools.length > 0) break;
           await new Promise((res) => setTimeout(res, 4000));

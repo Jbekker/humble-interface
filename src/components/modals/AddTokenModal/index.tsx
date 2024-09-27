@@ -5,7 +5,7 @@ import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../../store/store";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import { CONNECTOR_ALGO_ARC200 } from "../../../constants/tokens";
 import { getAlgorandClients } from "../../../wallets";
 import algosdk from "algosdk";
@@ -460,7 +460,9 @@ const SwapSuccessfulModal: React.FC<SwapSuccessfulModalProps> = ({
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const { activeAccount, signTransactions, sendTransactions } = useWallet();
+  const { activeAccount, signTransactions, 
+    //sendTransactions 
+  } = useWallet();
   const [tokenId, setTokenId] = useState("");
   const [token, setToken] = useState<ARC200TokenI>();
   const isValid = useMemo(() => {

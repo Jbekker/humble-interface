@@ -5,7 +5,7 @@ import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../../store/store";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import { CONNECTOR_ALGO_ARC200 } from "../../../constants/tokens";
 import { getAlgorandClients } from "../../../wallets";
 import algosdk from "algosdk";
@@ -460,7 +460,11 @@ const SwapSuccessfulModal: React.FC<SwapSuccessfulModalProps> = ({
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
-  const { activeAccount, signTransactions, sendTransactions } = useWallet();
+  const {
+    activeAccount,
+    signTransactions,
+    //sendTransactions
+  } = useWallet();
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("");
   const [decimals, setDecimals] = useState("");
@@ -501,7 +505,7 @@ const SwapSuccessfulModal: React.FC<SwapSuccessfulModalProps> = ({
       );
 
       const res: any = await toast.promise(
-        signTransactions([appCreateTxn.toByte()]).then(sendTransactions),
+        signTransactions([appCreateTxn.toByte()]), //.then(sendTransactions),
         {
           pending: "Pending transaction to deploy toke",
           success: "Token deployed!",
@@ -570,7 +574,7 @@ const SwapSuccessfulModal: React.FC<SwapSuccessfulModalProps> = ({
           _reachp_0R.txns.map(
             (t: string) => new Uint8Array(Buffer.from(t, "base64"))
           )
-        ).then(sendTransactions),
+        ),//.then(sendTransactions),
         {
           pending: "Pending transaction mint token",
           success: "Token creation complete!",
@@ -580,26 +584,26 @@ const SwapSuccessfulModal: React.FC<SwapSuccessfulModalProps> = ({
       // -----------------------------------------
       // QUEST HERE hmbl_token_create
       // -----------------------------------------
-      do {
-        const address = activeAccount.address;
-        const actions: string[] = [QUEST_ACTION.CREATE_TOKEN];
-        (async () => {
-          const {
-            data: { results },
-          } = await getActions(address);
-          for (const action of actions) {
-            const address = activeAccount.address;
-            const key = `${action}:${address}`;
-            const completedAction = results.find((el: any) => el.key === key);
-            if (!completedAction) {
-              await submitAction(action, address, {
-                tokenId: ctcInfo,
-              });
-            }
-            // TODO notify quest completion here
-          }
-        })();
-      } while (0);
+      // do {
+      //   const address = activeAccount.address;
+      //   const actions: string[] = [QUEST_ACTION.CREATE_TOKEN];
+      //   (async () => {
+      //     const {
+      //       data: { results },
+      //     } = await getActions(address);
+      //     for (const action of actions) {
+      //       const address = activeAccount.address;
+      //       const key = `${action}:${address}`;
+      //       const completedAction = results.find((el: any) => el.key === key);
+      //       if (!completedAction) {
+      //         await submitAction(action, address, {
+      //           tokenId: ctcInfo,
+      //         });
+      //       }
+      //       // TODO notify quest completion here
+      //     }
+      //   })();
+      // } while (0);
       // -----------------------------------------
       navigate(`/pool/create?tokAId=${ctcInfo}`);
     } catch (e: any) {

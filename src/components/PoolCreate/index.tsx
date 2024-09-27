@@ -4,7 +4,7 @@ import SwapIcon from "static/icon/icon-swap-stable-light.svg";
 import ActiveSwapIcon from "static/icon/icon-swap-active-light.svg";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
-import { custom, useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import { CircularProgress, Stack, Button as MButton } from "@mui/material";
 import { CONTRACT, abi, arc200, swap, swap200 } from "ulujs";
 import {
@@ -634,7 +634,7 @@ const Swap = () => {
   useEffect(() => {
     axios
       .get(
-        `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=tokens`
+        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=tokens`
       )
       .then((res) => {
         setTokens(res.data.tokens);
@@ -647,9 +647,11 @@ const Swap = () => {
 
   const [stubs, setStubs] = React.useState<any[]>();
   useEffect(() => {
+    const exchangeHash = // TODO export to constants
+      "1365fd96882cef38c711ca95a04f8b933ca151ad6a2470dae62c3036bfdd8147";
     axios
       .get(
-        `https://arc72-idx.nautilus.sh/nft-indexer/v1/dex/stubs/pool?active=0&hash=e80b280db0d1ae7ee02c5138235a7ceb9ca3817bcd1c254ccc3693e6646e7ab6`
+        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/dex/stubs/pool?active=0&hash=${exchangeHash}`
       )
       .then((res) => {
         setStubs(res.data.stubs);
@@ -673,11 +675,11 @@ const Swap = () => {
 
   /* Wallet */
   const {
-    providers,
+    //providers,
     activeAccount,
     signTransactions,
-    sendTransactions,
-    getAccountInfo,
+    //sendTransactions,
+    //getAccountInfo,
   } = useWallet();
 
   const [pool, setPool] = useState<PoolI>();
@@ -900,11 +902,11 @@ const Swap = () => {
   }, [tokens2, token2, activeAccount]);
 
   // EFFECT: get voi balance
-  useEffect(() => {
-    if (activeAccount && providers && providers.length >= 3) {
-      getAccountInfo().then(setAccInfo);
-    }
-  }, [activeAccount, providers]);
+  // useEffect(() => {
+  //   if (activeAccount && providers && providers.length >= 3) {
+  //     getAccountInfo().then(setAccInfo);
+  //   }
+  // }, [activeAccount, providers]);
 
   // EFFECT: get eligible pools
   const eligiblePools = useMemo(() => {
@@ -1013,6 +1015,7 @@ const Swap = () => {
       if (!stub) {
         stub = stubs.find((s) => s.active === 0);
       }
+      console.log({ stub });
 
       let ctcInfo: number;
       const {
@@ -1041,13 +1044,22 @@ const Swap = () => {
         makeApplicationCreateTxnFromObjectObj
       );
       if (!stub) {
+        const stxns = await signTransactions([appCreateTxn.toByte()]);
+        /*
         const res: any = await toast.promise(
-          signTransactions([appCreateTxn.toByte()]).then(sendTransactions),
+          //.then(sendTransactions),
           {
             pending: "Pending transaction to deploy pool",
             success: "Pool deployed",
           }
         );
+        */
+        const res = await algodClient
+          .sendRawTransaction(stxns as Uint8Array[])
+          .do();
+        console.log({ res, stxns });
+        // TODO fix broken
+
         ctcInfo = res["application-index"];
       } else {
         ctcInfo = stub.contractId;
@@ -1093,7 +1105,8 @@ const Swap = () => {
         extraTxns.push(makeApplicationCreateTxnFromObjectObj);
         //}
 
-        const swapR: any = await ci.deposit(acc.addr, ctcInfo, A, B, extraTxns);
+        //const swapR: any = await ci.deposit(acc.addr, ctcInfo, A, B, extraTxns);
+        const swapR: any = await ci.deposit(acc.addr, ctcInfo, A, B, []);
 
         const unsignedTxns = [
           ...swapR.txns.map(
@@ -1104,8 +1117,10 @@ const Swap = () => {
         setProgress(50);
         setMessage("Signing transaction");
 
+        const stxns = await signTransactions(unsignedTxns);
+        /*
         await toast.promise(
-          signTransactions(unsignedTxns).then(sendTransactions),
+          //.then(sendTransactions),
           {
             pending: `Creating new pool with liquidity ${fromAmount} ${tokenSymbol(
               token
@@ -1117,32 +1132,35 @@ const Swap = () => {
             theme: "dark",
           }
         );
+        */
+
+        await algodClient.sendRawTransaction(stxns as Uint8Array[]).do();
       } while (0);
 
       setProgress(70);
-      setMessage("Updating quest");
 
       // -----------------------------------------
       // QUEST HERE hmbl_pool_creation
       // -----------------------------------------
-      do {
-        const address = activeAccount.address;
-        const actions: string[] = [QUEST_ACTION.CREATE_LIQUIDITY_POOL];
-        const {
-          data: { results },
-        } = await getActions(address);
-        for (const action of actions) {
-          const address = activeAccount.address;
-          const key = `${action}:${address}`;
-          const completedAction = results.find((el: any) => el.key === key);
-          if (!completedAction) {
-            await submitAction(action, address, {
-              poolId: ctcInfo,
-            });
-          }
-          // TODO notify quest completion here
-        }
-      } while (0);
+      // setMessage("Updating quest");
+      // do {
+      //   const address = activeAccount.address;
+      //   const actions: string[] = [QUEST_ACTION.CREATE_LIQUIDITY_POOL];
+      //   const {
+      //     data: { results },
+      //   } = await getActions(address);
+      //   for (const action of actions) {
+      //     const address = activeAccount.address;
+      //     const key = `${action}:${address}`;
+      //     const completedAction = results.find((el: any) => el.key === key);
+      //     if (!completedAction) {
+      //       await submitAction(action, address, {
+      //         poolId: ctcInfo,
+      //       });
+      //     }
+      //     // TODO notify quest completion here
+      //   }
+      // } while (0);
       // -----------------------------------------
       // confirm pool
       // -----------------------------------------

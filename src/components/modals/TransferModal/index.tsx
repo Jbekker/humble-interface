@@ -9,7 +9,7 @@ import {
   Box,
   Typography,
 } from "@mui/material";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import { getAlgorandClients } from "../../../wallets";
 
 interface AddressModalProps {

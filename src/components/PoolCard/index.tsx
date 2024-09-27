@@ -12,7 +12,7 @@ import { CONTRACT, abi, swap } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
 import { TOKEN_WVOI1 } from "../../constants/tokens";
 import BigNumber from "bignumber.js";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 
 const spec = {
   name: "pool",

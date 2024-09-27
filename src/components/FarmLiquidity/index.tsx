@@ -5,7 +5,6 @@ import { useSelector } from "react-redux";
 import { FarmI, PoolI, PositionI, StakeI } from "../../types";
 import { arc200 } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
-import { useWallet } from "@txnlab/use-wallet";
 import { useNavigate } from "react-router-dom";
 import { Fade, Stack, Tooltip } from "@mui/material";
 import FarmCard from "../FarmCard";

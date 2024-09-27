@@ -11,7 +11,7 @@ import { RootState } from "../../store/store";
 import { useSelector } from "react-redux";
 
 import Box from "@mui/material/Box";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 
 import { useCopyToClipboard } from "usehooks-ts";
 import { toast } from "react-toastify";
@@ -241,33 +241,36 @@ const Navbar = () => {
 
   /* Wallet */
 
-  const { providers, activeAccount, connectedAccounts, getAccountInfo } =
-    useWallet();
+  const {
+    //providers,
+    activeAccount,
+    //connectedAccounts, getAccountInfo
+  } = useWallet();
 
   const [accInfo, setAccInfo] = React.useState<any>(null);
   const [balance, setBalance] = React.useState<any>(null);
 
   // EFFECT: get voi balance
-  useEffect(() => {
-    if (activeAccount && providers && providers.length >= 3) {
-      getAccountInfo().then(setAccInfo);
-    }
-  }, [activeAccount, providers]);
+  // useEffect(() => {
+  //   if (activeAccount && providers && providers.length >= 3) {
+  //     getAccountInfo().then(setAccInfo);
+  //   }
+  // }, [activeAccount, providers]);
 
   // EFFECT: get voi balance
-  useEffect(() => {
-    if (activeAccount && providers && providers.length >= 3) {
-      const { algodClient, indexerClient } = getAlgorandClients();
-      const ci = new arc200(TOKEN_VIA, algodClient, indexerClient);
-      ci.arc200_balanceOf(activeAccount.address).then(
-        (arc200_balanceOfR: any) => {
-          if (arc200_balanceOfR.success) {
-            setBalance(Number(arc200_balanceOfR.returnValue));
-          }
-        }
-      );
-    }
-  }, [activeAccount, providers]);
+  // useEffect(() => {
+  //   if (activeAccount && providers && providers.length >= 3) {
+  //     const { algodClient, indexerClient } = getAlgorandClients();
+  //     const ci = new arc200(TOKEN_VIA, algodClient, indexerClient);
+  //     ci.arc200_balanceOf(activeAccount.address).then(
+  //       (arc200_balanceOfR: any) => {
+  //         if (arc200_balanceOfR.success) {
+  //           setBalance(Number(arc200_balanceOfR.returnValue));
+  //         }
+  //       }
+  //     );
+  //   }
+  // }, [activeAccount, providers]);
 
   /* Theme */
 
@@ -328,11 +331,13 @@ const Navbar = () => {
                 href: "/token",
                 icon: TokenIcon,
               },
+              /*
               {
                 label: "Farm",
                 href: "/farm",
                 icon: FarmIcon,
               },
+              */
             ].map((item) => (
               <StyledLink to={item.href}>
                 <NavButton>

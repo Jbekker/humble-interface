@@ -2,7 +2,7 @@ import styled from "@emotion/styled";
 import React, { useEffect, useMemo, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import PoolPosition from "../PoolPosition";
 import TokenList from "../TokenList";
 import axios from "axios";
@@ -106,7 +106,7 @@ const Pool = () => {
   const [pools, setPools] = React.useState<IndexerPoolI[]>();
   useEffect(() => {
     axios
-      .get(`https://arc72-idx.nautilus.sh/nft-indexer/v1/dex/pools`)
+      .get(`https://mainnet-idx.nautilus.sh/nft-indexer/v1/dex/pools`)
       .then(({ data }) => {
         setPools(
           data.pools.map((p: IndexerPoolI) => ({
@@ -122,7 +122,7 @@ const Pool = () => {
   useEffect(() => {
     axios
       .get(
-        `https://arc72-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=all`
+        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=all`
       )
       .then(({ data: { tokens } }) => {
         setTokens(tokens);

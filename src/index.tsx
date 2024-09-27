@@ -2,8 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom";
 import App from "./App";
 import "./style.css";
+/*
 import * as Sentry from "@sentry/react";
-
 Sentry.init({
   dsn: "https://7cf1de51a2077d109b793369d924bb4c@o4507456022904832.ingest.us.sentry.io/4507456024739840",
   integrations: [
@@ -18,5 +18,6 @@ Sentry.init({
   replaysSessionSampleRate: 0.1, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
   replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, change the sample rate to 100% when sampling sessions where errors occur.
 });
+*/
 
 ReactDOM.render(<App />, document.getElementById("root"));

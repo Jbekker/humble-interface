@@ -30,7 +30,8 @@ import {
 } from "../../types";
 import { getSales } from "../../store/saleSlice";
 import { getPrices } from "../../store/dexSlice";
-import { CTCINFO_LP_WVOI_VOI } from "../../constants/dex";
+import { CTCINFO_LP_WVOI_AUSD } from "../../constants/dex";
+//import { CTCINFO_LP_WVOI_VOI } from "../../constants/dex";
 
 const SectionDescription = styled.div`
   flex: 1 0 0;
@@ -164,7 +165,7 @@ export const Listings: React.FC = () => {
   }, [dispatch]);
   const exchangeRate = useMemo(() => {
     if (!prices || dexStatus !== "succeeded") return 0;
-    const voiPrice = prices.find((p) => p.contractId === CTCINFO_LP_WVOI_VOI);
+    const voiPrice = prices.find((p) => p.contractId === CTCINFO_LP_WVOI_AUSD);
     if (!voiPrice) return 0;
     return voiPrice.rate;
   }, [prices, dexStatus]);
@@ -217,11 +218,14 @@ export const Listings: React.FC = () => {
   React.useEffect(() => {
     try {
       const res = axios
-        .get("https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/mp/listings", {
-          params: {
-            active: true,
-          },
-        })
+        .get(
+          "https://mainnet-idx.nftnavigator.xyz/nft-indexer/v1/mp/listings",
+          {
+            params: {
+              active: true,
+            },
+          }
+        )
         .then(({ data }) => {
           setListings(data.listings);
         });

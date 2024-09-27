@@ -2,7 +2,7 @@ import * as React from "react";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import styled from "styled-components";
-import { PROVIDER_ID, useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import ArrowDownwardIcon from "static/icon/icon-arrow-downward.svg";
 import CogIcon from "static/icon/icon-cog.svg";
 import ArrowDownwardIcon2 from "static/icon/icon-arrow-downward-color.svg";
@@ -107,7 +107,9 @@ function BasicMenu() {
     (state: RootState) => state.theme.isDarkTheme
   );
   /* Wallet */
-  const { activeAccount, providers, connectedAccounts } = useWallet();
+  const { activeAccount, 
+    //providers, connectedAccounts 
+  } = useWallet();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
