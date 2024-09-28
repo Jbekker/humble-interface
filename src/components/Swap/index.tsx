@@ -890,10 +890,10 @@ const Swap = () => {
 
   // EFFECT: get token balance
   useEffect(() => {
-    if (!token || !activeAccount || !tokens) return;
+    if (!token || !activeAccount || !tokens || !tokens2) return;
     const { algodClient, indexerClient } = getAlgorandClients();
     const wrappedTokenId = Number(
-      tokens.find((t) => t.contractId === token.tokenId)?.tokenId
+      tokens2.find((t) => t.contractId === token.tokenId)?.tokenId
     );
     if (token.tokenId === 0) {
       algodClient
@@ -922,7 +922,7 @@ const Swap = () => {
             });
         });
     } else {
-      const ci = new arc200(token.tokenId, algodClient, indexerClient);
+      const ci = new arc200(Number(token.tokenId), algodClient, indexerClient);
       ci.arc200_balanceOf(activeAccount.address).then(
         (arc200_balanceOfR: any) => {
           if (arc200_balanceOfR.success) {
@@ -987,6 +987,7 @@ const Swap = () => {
       );
     }
   }, [token2, activeAccount]);
+  console.log({ balance, balance2 });
 
   // EFFECT: get voi balance
   /*
