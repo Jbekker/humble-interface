@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Modal, Button, TextField, CircularProgress } from "@mui/material";
 
-interface AddressModalProps {
+interface BaseModalPRops {
   open: boolean;
   loading: boolean;
   handleClose: () => void;
@@ -10,7 +10,7 @@ interface AddressModalProps {
   buttonText?: string;
 }
 
-const AddressModal: React.FC<AddressModalProps> = ({
+const BaseModal: React.FC<BaseModalPRops> = ({
   open,
   loading,
   handleClose,
@@ -94,4 +94,4 @@ const AddressModal: React.FC<AddressModalProps> = ({
   );
 };
 
-export default AddressModal;
+export default BaseModal;

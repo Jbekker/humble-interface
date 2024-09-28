@@ -11,9 +11,11 @@ import OnIcon from "static/icon/icon-on.svg";
 import { compactAddress } from "../../utils/mp";
 import { Box, Divider } from "@mui/material";
 import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
+import WalletModal from "../modals/WalletModal";
 
 function WalletMenu() {
-  const { wallets, activeWallet, activeAccount } = useWallet();
+  const { wallets, activeWallet, activeAccount, activeWalletAccounts } =
+    useWallet();
 
   return (
     <div>
@@ -298,17 +300,17 @@ const ConnectButton = () => {
 };
 
 function BasicMenu() {
-  const {
-    activeAccount,
-    //providers, connectedAccounts
-  } = useWallet();
+  const { activeAccount, wallets, activeWallet, activeWalletAccounts } =
+    useWallet();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
+  const [isWalletModalOpen, setIsWalletModalOpen] = React.useState(false);
   const handleClose = () => {
     setAnchorEl(null);
+    setIsWalletModalOpen(false);
   };
   React.useEffect(() => {
     if (!activeAccount) return;
@@ -341,7 +343,7 @@ function BasicMenu() {
         <AccountDropdown
           onClick={(e: any) => {
             e.preventDefault();
-            handleClick(e);
+            setIsWalletModalOpen(true);
           }}
         >
           <AccountDropdownLabel>Connect</AccountDropdownLabel>
@@ -416,30 +418,27 @@ function BasicMenu() {
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
         <WalletContainer>
-          <WalletMenu />
-          {/*providers?.map((provider) => {
+          {wallets?.map((wallet) => {
             return (
               <ProviderContainer>
                 <ProviderIconContainer>
                   <ProviderName>
                     <WalletIcon
                       style={{
-                        background: `url(${provider.metadata.icon}) lightgray 50% / cover no-repeat`,
+                        background: `url(${wallet.metadata.icon}) lightgray 50% / cover no-repeat`,
                       }}
                     />
                     <ProviderNameLabel>
-                      {provider.metadata.name}
+                      {wallet.metadata.name}
                     </ProviderNameLabel>
                   </ProviderName>
-                  {connectedAccounts?.some(
-                    (el: any) => el.providerId === provider.metadata.id
+
+                  {activeWalletAccounts?.some(
+                    (el: any) => wallet.isConnected
                   ) ? (
                     <Box
                       onClick={(e: any) => {
-                        const provider = providers?.find(
-                          (p) => p.metadata.id === activeAccount?.providerId
-                        );
-                        provider?.disconnect();
+                        wallet.disconnect();
                       }}
                     >
                       <DisconnectButton />
@@ -447,8 +446,8 @@ function BasicMenu() {
                   ) : (
                     <Box
                       onClick={(e: any) => {
-                        provider?.connect();
-                        if (provider?.metadata.id !== PROVIDER_ID.KIBISIS) {
+                        wallet.connect();
+                        if (wallet.isActive) {
                           setAnchorEl(null);
                         }
                       }}
@@ -458,6 +457,29 @@ function BasicMenu() {
                   )}
                 </ProviderIconContainer>
                 <ConnectedAccountContainer>
+                  {wallet.accounts.map((account) => {
+                    return (
+                      <AccountContainer>
+                        <AccountNameContainer>
+                          <AccountName>
+                            {compactAddress(account.address)}
+                          </AccountName>
+                        </AccountNameContainer>
+                        <ActiveButtonContainer>
+                          {!wallet.isActive ? (
+                            <ActiveButton
+                              onClick={(e: any) => {
+                                wallet.setActive();
+                              }}
+                            >
+                              Set Active
+                            </ActiveButton>
+                          ) : null}
+                        </ActiveButtonContainer>
+                      </AccountContainer>
+                    );
+                  })}
+
                   {/*connectedAccounts
                     ?.filter((a) => a.providerId === provider.metadata.id)
                     .map((account) => {
@@ -482,11 +504,11 @@ function BasicMenu() {
                           </ActiveButtonContainer>
                         </AccountContainer>
                       );
-                    })}
+                    })*/}
                 </ConnectedAccountContainer>
               </ProviderContainer>
             );
-          })*/}
+          })}
         </WalletContainer>
         {/*<MenuItem
           onClick={(e) => {
@@ -500,6 +522,14 @@ function BasicMenu() {
         </MenuItem>
         */}
       </AccountMenu>
+      <WalletModal
+        open={isWalletModalOpen}
+        loading={false}
+        handleClose={() => {
+          setIsWalletModalOpen(false);
+        }}
+        onSave={async () => {}}
+      />
     </div>
   );
 }
