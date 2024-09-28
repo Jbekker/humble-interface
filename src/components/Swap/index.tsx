@@ -553,6 +553,17 @@ const Swap = () => {
   const [tokOut, setTokOut] = useState("TOKB");
   const [swapModalOpen, setSwapModalOpen] = useState<boolean>(false);
 
+  const [tokens2, setTokens] = React.useState<any[]>();
+  useEffect(() => {
+    axios
+      .get(
+        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=tokens`
+      )
+      .then(({ data }) => {
+        setTokens(data.tokens);
+      });
+  }, []);
+
   // don't remember what this is used for
 
   const [pool, setPool] = useState<PoolI>();
@@ -573,7 +584,7 @@ const Swap = () => {
         setToken2(token2);
       }
     }
-  }, [pool, pools, tokens]);
+  }, [pool, pools, tokens, tokens2]);
 
   //const [accInfo, setAccInfo] = React.useState<any>(null);
 
@@ -876,17 +887,6 @@ const Swap = () => {
       setTokenOptions2(newTokenOptions2);
     }
   }, [pool, token, pools]);
-
-  const [tokens2, setTokens] = React.useState<any[]>();
-  useEffect(() => {
-    axios
-      .get(
-        `https://mainnet-idx.nautilus.sh/nft-indexer/v1/arc200/tokens?includes=tokens`
-      )
-      .then(({ data }) => {
-        setTokens(data.tokens);
-      });
-  }, []);
 
   // EFFECT: get token balance
   useEffect(() => {
@@ -1212,6 +1212,11 @@ const Swap = () => {
             balance={balance}
             onFocus={() => setFocus("from")}
             options={tokenOptions}
+            displayId={
+              tokens2?.find((t) => t.contractId === token?.tokenId)?.tokenId ||
+              token?.tokenId ||
+              0
+            }
           />
           <img
             onClick={() => {
@@ -1236,6 +1241,11 @@ const Swap = () => {
             options={tokenOptions2}
             balance={balance2}
             onFocus={() => setFocus("to")}
+            displayId={
+              tokens2?.find((t) => t.contractId === token2?.tokenId)?.tokenId ||
+              token2?.tokenId ||
+              0
+            }
           />
         </SwapContainer>
         {!!token2 ? (

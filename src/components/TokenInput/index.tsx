@@ -371,6 +371,7 @@ interface SwapProps {
   balance?: string;
   onFocus: () => void;
   showInput?: boolean;
+  displayId?: number;
 }
 const Swap: FC<SwapProps> = ({
   label,
@@ -383,7 +384,9 @@ const Swap: FC<SwapProps> = ({
   balance,
   onFocus,
   showInput = true,
+  displayId,
 }) => {
+  console.log({ token, token2 });
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
@@ -431,7 +434,9 @@ const Swap: FC<SwapProps> = ({
                   {tokenSymbol(token)}
                 </TokenLabel>
                 <TokenIdContainer>
-                  <TokenIdLabel>ID: {token?.tokenId || 0}</TokenIdLabel>
+                  <TokenIdLabel>
+                    ID: {displayId || token?.tokenId || 0}
+                  </TokenIdLabel>
                 </TokenIdContainer>
               </TokenButtonWrapper>
             </TokenButtonContainer>
