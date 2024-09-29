@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { RootState } from "../../store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet-react";
-import { CircularProgress } from "@mui/material";
+import { Box, CircularProgress, Typography } from "@mui/material";
 import { CONTRACT, abi, arc200, swap200, swap } from "ulujs";
 import { TOKEN_AUSDC, TOKEN_WVOI1 } from "../../constants/tokens";
 import { getAlgorandClients } from "../../wallets";
@@ -277,6 +277,7 @@ const PoolRemove = () => {
   useEffect(() => {
     dispatch(getTokens() as unknown as UnknownAction);
   }, [dispatch]);
+
   /* Pools */
   const pools: PoolI[] = useSelector((state: RootState) => state.pools.pools);
 
@@ -1126,21 +1127,30 @@ const PoolRemove = () => {
         }}
       >
         You will receive: <br />
+        <br />
         {tokenSymbol(
-          tokens.find((t: ARC200TokenI) => t.tokenId === pool?.tokA),
+          tokens.find((t: ARC200TokenI) => t.tokenId === info?.tokA),
           true
         )}
         :{" "}
         {expectedOutcome
-          ? Number(expectedOutcome?.[0]) / 10 ** (token?.decimals || 0)
+          ? Number(expectedOutcome?.[0]) /
+            10 **
+              (tokens.find((t: ARC200TokenI) => t.tokenId === info?.tokA)
+                ?.decimals || 0)
           : "-"}
+        <br />
+        <br />
         {tokenSymbol(
-          tokens.find((t: ARC200TokenI) => t.tokenId === pool?.tokB),
+          tokens.find((t: ARC200TokenI) => t.tokenId === info?.tokB),
           true
         )}
         :{" "}
         {expectedOutcome
-          ? Number(expectedOutcome?.[1]) / 10 ** (token2?.decimals || 0)
+          ? Number(expectedOutcome?.[1]) /
+            10 **
+              (tokens.find((t: ARC200TokenI) => t.tokenId === info?.tokB)
+                ?.decimals || 0)
           : "-"}
       </div>
       <Button

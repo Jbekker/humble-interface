@@ -16,13 +16,13 @@ const DiscreteSlider: React.FC<DiscreteSliderProps> = ({ onChange }) => {
       <Slider
         onChange={(e, v, at) => onChange(v)}
         aria-label="%"
-        defaultValue={30}
+        defaultValue={0}
         getAriaValueText={valuetext}
         valueLabelDisplay="auto"
         shiftStep={30}
         step={10}
         marks
-        min={10}
+        min={0}
         max={100}
       />
     </Box>
