@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { CircularProgress } from "@mui/material";
 import { CONTRACT, abi, arc200, swap200, swap } from "ulujs";
-import { TOKEN_WVOI1 } from "../../constants/tokens";
+import { TOKEN_AUSDC, TOKEN_WVOI1 } from "../../constants/tokens";
 import { getAlgorandClients } from "../../wallets";
 import { useSearchParams } from "react-router-dom";
 import { ARC200TokenI, PoolI } from "../../types";
@@ -15,6 +15,7 @@ import { tokenSymbol } from "../../utils/dex";
 import DiscreteSlider from "../DiscreteSlider";
 import { getTokens } from "../../store/tokenSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
+import BigNumber from "bignumber.js";
 
 const spec = {
   name: "pool",
@@ -699,9 +700,9 @@ const PoolRemove = () => {
     }
   }, [isValid]);
 
-  const handleButtonClick = async () => {
+  const handleRemoveLiquidity = async () => {
     //if (!isValid || !token || !token2 || !pool) return;
-    if (!activeAccount) {
+    if (!activeAccount || !info) {
       toast.info("Please connect your wallet first");
       return;
     }
@@ -798,12 +799,16 @@ const PoolRemove = () => {
         };
       };
 
+      console.log({ info });
+
       // pick a pool
       //const pool = eligiblePools.slice(-1)[0];
       const { poolId } = pool;
-      const tokA = info.tokAId;
-      const tokB = info.tokBId;
+      const tokA = info.tokA;
+      const tokB = info.tokB;
       const ci = makeCi(poolId);
+      const ciA = makeCi(tokA);
+      const ciB = makeCi(tokB);
 
       // get token ids
 
@@ -822,15 +827,18 @@ const PoolRemove = () => {
       // const inA = Math.round(Number(fromAmount) * 10 ** token.decimals);
       // const inB = Math.round(Number(toAmount) * 10 ** token2.decimals);
 
-      const withdrawShare =
-        fromAmount === "100"
-          ? Number(poolShare)
-          : (Number(poolShare) * Number(fromAmount)) / 100;
+      const arc200_balanceOfR = await ci.arc200_balanceOf(
+        activeAccount.address
+      );
+      if (!arc200_balanceOfR.success) return new Error("Balance failed");
+      const poolShare = arc200_balanceOfR.returnValue;
 
-      const withdrawAmount =
-        fromAmount === "100"
-          ? poolBalance
-          : Math.round((Number(info.lptBals.lpMinted) * withdrawShare) / 100);
+      const withdrawAmount = BigInt(
+        new BigNumber(poolShare.toString())
+          .dividedBy(100)
+          .multipliedBy(fromAmount)
+          .toFixed(0)
+      );
 
       const Provider_withdrawR = await ci.Provider_withdraw(
         1,
@@ -841,34 +849,177 @@ const PoolRemove = () => {
         return new Error("Add liquidity simulation failed");
       const Provider_withdraw = Provider_withdrawR.returnValue;
 
-      console.log({ Provider_withdraw });
-
       const builder = makeBuilder(poolId, tokA, tokB);
       const poolAddr = algosdk.getApplicationAddress(poolId);
 
-      const buildN = [
-        builder.pool.Provider_withdraw(0, withdrawAmount, Provider_withdraw),
-      ];
+      const buildN = [];
+
+      // experimental withdraw extra wVOI
+
+      do {
+        if ([TOKEN_WVOI1].includes(tokA) || [TOKEN_WVOI1].includes(tokB)) {
+          let constructor;
+          let arc200_balanceOf = BigInt(0);
+          if (tokA === TOKEN_WVOI1) {
+            arc200_balanceOf = (
+              await ciA.arc200_balanceOf(activeAccount.address)
+            ).returnValue;
+            constructor = builder.arc200.tokA;
+          } else {
+            arc200_balanceOf = (
+              await ciB.arc200_balanceOf(activeAccount.address)
+            ).returnValue;
+            constructor = builder.arc200.tokB;
+          }
+          if (arc200_balanceOf === BigInt(0)) break;
+          const msg = `Withdraw ${new BigNumber(arc200_balanceOf.toString())
+            .dividedBy(new BigNumber(10).pow(6))
+            .toFixed(6)} wVOI`;
+          const note = new TextEncoder().encode(msg);
+          const txnO = (await constructor.withdraw(arc200_balanceOf)).obj;
+          buildN.push({
+            ...txnO,
+            note,
+          });
+        }
+      } while (0);
+
+      // experimental withdraw extra aUSD
+
+      do {
+        if ([TOKEN_AUSDC].includes(tokA) || [TOKEN_AUSDC].includes(tokB)) {
+          let constructor;
+          let arc200_balanceOf = BigInt(0);
+          if (tokA === TOKEN_AUSDC) {
+            arc200_balanceOf = (
+              await ciA.arc200_balanceOf(activeAccount.address)
+            ).returnValue;
+            constructor = builder.arc200.tokA;
+          } else {
+            arc200_balanceOf = (
+              await ciB.arc200_balanceOf(activeAccount.address)
+            ).returnValue;
+            constructor = builder.arc200.tokB;
+          }
+          if (arc200_balanceOf === BigInt(0)) break;
+          const accountAssets = await indexerClient
+            .lookupAccountAssets(algosdk.getApplicationAddress(TOKEN_AUSDC))
+            .do();
+          const [asset] = accountAssets.assets;
+          const { ["asset-id"]: assetId } = asset;
+          const msg = `Withdraw ${new BigNumber(arc200_balanceOf.toString())
+            .dividedBy(new BigNumber(10).pow(6))
+            .toFixed(6)} aUSDC`;
+          const note = new TextEncoder().encode(msg);
+          const accountAssets2 = await indexerClient
+            .lookupAccountAssets(activeAccount.address)
+            .do();
+          const condOptin = !!accountAssets2.assets.find(
+            (a: any) => a["asset-id"] === TOKEN_AUSDC
+          )
+            ? {
+                xaid: assetId,
+                snd: activeAccount.address,
+                arcv: activeAccount.address,
+              }
+            : {};
+          const txnO = (await constructor.withdraw(arc200_balanceOf)).obj;
+          buildN.push({
+            ...txnO,
+            ...condOptin,
+            note,
+          });
+        }
+      } while (0);
+
+      // remove liquidity
+
+      do {
+        const txnO = (
+          await builder.pool.Provider_withdraw(
+            0,
+            withdrawAmount,
+            Provider_withdraw
+          )
+        ).obj;
+        const msg = `Remove liquidity ${withdrawAmount} LP`;
+        const note = new TextEncoder().encode(msg);
+        buildN.push({
+          ...txnO,
+          note,
+        });
+      } while (0);
 
       // if Provider_withdraw includes wVOI add withdraw wVOI
-      let wVOIWithdraw = BigInt(0);
       if ([TOKEN_WVOI1].includes(tokA) || [TOKEN_WVOI1].includes(tokB)) {
-        if ([TOKEN_WVOI1].includes(tokA)) {
-          wVOIWithdraw = Provider_withdraw[0];
+        let constructor;
+        let withdrawAmount = BigInt(0);
+        if (tokA === TOKEN_WVOI1) {
+          withdrawAmount = Provider_withdraw[0];
+          constructor = builder.arc200.tokA;
         } else {
-          wVOIWithdraw = Provider_withdraw[1];
+          withdrawAmount = Provider_withdraw[1];
+          constructor = builder.arc200.tokB;
         }
-        buildN.push(builder.arc200.tokA.withdraw(wVOIWithdraw));
+        const msg = `Withdraw ${new BigNumber(withdrawAmount.toString())
+          .dividedBy(new BigNumber(10).pow(6))
+          .toFixed(6)} wVOI`;
+        const note = new TextEncoder().encode(msg);
+        const txnO = (await constructor.withdraw(withdrawAmount)).obj;
+        buildN.push({
+          ...txnO,
+          note,
+        });
       }
 
-      const buildP = (await Promise.all(buildN)).map((res: any) => res.obj);
+      // TODO check for aUSD, generalize
+      // if Provider_withdraw includes aUSD like token add withdraw withdraw aUSD
+      if ([TOKEN_AUSDC].includes(tokA) || [TOKEN_AUSDC].includes(tokB)) {
+        let constructor;
+        let withdrawAmount = BigInt(0);
+        if ([TOKEN_AUSDC].includes(tokA)) {
+          constructor = builder.arc200.tokA;
+          withdrawAmount = Provider_withdraw[0];
+        } else {
+          constructor = builder.arc200.tokB;
+          withdrawAmount = Provider_withdraw[1];
+        }
+        const accountAssets = await indexerClient
+          .lookupAccountAssets(algosdk.getApplicationAddress(TOKEN_AUSDC))
+          .do();
+        const [asset] = accountAssets.assets;
+        const { ["asset-id"]: assetId } = asset;
+        const accountAssets2 = await indexerClient
+          .lookupAccountAssets(activeAccount.address)
+          .do();
+        const condOptin = !!accountAssets2.assets.find(
+          (a: any) => a["asset-id"] === TOKEN_AUSDC
+        )
+          ? {
+              xaid: assetId,
+              snd: activeAccount.address,
+              arcv: activeAccount.address,
+            }
+          : {};
+        const txnO = (await constructor.withdraw(withdrawAmount)).obj;
+        const msg = `Withdraw ${new BigNumber(withdrawAmount.toString())
+          .dividedBy(new BigNumber(10).pow(6))
+          .toFixed(6)}  aUSDC`;
+        const note = new TextEncoder().encode(msg);
+        buildN.push({
+          ...txnO,
+          ...condOptin,
+          note,
+        });
+      }
+
       ci.setAccounts([poolAddr]);
       ci.setEnableGroupResourceSharing(true);
-      ci.setExtraTxns(buildP);
+      ci.setExtraTxns(buildN);
       const customR = await ci.custom();
       console.log({ customR });
       if (!customR.success)
-        return new Error("Add liquidity group simulation failed");
+        return new Error("Remove liquidity group simulation failed");
 
       const stxns = await signTransactions(
         customR.txns.map(
@@ -997,7 +1148,7 @@ const PoolRemove = () => {
         className="active"
         onClick={() => {
           if (!on) {
-            handleButtonClick();
+            handleRemoveLiquidity();
           }
         }}
       >
