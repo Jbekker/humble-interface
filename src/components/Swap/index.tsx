@@ -936,7 +936,7 @@ const Swap = () => {
         }
       );
     }
-  }, [token, activeAccount, tokens2]);
+  }, [token, activeAccount, tokens, tokens2]);
 
   // EFFECT: get token2 balance
   useEffect(() => {
@@ -986,8 +986,7 @@ const Swap = () => {
         }
       );
     }
-  }, [token2, activeAccount]);
-  console.log({ balance, balance2 });
+  }, [balance, token, token2, activeAccount]);
 
   // EFFECT: get voi balance
   /*
