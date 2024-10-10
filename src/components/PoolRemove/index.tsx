@@ -719,7 +719,7 @@ const PoolRemove = () => {
                   arcv: activeAccount.address,
                 }
               : {};
-          const txnO = (await constructor.withdraw(withdrawAmount)).obj;
+          const txnO = (await tokenContract.withdraw(withdrawAmount)).obj;
           buildN.push({
             ...txnO,
             ...condOptin,
