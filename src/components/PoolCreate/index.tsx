@@ -748,10 +748,11 @@ const Swap = () => {
     }
   }, []);
   useEffect(() => {
+    if(!activeAccount) return;
     if (paramTokBId && !isNaN(Number(paramTokBId))) {
       if (paramTokBId === "0") {
         setToken2({
-          tokenId: "0",
+          tokenId: 0,
           name: "Voi",
           symbol: "VOI",
           decimals: 6,
@@ -762,7 +763,7 @@ const Swap = () => {
         getToken(tokenId).then(setToken2);
       }
     }
-  }, []);
+  }, [activeAccount, paramTokBId])
 
   // EFFECT
   useEffect(() => {
@@ -851,7 +852,7 @@ const Swap = () => {
     }
   }, [tokens2, token, activeAccount]);
 
-  // EFFECT
+  // EFFECT set balance2
   useEffect(() => {
     if (!token2 || !activeAccount || !tokens2) return;
     const { algodClient, indexerClient } = getAlgorandClients();
