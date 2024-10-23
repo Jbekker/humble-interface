@@ -87,6 +87,19 @@ const App: React.FC = () => {
         options: { siteName: "HumbPact" },
       },
       {
+        id: WalletId.BIATEC,
+        options: {
+          projectId: walletConnectProjectId,
+          metadata: {
+            name: "HumbleSwap",
+            url: "https://voi.humble.sh",
+            description: "HumbleSwap",
+            icons: ["https://nautilus.sh/favicon.ico"],
+          },
+          themeMode: "light",
+        },
+      },
+      {
         id: WalletId.WALLETCONNECT,
         options: {
           projectId: walletConnectProjectId,
