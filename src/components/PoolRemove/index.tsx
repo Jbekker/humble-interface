@@ -394,6 +394,7 @@ const PoolRemove = () => {
     ci.setFee(4000);
     ci.Provider_withdraw(1, withdrawAmount, [0, 0]).then(
       (Provider_withdrawR: any) => {
+        console.log({ Provider_withdrawR });
         if (Provider_withdrawR.success) {
           setExpectedOutcome(Provider_withdrawR.returnValue);
         }
