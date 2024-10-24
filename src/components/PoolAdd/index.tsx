@@ -1455,14 +1455,18 @@ const Swap = () => {
     }, 1000);
     return () => clearTimeout(timeout);
   }, [progress]);
+  
+  const findTokenInfo = (token: ARC200TokenI, tokens2: any[]) => {
+    if (!token || !tokens2) return undefined;
+    return tokens2.find(
+      (t) => t.contractId === token.tokenId || t.tokenId === String(token.tokenId)
+    );
+  };
 
   const [tokAInfo, setTokAInfo] = useState<any>();
   useEffect(() => {
     if (!token || !tokens2) return;
-    const tokA = tokens2.find(
-      (t) =>
-        t.contractId === token.tokenId || `${t.tokenId}` === `${token.tokenId}`
-    );
+    const tokA = findTokenInfo(token, tokens2)
     if (!tokA) return;
     setTokAInfo(tokA);
   }, [token, tokens2]);
@@ -1470,10 +1474,7 @@ const Swap = () => {
   const [tokBInfo, setTokBInfo] = useState<any>();
   useEffect(() => {
     if (!token2 || !tokens2) return;
-    const tokB = tokens2.find(
-      (t) =>
-        t.contractId === token2.tokenId || `${t.tokenId}` === `${token2.tokenId}`
-    );
+    const tokB = findTokenInfo(token2, tokens2)
     if (!tokB) return;
     setTokBInfo(tokB);
   }, [token2, tokens2]);
