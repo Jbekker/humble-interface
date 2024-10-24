@@ -1456,6 +1456,28 @@ const Swap = () => {
     return () => clearTimeout(timeout);
   }, [progress]);
 
+  const [tokAInfo, setTokAInfo] = useState<any>();
+  useEffect(() => {
+    if (!token || !tokens2) return;
+    const tokA = tokens2.find(
+      (t) =>
+        t.contractId === token.tokenId || `${t.tokenId}` === `${token.tokenId}`
+    );
+    if (!tokA) return;
+    setTokAInfo(tokA);
+  }, [token, tokens2]);
+
+  const [tokBInfo, setTokBInfo] = useState<any>();
+  useEffect(() => {
+    if (!token2 || !tokens2) return;
+    const tokB = tokens2.find(
+      (t) =>
+        t.contractId === token2.tokenId || `${t.tokenId}` === `${token2.tokenId}`
+    );
+    if (!tokB) return;
+    setTokBInfo(tokB);
+  }, [token2, tokens2]);
+
   return !isLoading ? (
     <SwapRoot className={isDarkTheme ? "dark" : "light"}>
       <SwapHeadingContainer>
@@ -1473,6 +1495,7 @@ const Swap = () => {
           balance={balance}
           onFocus={() => setFocus("from")}
           options={tokenOptions}
+          tokInfo={tokAInfo}
         />
         <AddIcon theme={isDarkTheme ? "dark" : "light"} />
         <TokenInput
@@ -1484,6 +1507,7 @@ const Swap = () => {
           options={tokenOptions2}
           balance={balance2}
           onFocus={() => setFocus("to")}
+          tokInfo={tokBInfo}
         />
       </SwapContainer>
       <SummaryContainer>
