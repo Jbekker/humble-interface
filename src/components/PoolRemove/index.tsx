@@ -384,7 +384,7 @@ const PoolRemove = () => {
     if (!pool || !info) return;
     const { algodClient, indexerClient } = getAlgorandClients();
     const ci = new CONTRACT(pool.poolId, algodClient, indexerClient, spec, {
-      addr: "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+      addr: activeAccount?.address || "",
       sk: new Uint8Array(0),
     });
     const share = (Number(poolShare) * Number(fromAmount)) / 100;
@@ -401,6 +401,7 @@ const PoolRemove = () => {
       }
     );
   }, [activeAccount, pool, info, fromAmount]);
+  console.log({ expectedOutcome });
 
   const [newShare, setNewShare] = useState<string>();
   useEffect(() => {
