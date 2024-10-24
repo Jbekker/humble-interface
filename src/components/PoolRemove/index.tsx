@@ -409,7 +409,6 @@ const PoolRemove = () => {
       );
       if (!Provider_withdrawR.success) return;
       setExpectedOutcome(Provider_withdrawR.returnValue);
-      }
     })();
   }, [activeAccount, pool, info, fromAmount]);
 
